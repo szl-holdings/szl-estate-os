@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+outputs/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+latest_audit.json
