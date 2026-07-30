@@ -818,8 +818,53 @@ def collect_hf_asset_details(
                             "error": f"{exc.code}: {sanitize_error(exc)}",
                         }
                     )
+        runtime_build: dict[str, Any] | None = None
+        runtime = payload.get("runtime")
+        if kind == "space" and isinstance(runtime, dict):
+            domains = runtime.get("domains")
+            ready_domains = [
+                str(item.get("domain") or "").lower()
+                for item in domains
+                if isinstance(item, dict)
+                and str(item.get("stage") or "").upper() == "READY"
+                and re.fullmatch(
+                    r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.hf\.space",
+                    str(item.get("domain") or "").lower(),
+                )
+            ] if isinstance(domains, list) else []
+            for domain in ready_domains:
+                try:
+                    build_payload, _ = get_json(
+                        (
+                            f"https://{domain}/api/build-info?"
+                            f"cache_bust={time.time_ns()}"
+                        ),
+                        headers={
+                            "Accept": "application/json",
+                            "Cache-Control": "no-cache, no-store, max-age=0",
+                            "Pragma": "no-cache",
+                        },
+                        timeout=timeout,
+                    )
+                    build = (
+                        build_payload.get("build")
+                        if isinstance(build_payload, dict)
+                        else None
+                    )
+                    if isinstance(build, dict):
+                        runtime_build = {
+                            "status": "OBSERVED",
+                            "domain": domain,
+                            "revision": str(build.get("revision") or "").lower(),
+                            "state": str(build.get("state") or "").upper(),
+                            "receipt_minted": build_payload.get("receipt_minted"),
+                        }
+                        break
+                except SourceError:
+                    continue
         payload["_provenance_docs"] = provenance_docs
         payload["_file_count"] = len(paths)
+        payload["_runtime_build"] = runtime_build
         return identity, payload
 
     with ThreadPoolExecutor(max_workers=max(1, min(workers, 8))) as executor:
@@ -928,6 +973,7 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
                 "provenance_docs": detail.get("_provenance_docs", [])
                 if detail
                 else [],
+                "runtime_build": detail.get("_runtime_build") if detail else None,
             }
             assets.append(
                 Asset(
@@ -1986,6 +2032,11 @@ def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
         for asset in assets
         if asset.source == "github" and asset.asset_type == "repo"
     }
+    github_repositories_by_revision: dict[str, list[Asset]] = {}
+    for github_asset in github_repositories.values():
+        revision = str(github_asset.metadata.get("default_branch_sha") or "").lower()
+        if FULL_SHA_RE.fullmatch(revision):
+            github_repositories_by_revision.setdefault(revision, []).append(github_asset)
     counts: dict[str, int] = {}
     for asset in assets:
         if asset.source != "huggingface" or asset.asset_type not in {
@@ -2021,7 +2072,52 @@ def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
             "source_revision": None,
             "github_default_revision": None,
         }
-        if any(document.get("status") == "UNAVAILABLE" for document in documents):
+        runtime_build = asset.metadata.get("runtime_build")
+        runtime_revision = (
+            str(runtime_build.get("revision") or "").lower()
+            if isinstance(runtime_build, dict)
+            and runtime_build.get("status") == "OBSERVED"
+            and runtime_build.get("state") == "OBSERVED"
+            else ""
+        )
+        runtime_matches = (
+            github_repositories_by_revision.get(runtime_revision, [])
+            if FULL_SHA_RE.fullmatch(runtime_revision)
+            else []
+        )
+        if len(runtime_matches) == 1:
+            github_asset = runtime_matches[0]
+            alignment.update(
+                {
+                    "status": "EXACT_RUNTIME_HEAD",
+                    "evidence": (
+                        "The running Space exposed an exact build revision equal to "
+                        "one observed GitHub default-branch revision"
+                    ),
+                    "source_repository": github_asset.name.lower(),
+                    "source_revision": runtime_revision,
+                    "github_default_revision": runtime_revision,
+                    "runtime_domain": runtime_build.get("domain"),
+                    "receipt_minted": runtime_build.get("receipt_minted"),
+                }
+            )
+        elif len(runtime_matches) > 1:
+            alignment["status"] = "RUNTIME_REVISION_AMBIGUOUS"
+            alignment["source_revision"] = runtime_revision
+            alignment["evidence"] = (
+                "The running Space revision matched multiple observed GitHub "
+                "default branches"
+            )
+        elif FULL_SHA_RE.fullmatch(runtime_revision):
+            alignment["status"] = "RUNTIME_SOURCE_UNRESOLVED"
+            alignment["source_revision"] = runtime_revision
+            alignment["runtime_domain"] = runtime_build.get("domain")
+            alignment["receipt_minted"] = runtime_build.get("receipt_minted")
+            alignment["evidence"] = (
+                "The running Space exposed an exact revision that did not match an "
+                "observed GitHub default branch"
+            )
+        elif any(document.get("status") == "UNAVAILABLE" for document in documents):
             alignment["status"] = "EVIDENCE_UNAVAILABLE"
             alignment["evidence"] = "A declared source-binding document could not be read"
         elif len(claims) > 1:

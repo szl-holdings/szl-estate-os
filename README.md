@@ -96,6 +96,13 @@ revision. `PINNED_NON_HEAD`, `REPOSITORY_ONLY`, `MANAGED_UNBOUND`,
 `NOT_DECLARED`, conflicts, and unavailable evidence remain distinct; a managed
 marker alone is never treated as source alignment.
 
+For running non-static Spaces, deep mode also attempts the conventional
+same-host read-only `/api/build-info` route on a Hugging Face-provided
+`*.hf.space` domain. `EXACT_RUNTIME_HEAD` requires `build.state=OBSERVED` and an
+exact runtime revision that uniquely equals one observed GitHub default-branch
+revision. The audit never infers a repository from a service name, and it keeps
+`receipt_minted` separate from source alignment.
+
 Domain audits start from the configured root and discover a bounded set of
 same-origin navigation routes from the live HTML. Fragments collapse to their
 real server path, static assets are excluded, and discovery failures fall back
