@@ -103,6 +103,11 @@ exact runtime revision that uniquely equals one observed GitHub default-branch
 revision. The audit never infers a repository from a service name, and it keeps
 `receipt_minted` separate from source alignment.
 
+When no supported JSON provenance document exists, one strict card fallback is
+allowed: `README.md` must contain exactly one SZL Holdings GitHub repository and
+exactly one 40-character Git revision. Cards with multiple repositories or
+revisions remain unbound rather than relying on editorial guesswork.
+
 Domain audits start from the configured root and discover a bounded set of
 same-origin navigation routes from the live HTML. Fragments collapse to their
 real server path, static assets are excluded, and discovery failures fall back
