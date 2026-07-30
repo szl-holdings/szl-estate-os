@@ -86,6 +86,12 @@ revision, runtime stage, hardware request, and served-domain state. A sleeping
 Space is `UNAVAILABLE`, a running Space is `LIVE`, and a build/runtime/config
 error is `BROKEN`; a published card alone is only `OBSERVED`.
 
+Domain audits start from the configured root and discover a bounded set of
+same-origin navigation routes from the live HTML. Fragments collapse to their
+real server path, static assets are excluded, and discovery failures fall back
+to the declared root. This keeps route evidence aligned with the deployed site
+instead of treating retired, guessed paths as current contracts.
+
 ## API
 
 The local server exposes:

@@ -61,25 +61,29 @@ DEFAULT_DB = DEFAULT_OUTPUT_DIR / "estate.db"
 DEFAULT_EXPORT = DEFAULT_OUTPUT_DIR / "latest_audit.json"
 
 DOMAIN_ROUTES = {
-    "a-11-oy.com": (
-        "/",
-        "/thesis",
-        "/architecture",
-        "/docs",
-        "/kernels",
-        "/benchmarks",
-        "/models",
-        "/estate",
-    ),
-    "a11oy.net": (
-        "/verify",
-        "/observability",
-        "/receipts",
-        "/calibration",
-        "/bench",
-        "/status",
-        "/demo",
-    ),
+    "a-11-oy.com": ("/",),
+    "a11oy.net": ("/",),
+}
+MAX_DISCOVERED_ROUTES_PER_DOMAIN = 40
+NON_NAVIGATION_SUFFIXES = {
+    ".avif",
+    ".css",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".js",
+    ".json",
+    ".map",
+    ".mp3",
+    ".mp4",
+    ".pdf",
+    ".png",
+    ".svg",
+    ".webm",
+    ".webp",
+    ".woff",
+    ".woff2",
 }
 
 PLACEHOLDER_MARKERS = (
@@ -979,12 +983,63 @@ def classify_content(result: HttpResult, text: str) -> tuple[str, str]:
         return "UNAVAILABLE", "RESTRICTED"
     if not 200 <= result.status < 400:
         return "BROKEN", f"HTTP_{result.status}"
-    lowered = text.lower()
-    if any(marker in lowered for marker in PLACEHOLDER_MARKERS):
+    visible = re.sub(r"<[^>]+>", " ", text)
+    visible = html.unescape(re.sub(r"\s+", " ", visible)).strip()
+    title = (content_title(text) or "").lower()
+    leading = visible[:800].lower()
+    placeholder_in_title = any(marker in title for marker in PLACEHOLDER_MARKERS)
+    thin_placeholder = len(visible) < 1_200 and any(
+        marker in leading for marker in PLACEHOLDER_MARKERS
+    )
+    if placeholder_in_title or thin_placeholder:
         return "MODELED", "PLACEHOLDER"
-    if len(re.sub(r"<[^>]+>", "", text).strip()) < 40:
+    if len(visible) < 40:
         return "MODELED", "EMPTY_OR_THIN"
     return "LIVE", "REAL"
+
+
+def discover_domain_routes(
+    base_url: str,
+    hostname: str,
+    timeout: float,
+) -> tuple[set[str], list[str]]:
+    warnings: list[str] = []
+    routes = set(DOMAIN_ROUTES.get(hostname, ("/",)))
+    root_url = base_url.rstrip("/") + "/"
+    result = fetch(
+        root_url,
+        headers={"Accept": "text/html,application/xhtml+xml"},
+        timeout=timeout,
+        max_bytes=750_000,
+    )
+    if not 200 <= result.status < 400:
+        warnings.append(
+            f"{hostname}: route discovery unavailable (HTTP {result.status})"
+        )
+        return routes, warnings
+    text = decode_body(result)
+    candidates = re.findall(
+        r"""href\s*=\s*["']([^"'#]+(?:#[^"']*)?)["']""",
+        text,
+        flags=re.IGNORECASE,
+    )
+    for candidate in candidates:
+        absolute = urllib.parse.urljoin(root_url, html.unescape(candidate))
+        parsed = urllib.parse.urlparse(absolute)
+        if (parsed.hostname or "").lower() != hostname:
+            continue
+        path = parsed.path or "/"
+        suffix = Path(path.rstrip("/")).suffix.lower()
+        if suffix in NON_NAVIGATION_SUFFIXES:
+            continue
+        routes.add(path)
+        if len(routes) >= MAX_DISCOVERED_ROUTES_PER_DOMAIN:
+            warnings.append(
+                f"{hostname}: discovered routes capped at "
+                f"{MAX_DISCOVERED_ROUTES_PER_DOMAIN}"
+            )
+            break
+    return routes, warnings
 
 
 def probe_domain_route(
@@ -1050,14 +1105,31 @@ def collect_domains(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
     errors: list[str] = []
     warnings: list[str] = []
     tasks: list[tuple[str, str, str]] = []
+    declared_route_count = 0
+    discovered_route_count = 0
     for domain in config.domains:
         try:
             base_url, hostname = normalize_domain(domain)
         except ValueError as exc:
             errors.append(sanitize_error(exc))
             continue
-        routes = DOMAIN_ROUTES.get(hostname, ("/",))
-        tasks.extend((base_url, hostname, route) for route in routes)
+        declared_routes = set(DOMAIN_ROUTES.get(hostname, ("/",)))
+        declared_route_count += len(declared_routes)
+        try:
+            routes, discovery_warnings = discover_domain_routes(
+                base_url, hostname, config.timeout
+            )
+            warnings.extend(discovery_warnings)
+        except Exception as exc:
+            routes = declared_routes
+            warnings.append(
+                f"{hostname}: route discovery failed: {sanitize_error(exc)}"
+            )
+        discovered_route_count += max(0, len(routes) - len(declared_routes))
+        tasks.extend(
+            (base_url, hostname, route)
+            for route in sorted(routes, key=lambda value: (value != "/", value))
+        )
 
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         futures = {
@@ -1098,6 +1170,8 @@ def collect_domains(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
         metadata={
             "domains": list(config.domains),
             "route_count": len(tasks),
+            "declared_route_count": declared_route_count,
+            "discovered_route_count": discovered_route_count,
             "broken_count": broken,
             "modeled_count": modeled,
         },
@@ -2590,6 +2664,24 @@ def self_test() -> dict[str, Any]:
         )
         assert classify_content(live_result, live_result.body.decode())[0] == "LIVE"
         checks.append("honesty labels")
+        roadmap_result = dataclasses.replace(
+            live_result,
+            body=(
+                b"<html><title>Evidence registry</title><body>"
+                + b"Measured operational evidence. " * 80
+                + b"A separate capability remains on the roadmap.</body></html>"
+            ),
+        )
+        assert classify_content(roadmap_result, roadmap_result.body.decode())[0] == "LIVE"
+        placeholder_result = dataclasses.replace(
+            live_result,
+            body=b"<html><title>Coming soon</title><body>Work in progress.</body></html>",
+        )
+        assert (
+            classify_content(placeholder_result, placeholder_result.body.decode())[0]
+            == "MODELED"
+        )
+        checks.append("placeholder precision")
         assert hf_truth_label(
             "space", {"runtime": {"stage": "RUNNING"}}
         ) == ("LIVE", "RUNNING")
