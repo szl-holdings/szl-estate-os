@@ -720,7 +720,35 @@ def hf_truth_label(kind: str, item: dict[str, Any]) -> tuple[str, str]:
     return "OBSERVED", publication
 
 
-def collect_hf_space_details(
+HF_PROVENANCE_FILES = (
+    "hf-deploy-manifest.json",
+    "SPACE_PROVENANCE.json",
+    "SZL_ESTATE_MANAGED.json",
+)
+FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def provenance_source(payload: Any) -> tuple[str | None, str | None]:
+    if not isinstance(payload, dict):
+        return None, None
+    repository = payload.get("source_repository")
+    revision = payload.get("source_revision")
+    source = payload.get("source")
+    if isinstance(source, dict):
+        repository = repository or source.get("repository")
+        revision = revision or source.get("commit")
+    normalized_repository = (
+        str(repository).strip().lower() if isinstance(repository, str) else None
+    )
+    normalized_revision = (
+        str(revision).strip().lower() if isinstance(revision, str) else None
+    )
+    return normalized_repository or None, normalized_revision or None
+
+
+def collect_hf_asset_details(
+    kind: str,
+    endpoint: str,
     items: list[Any],
     *,
     headers: dict[str, str],
@@ -740,20 +768,58 @@ def collect_hf_space_details(
 
     def fetch_detail(identity: str) -> tuple[str, dict[str, Any]]:
         encoded_identity = urllib.parse.quote(identity, safe="/")
-        expand = urllib.parse.urlencode(
-            [
-                ("expand[]", "runtime"),
-                ("expand[]", "sha"),
-                ("expand[]", "cardData"),
-            ]
-        )
         payload, _ = get_json(
-            f"https://huggingface.co/api/spaces/{encoded_identity}?{expand}",
+            f"https://huggingface.co/api/{endpoint}/{encoded_identity}",
             headers=headers,
             timeout=timeout,
         )
         if not isinstance(payload, dict):
-            raise SourceError("INVALID_SHAPE", "Space detail response was not an object")
+            raise SourceError("INVALID_SHAPE", f"{kind} detail response was not an object")
+        revision = str(payload.get("sha") or "").strip().lower()
+        siblings = payload.get("siblings")
+        paths = {
+            str(item.get("rfilename") or "")
+            for item in siblings
+            if isinstance(item, dict)
+        } if isinstance(siblings, list) else set()
+        provenance_docs: list[dict[str, Any]] = []
+        prefix = {"model": "", "dataset": "datasets/", "space": "spaces/"}[kind]
+        if FULL_SHA_RE.fullmatch(revision):
+            for filename in HF_PROVENANCE_FILES:
+                if filename not in paths:
+                    continue
+                encoded_filename = urllib.parse.quote(filename, safe="/")
+                try:
+                    document, _ = get_json(
+                        (
+                            f"https://huggingface.co/{prefix}{encoded_identity}/resolve/"
+                            f"{revision}/{encoded_filename}"
+                        ),
+                        headers=headers,
+                        timeout=timeout,
+                    )
+                    repository, source_revision = provenance_source(document)
+                    provenance_docs.append(
+                        {
+                            "file": filename,
+                            "schema": document.get("schema")
+                            if isinstance(document, dict)
+                            else None,
+                            "source_repository": repository,
+                            "source_revision": source_revision,
+                            "status": "OBSERVED",
+                        }
+                    )
+                except SourceError as exc:
+                    provenance_docs.append(
+                        {
+                            "file": filename,
+                            "status": "UNAVAILABLE",
+                            "error": f"{exc.code}: {sanitize_error(exc)}",
+                        }
+                    )
+        payload["_provenance_docs"] = provenance_docs
+        payload["_file_count"] = len(paths)
         return identity, payload
 
     with ThreadPoolExecutor(max_workers=max(1, min(workers, 8))) as executor:
@@ -767,11 +833,11 @@ def collect_hf_space_details(
                 details[detail_identity] = payload
             except SourceError as exc:
                 warnings.append(
-                    f"space detail {identity}: {exc.code}: {sanitize_error(exc)}"
+                    f"{kind} detail {identity}: {exc.code}: {sanitize_error(exc)}"
                 )
             except Exception as exc:
                 warnings.append(
-                    f"space detail {identity}: UNEXPECTED: {sanitize_error(exc)}"
+                    f"{kind} detail {identity}: UNEXPECTED: {sanitize_error(exc)}"
                 )
     return details, warnings
 
@@ -808,15 +874,17 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
         if len(page_data) >= 1000:
             warnings.append(f"{endpoint} may be truncated at 1000 items")
         details_by_identity: dict[str, dict[str, Any]] = {}
-        if kind == "space" and config.deep:
-            details_by_identity, detail_warnings = collect_hf_space_details(
+        if config.deep:
+            details_by_identity, detail_warnings = collect_hf_asset_details(
+                kind,
+                endpoint,
                 page_data,
                 headers=headers,
                 timeout=config.timeout,
                 workers=config.workers,
             )
             warnings.extend(detail_warnings)
-            metadata["space_detail_count"] = len(details_by_identity)
+            metadata[f"{kind}_detail_count"] = len(details_by_identity)
         for item in page_data:
             if not isinstance(item, dict):
                 continue
@@ -829,7 +897,7 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
                 truth_item.update(
                     {
                         key: detail[key]
-                        for key in ("runtime", "sha", "cardData")
+                        for key in ("runtime", "sha", "cardData", "siblings")
                         if key in detail
                     }
                 )
@@ -856,6 +924,10 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
                 "card_data": card_data if isinstance(card_data, dict) else {},
                 "runtime": runtime if isinstance(runtime, dict) else {},
                 "revision": truth_item.get("sha"),
+                "file_count": detail.get("_file_count") if detail else None,
+                "provenance_docs": detail.get("_provenance_docs", [])
+                if detail
+                else [],
             }
             assets.append(
                 Asset(
@@ -1908,6 +1980,105 @@ def audit_status(source_reports: list[SourceReport], asset_count: int) -> str:
     return "PARTIAL"
 
 
+def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
+    github_repositories = {
+        asset.name.lower(): asset
+        for asset in assets
+        if asset.source == "github" and asset.asset_type == "repo"
+    }
+    counts: dict[str, int] = {}
+    for asset in assets:
+        if asset.source != "huggingface" or asset.asset_type not in {
+            "model",
+            "dataset",
+            "space",
+        }:
+            continue
+        documents = asset.metadata.get("provenance_docs")
+        documents = documents if isinstance(documents, list) else []
+        observed_documents = [
+            document
+            for document in documents
+            if isinstance(document, dict) and document.get("status") == "OBSERVED"
+        ]
+        claims = {
+            (
+                str(document.get("source_repository") or "").lower(),
+                str(document.get("source_revision") or "").lower(),
+            )
+            for document in observed_documents
+            if document.get("source_repository") and document.get("source_revision")
+        }
+        repositories = {
+            str(document.get("source_repository") or "").lower()
+            for document in observed_documents
+            if document.get("source_repository")
+        }
+        alignment: dict[str, Any] = {
+            "status": "NOT_DECLARED",
+            "evidence": "No supported source-binding document was observed",
+            "source_repository": None,
+            "source_revision": None,
+            "github_default_revision": None,
+        }
+        if any(document.get("status") == "UNAVAILABLE" for document in documents):
+            alignment["status"] = "EVIDENCE_UNAVAILABLE"
+            alignment["evidence"] = "A declared source-binding document could not be read"
+        elif len(claims) > 1:
+            alignment["status"] = "CONFLICT"
+            alignment["evidence"] = "Source-binding documents disagree"
+        elif len(claims) == 1:
+            repository, revision = next(iter(claims))
+            alignment["source_repository"] = repository
+            alignment["source_revision"] = revision
+            if FULL_SHA_RE.fullmatch(revision) is None:
+                alignment["status"] = "INVALID_REVISION"
+                alignment["evidence"] = "Source revision is not an exact Git SHA"
+            else:
+                github_asset = github_repositories.get(repository)
+                if github_asset is None:
+                    alignment["status"] = "SOURCE_REPOSITORY_UNAVAILABLE"
+                    alignment["evidence"] = "Declared source repository was not observed"
+                else:
+                    default_revision = str(
+                        github_asset.metadata.get("default_branch_sha") or ""
+                    ).lower()
+                    alignment["github_default_revision"] = default_revision or None
+                    if FULL_SHA_RE.fullmatch(default_revision) is None:
+                        alignment["status"] = "SOURCE_HEAD_UNAVAILABLE"
+                        alignment["evidence"] = (
+                            "Declared source repository was observed without an exact "
+                            "default-branch revision"
+                        )
+                    elif default_revision == revision:
+                        alignment["status"] = "EXACT_HEAD"
+                        alignment["evidence"] = (
+                            "Declared Hub source revision equals the observed GitHub "
+                            "default-branch revision"
+                        )
+                    else:
+                        alignment["status"] = "PINNED_NON_HEAD"
+                        alignment["evidence"] = (
+                            "Hub artifact is pinned, but not to the observed GitHub "
+                            "default-branch revision"
+                        )
+        elif repositories:
+            alignment["status"] = "REPOSITORY_ONLY"
+            alignment["source_repository"] = sorted(repositories)[0]
+            alignment["evidence"] = (
+                "A source repository is declared without an exact source revision"
+            )
+        elif observed_documents:
+            alignment["status"] = "MANAGED_UNBOUND"
+            alignment["evidence"] = (
+                "Management provenance exists without an artifact source binding"
+            )
+        asset.metadata["github_alignment"] = alignment
+        status = str(alignment["status"])
+        counts[status] = counts.get(status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{secrets.token_hex(4)}.tmp")
@@ -1953,6 +2124,7 @@ def run_audit(
             reports_by_source[source] = report
     assets = sorted(collected_assets, key=lambda item: item.asset_id)
     source_reports = [reports_by_source[source] for source, _ in collectors]
+    alignment_counts = attach_cross_estate_alignment(assets)
     scorecards, clusters, proposals = build_analysis(audit_id, assets)
     completed_at = utc_now()
     status = audit_status(source_reports, len(assets))
@@ -1988,6 +2160,7 @@ def run_audit(
             "duplicate_cluster_count": len(set(clusters.values())),
             "status_counts": count_by(asset.status_label for asset in assets),
             "type_counts": count_by(asset.asset_type for asset in assets),
+            "github_alignment_counts": alignment_counts,
             "fate_counts": count_by(
                 scorecard.proposed_fate for scorecard in scorecards.values()
             ),
@@ -2540,6 +2713,7 @@ def serve(db_path: Path, host: str, port: int, allow_remote: bool) -> None:
 def self_test() -> dict[str, Any]:
     checks: list[str] = []
     observed = utc_now()
+    source_revision = "a" * 40
     with tempfile.TemporaryDirectory(prefix="szl-estate-os-") as temporary:
         root = Path(temporary)
         db_path = root / "estate.db"
@@ -2568,6 +2742,7 @@ def self_test() -> dict[str, Any]:
                         "secret_scanning": "enabled",
                     },
                     "has_pages": True,
+                    "default_branch_sha": source_revision,
                 },
             ),
             Asset(
@@ -2584,6 +2759,15 @@ def self_test() -> dict[str, Any]:
                     "tags": ["calibration", "governance"],
                     "card_present": True,
                     "card_data": {"license": "apache-2.0", "datasets": ["synthetic"]},
+                    "provenance_docs": [
+                        {
+                            "file": "hf-deploy-manifest.json",
+                            "schema": "szl.hf-deploy-manifest/v1",
+                            "source_repository": "szl-holdings/calibration-kernel",
+                            "source_revision": source_revision,
+                            "status": "OBSERVED",
+                        }
+                    ],
                 },
             ),
             Asset(
@@ -2608,6 +2792,13 @@ def self_test() -> dict[str, Any]:
                 },
             ),
         ]
+        alignment_counts = attach_cross_estate_alignment(assets)
+        assert alignment_counts["EXACT_HEAD"] == 1
+        assert (
+            assets[1].metadata["github_alignment"]["source_revision"]
+            == source_revision
+        )
+        checks.append("cross-estate exact-source alignment")
         scorecards, clusters, proposals = build_analysis(audit_id, assets)
         assert len(set(clusters.values())) == 1
         checks.append("duplicate clustering")
