@@ -724,6 +724,9 @@ HF_PROVENANCE_FILES = (
     "hf-deploy-manifest.json",
     "SPACE_PROVENANCE.json",
     "SZL_ESTATE_MANAGED.json",
+    "a11oy-metadata.json",
+    "publication.json",
+    "publication-manifest.json",
 )
 FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 GITHUB_SOURCE_RE = re.compile(
@@ -736,7 +739,23 @@ EMBEDDED_SHA_RE = re.compile(
 )
 
 
-def provenance_source(payload: Any) -> tuple[str | None, str | None]:
+def normalize_github_repository(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    match = GITHUB_SOURCE_RE.search(candidate)
+    if match:
+        return match.group(1).lower()
+    candidate = candidate.removeprefix("github.com/").strip("/").lower()
+    if re.fullmatch(r"szl-holdings/[a-z0-9_.-]+", candidate):
+        return candidate
+    return None
+
+
+def provenance_source(
+    payload: Any,
+    filename: str | None = None,
+) -> tuple[str | None, str | None]:
     if not isinstance(payload, dict):
         return None, None
     repository = payload.get("source_repository")
@@ -744,10 +763,21 @@ def provenance_source(payload: Any) -> tuple[str | None, str | None]:
     source = payload.get("source")
     if isinstance(source, dict):
         repository = repository or source.get("repository")
-        revision = revision or source.get("commit")
-    normalized_repository = (
-        str(repository).strip().lower() if isinstance(repository, str) else None
-    )
+        revision = (
+            revision
+            or source.get("commit")
+            or source.get("mergedCommit")
+            or source.get("revision")
+        )
+    if filename == "a11oy-metadata.json":
+        repository = repository or payload.get("sourceRepository")
+        revision = revision or payload.get("sourceCommit")
+    if filename == "publication-manifest.json":
+        managed_by = payload.get("managed_by")
+        if not repository and isinstance(managed_by, str):
+            repository = managed_by.split(":", 1)[0]
+        revision = revision or payload.get("source_revision")
+    normalized_repository = normalize_github_repository(repository)
     normalized_revision = (
         str(revision).strip().lower() if isinstance(revision, str) else None
     )
@@ -814,7 +844,7 @@ def collect_hf_asset_details(
                         headers=headers,
                         timeout=timeout,
                     )
-                    repository, source_revision = provenance_source(document)
+                    repository, source_revision = provenance_source(document, filename)
                     provenance_docs.append(
                         {
                             "file": filename,
@@ -823,6 +853,11 @@ def collect_hf_asset_details(
                             else None,
                             "source_repository": repository,
                             "source_revision": source_revision,
+                            "binding_kind": (
+                                "MANAGEMENT_ONLY"
+                                if filename == "SZL_ESTATE_MANAGED.json"
+                                else "ARTIFACT_SOURCE"
+                            ),
                             "status": "OBSERVED",
                         }
                     )
@@ -856,9 +891,11 @@ def collect_hf_asset_details(
                                 "schema": "szl.strict-readme-source/v1",
                                 "source_repository": repository,
                                 "source_revision": source_revision,
+                                "binding_kind": "ARTIFACT_SOURCE",
                                 "status": "OBSERVED",
                             }
                         )
+        runtime_source: dict[str, Any] | None = None
         runtime_build: dict[str, Any] | None = None
         runtime = payload.get("runtime")
         if kind == "space" and isinstance(runtime, dict):
@@ -874,6 +911,45 @@ def collect_hf_asset_details(
                 )
             ] if isinstance(domains, list) else []
             for domain in ready_domains:
+                if runtime_source is None:
+                    try:
+                        source_payload, _ = get_json(
+                            f"https://{domain}/.well-known/szl-source.json",
+                            headers={
+                                "Accept": "application/json",
+                                "Cache-Control": "no-cache, no-store, max-age=0",
+                                "Pragma": "no-cache",
+                            },
+                            timeout=timeout,
+                        )
+                        source_repository, source_revision = provenance_source(
+                            source_payload
+                        )
+                        if source_repository or source_revision:
+                            source_claims = source_payload.get("claims")
+                            source_claims = (
+                                source_claims
+                                if isinstance(source_claims, dict)
+                                else {}
+                            )
+                            source = source_payload.get("source")
+                            source = source if isinstance(source, dict) else {}
+                            runtime_source = {
+                                "status": "OBSERVED",
+                                "domain": domain,
+                                "source_repository": source_repository,
+                                "source_revision": source_revision,
+                                "relation": source.get("relation"),
+                                "alignment_state": source_payload.get(
+                                    "alignment_state"
+                                ),
+                                "github_parity": source_claims.get("github_parity"),
+                                "reproducible_build": source_claims.get(
+                                    "reproducible_build"
+                                ),
+                            }
+                    except SourceError:
+                        pass
                 try:
                     build_payload, _ = get_json(
                         (
@@ -906,6 +982,7 @@ def collect_hf_asset_details(
         payload["_provenance_docs"] = provenance_docs
         payload["_file_count"] = len(paths)
         payload["_runtime_build"] = runtime_build
+        payload["_runtime_source"] = runtime_source
         return identity, payload
 
     with ThreadPoolExecutor(max_workers=max(1, min(workers, 8))) as executor:
@@ -1015,6 +1092,7 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
                 if detail
                 else [],
                 "runtime_build": detail.get("_runtime_build") if detail else None,
+                "runtime_source": detail.get("_runtime_source") if detail else None,
             }
             assets.append(
                 Asset(
@@ -2093,17 +2171,22 @@ def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
             for document in documents
             if isinstance(document, dict) and document.get("status") == "OBSERVED"
         ]
+        artifact_source_documents = [
+            document
+            for document in observed_documents
+            if document.get("binding_kind") != "MANAGEMENT_ONLY"
+        ]
         claims = {
             (
                 str(document.get("source_repository") or "").lower(),
                 str(document.get("source_revision") or "").lower(),
             )
-            for document in observed_documents
+            for document in artifact_source_documents
             if document.get("source_repository") and document.get("source_revision")
         }
         repositories = {
             str(document.get("source_repository") or "").lower()
-            for document in observed_documents
+            for document in artifact_source_documents
             if document.get("source_repository")
         }
         alignment: dict[str, Any] = {
@@ -2114,6 +2197,7 @@ def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
             "github_default_revision": None,
         }
         runtime_build = asset.metadata.get("runtime_build")
+        runtime_source = asset.metadata.get("runtime_source")
         runtime_revision = (
             str(runtime_build.get("revision") or "").lower()
             if isinstance(runtime_build, dict)
@@ -2205,6 +2289,38 @@ def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
             alignment["evidence"] = (
                 "A source repository is declared without an exact source revision"
             )
+        elif (
+            isinstance(runtime_source, dict)
+            and runtime_source.get("status") == "OBSERVED"
+            and (
+                runtime_source.get("source_repository")
+                or runtime_source.get("source_revision")
+            )
+        ):
+            repository = str(
+                runtime_source.get("source_repository") or ""
+            ).lower()
+            revision = str(runtime_source.get("source_revision") or "").lower()
+            alignment["status"] = "SOURCE_REFERENCE_ONLY"
+            alignment["source_repository"] = repository or None
+            alignment["source_revision"] = revision or None
+            alignment["runtime_domain"] = runtime_source.get("domain")
+            alignment["source_relation"] = runtime_source.get("relation")
+            alignment["declared_alignment_state"] = runtime_source.get(
+                "alignment_state"
+            )
+            alignment["evidence"] = (
+                "The running Space exposes a structural source reference, not an "
+                "artifact-equivalence or reproducible-build claim"
+            )
+            github_asset = github_repositories.get(repository)
+            if github_asset is not None:
+                alignment["github_default_revision"] = (
+                    str(
+                        github_asset.metadata.get("default_branch_sha") or ""
+                    ).lower()
+                    or None
+                )
         elif observed_documents:
             alignment["status"] = "MANAGED_UNBOUND"
             alignment["evidence"] = (
@@ -2948,7 +3064,60 @@ def self_test() -> dict[str, Any]:
             )
             is None
         )
+        assert provenance_source(
+            {
+                "sourceRepository": (
+                    "https://github.com/szl-holdings/calibration-kernel"
+                ),
+                "sourceCommit": source_revision,
+            },
+            "a11oy-metadata.json",
+        ) == ("szl-holdings/calibration-kernel", source_revision)
+        assert provenance_source(
+            {
+                "source": {
+                    "repository": (
+                        "https://github.com/szl-holdings/calibration-kernel"
+                    ),
+                    "mergedCommit": source_revision,
+                }
+            },
+            "publication.json",
+        ) == ("szl-holdings/calibration-kernel", source_revision)
+        assert provenance_source(
+            {
+                "managed_by": "szl-holdings/calibration-kernel:deploy/hf",
+                "source_revision": source_revision,
+            },
+            "publication-manifest.json",
+        ) == ("szl-holdings/calibration-kernel", source_revision)
         checks.append("strict README source binding")
+        source_reference_asset = Asset(
+            asset_id="huggingface:space:szlholdings/calibration-reference",
+            asset_type="space",
+            source="huggingface",
+            name="SZLHOLDINGS/calibration-reference",
+            url="https://huggingface.co/spaces/SZLHOLDINGS/calibration-reference",
+            status_label="LIVE",
+            operational_status="RUNNING",
+            observed_at=observed,
+            metadata={
+                "provenance_docs": [],
+                "runtime_source": {
+                    "status": "OBSERVED",
+                    "domain": "calibration-reference.hf.space",
+                    "source_repository": "szl-holdings/calibration-kernel",
+                    "source_revision": source_revision,
+                    "relation": "reference-only",
+                    "alignment_state": "NOT_A_DIRECT_MIRROR",
+                },
+            },
+        )
+        reference_counts = attach_cross_estate_alignment(
+            [assets[0], source_reference_asset]
+        )
+        assert reference_counts["SOURCE_REFERENCE_ONLY"] == 1
+        checks.append("runtime source-reference boundary")
         scorecards, clusters, proposals = build_analysis(audit_id, assets)
         assert len(set(clusters.values())) == 1
         checks.append("duplicate clustering")

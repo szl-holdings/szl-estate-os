@@ -89,7 +89,10 @@ error is `BROKEN`; a published card alone is only `OBSERVED`.
 Deep mode also queries exact model, dataset, and Space revisions and reads only
 the supported source-binding documents present at those immutable revisions:
 `hf-deploy-manifest.json`, `SPACE_PROVENANCE.json`, and
-`SZL_ESTATE_MANAGED.json`. Each Hub repository receives a
+`SZL_ESTATE_MANAGED.json`, plus the repository-owned publication contracts
+`a11oy-metadata.json`, `publication.json`, and `publication-manifest.json`.
+Management markers remain management-only and cannot establish artifact
+equivalence. Each Hub repository receives a
 `metadata.github_alignment` result. `EXACT_HEAD` requires an exact 40-character
 source revision that equals the GitHub repository's observed default-branch
 revision. `PINNED_NON_HEAD`, `REPOSITORY_ONLY`, `MANAGED_UNBOUND`,
@@ -102,6 +105,11 @@ same-host read-only `/api/build-info` route on a Hugging Face-provided
 exact runtime revision that uniquely equals one observed GitHub default-branch
 revision. The audit never infers a repository from a service name, and it keeps
 `receipt_minted` separate from source alignment.
+
+The conventional read-only `/.well-known/szl-source.json` route is also
+inspected on running Spaces. Unsigned structural declarations and explicit
+reference relationships are reported as `SOURCE_REFERENCE_ONLY`; they are
+never promoted to source parity or a reproducible-build claim.
 
 When no supported JSON provenance document exists, one strict card fallback is
 allowed: `README.md` must contain exactly one SZL Holdings GitHub repository and
