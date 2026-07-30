@@ -726,6 +726,14 @@ HF_PROVENANCE_FILES = (
     "SZL_ESTATE_MANAGED.json",
 )
 FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+GITHUB_SOURCE_RE = re.compile(
+    r"https?://github\.com/(szl-holdings/[A-Za-z0-9_.-]+)(?:/|\b)",
+    re.IGNORECASE,
+)
+EMBEDDED_SHA_RE = re.compile(
+    r"(?<![0-9a-f])([0-9a-f]{40})(?![0-9a-f])",
+    re.IGNORECASE,
+)
 
 
 def provenance_source(payload: Any) -> tuple[str | None, str | None]:
@@ -744,6 +752,14 @@ def provenance_source(payload: Any) -> tuple[str | None, str | None]:
         str(revision).strip().lower() if isinstance(revision, str) else None
     )
     return normalized_repository or None, normalized_revision or None
+
+
+def strict_readme_source_binding(text: str) -> tuple[str, str] | None:
+    repositories = {match.lower() for match in GITHUB_SOURCE_RE.findall(text)}
+    revisions = {match.lower() for match in EMBEDDED_SHA_RE.findall(text)}
+    if len(repositories) == 1 and len(revisions) == 1:
+        return next(iter(repositories)), next(iter(revisions))
+    return None
 
 
 def collect_hf_asset_details(
@@ -818,6 +834,31 @@ def collect_hf_asset_details(
                             "error": f"{exc.code}: {sanitize_error(exc)}",
                         }
                     )
+            if not provenance_docs and "README.md" in paths:
+                readme_url = (
+                    f"https://huggingface.co/{prefix}{encoded_identity}/resolve/"
+                    f"{revision}/README.md"
+                )
+                readme_result = fetch(
+                    readme_url,
+                    headers=headers,
+                    timeout=timeout,
+                    max_bytes=512_000,
+                )
+                if 200 <= readme_result.status < 300 and not readme_result.truncated:
+                    readme_text = readme_result.body.decode("utf-8", errors="replace")
+                    readme_binding = strict_readme_source_binding(readme_text)
+                    if readme_binding is not None:
+                        repository, source_revision = readme_binding
+                        provenance_docs.append(
+                            {
+                                "file": "README.md",
+                                "schema": "szl.strict-readme-source/v1",
+                                "source_repository": repository,
+                                "source_revision": source_revision,
+                                "status": "OBSERVED",
+                            }
+                        )
         runtime_build: dict[str, Any] | None = None
         runtime = payload.get("runtime")
         if kind == "space" and isinstance(runtime, dict):
@@ -2895,6 +2936,19 @@ def self_test() -> dict[str, Any]:
             == source_revision
         )
         checks.append("cross-estate exact-source alignment")
+        assert strict_readme_source_binding(
+            "Source: https://github.com/szl-holdings/calibration-kernel\n"
+            f"Source revision: `{source_revision}`"
+        ) == ("szl-holdings/calibration-kernel", source_revision)
+        assert (
+            strict_readme_source_binding(
+                "Sources: https://github.com/szl-holdings/one and "
+                "https://github.com/szl-holdings/two\n"
+                f"Revision: {source_revision}"
+            )
+            is None
+        )
+        checks.append("strict README source binding")
         scorecards, clusters, proposals = build_analysis(audit_id, assets)
         assert len(set(clusters.values())) == 1
         checks.append("duplicate clustering")
