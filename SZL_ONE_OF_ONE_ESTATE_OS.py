@@ -47,7 +47,7 @@ from typing import Any, Iterable
 
 
 APP_NAME = "SZL_ONE_OF_ONE_ESTATE_OS"
-APP_VERSION = "2026.07.29"
+APP_VERSION = "2026.07.30"
 USER_AGENT = f"{APP_NAME}/{APP_VERSION} (+https://a-11-oy.com)"
 DEFAULT_GITHUB_ORG = "szl-holdings"
 DEFAULT_HF_ORG = "SZLHOLDINGS"
@@ -61,25 +61,29 @@ DEFAULT_DB = DEFAULT_OUTPUT_DIR / "estate.db"
 DEFAULT_EXPORT = DEFAULT_OUTPUT_DIR / "latest_audit.json"
 
 DOMAIN_ROUTES = {
-    "a-11-oy.com": (
-        "/",
-        "/thesis",
-        "/architecture",
-        "/docs",
-        "/kernels",
-        "/benchmarks",
-        "/models",
-        "/estate",
-    ),
-    "a11oy.net": (
-        "/verify",
-        "/observability",
-        "/receipts",
-        "/calibration",
-        "/bench",
-        "/status",
-        "/demo",
-    ),
+    "a-11-oy.com": ("/",),
+    "a11oy.net": ("/",),
+}
+MAX_DISCOVERED_ROUTES_PER_DOMAIN = 40
+NON_NAVIGATION_SUFFIXES = {
+    ".avif",
+    ".css",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".js",
+    ".json",
+    ".map",
+    ".mp3",
+    ".mp4",
+    ".pdf",
+    ".png",
+    ".svg",
+    ".webm",
+    ".webp",
+    ".woff",
+    ".woff2",
 }
 
 PLACEHOLDER_MARKERS = (
@@ -716,6 +720,62 @@ def hf_truth_label(kind: str, item: dict[str, Any]) -> tuple[str, str]:
     return "OBSERVED", publication
 
 
+def collect_hf_space_details(
+    items: list[Any],
+    *,
+    headers: dict[str, str],
+    timeout: float,
+    workers: int,
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    identities = sorted(
+        {
+            identity
+            for item in items
+            if isinstance(item, dict)
+            if (identity := hf_asset_identity("space", item))
+        }
+    )
+    details: dict[str, dict[str, Any]] = {}
+    warnings: list[str] = []
+
+    def fetch_detail(identity: str) -> tuple[str, dict[str, Any]]:
+        encoded_identity = urllib.parse.quote(identity, safe="/")
+        expand = urllib.parse.urlencode(
+            [
+                ("expand[]", "runtime"),
+                ("expand[]", "sha"),
+                ("expand[]", "cardData"),
+            ]
+        )
+        payload, _ = get_json(
+            f"https://huggingface.co/api/spaces/{encoded_identity}?{expand}",
+            headers=headers,
+            timeout=timeout,
+        )
+        if not isinstance(payload, dict):
+            raise SourceError("INVALID_SHAPE", "Space detail response was not an object")
+        return identity, payload
+
+    with ThreadPoolExecutor(max_workers=max(1, min(workers, 8))) as executor:
+        futures = {
+            executor.submit(fetch_detail, identity): identity for identity in identities
+        }
+        for future in as_completed(futures):
+            identity = futures[future]
+            try:
+                detail_identity, payload = future.result()
+                details[detail_identity] = payload
+            except SourceError as exc:
+                warnings.append(
+                    f"space detail {identity}: {exc.code}: {sanitize_error(exc)}"
+                )
+            except Exception as exc:
+                warnings.append(
+                    f"space detail {identity}: UNEXPECTED: {sanitize_error(exc)}"
+                )
+    return details, warnings
+
+
 def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
     started = time.perf_counter()
     observed = utc_now()
@@ -747,20 +807,40 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
             continue
         if len(page_data) >= 1000:
             warnings.append(f"{endpoint} may be truncated at 1000 items")
+        details_by_identity: dict[str, dict[str, Any]] = {}
+        if kind == "space" and config.deep:
+            details_by_identity, detail_warnings = collect_hf_space_details(
+                page_data,
+                headers=headers,
+                timeout=config.timeout,
+                workers=config.workers,
+            )
+            warnings.extend(detail_warnings)
+            metadata["space_detail_count"] = len(details_by_identity)
         for item in page_data:
             if not isinstance(item, dict):
                 continue
             identity = hf_asset_identity(kind, item)
             if not identity:
                 continue
-            status_label, operational_status = hf_truth_label(kind, item)
+            detail = details_by_identity.get(identity, {})
+            truth_item = dict(item)
+            if detail:
+                truth_item.update(
+                    {
+                        key: detail[key]
+                        for key in ("runtime", "sha", "cardData")
+                        if key in detail
+                    }
+                )
+            status_label, operational_status = hf_truth_label(kind, truth_item)
             url_prefix = {
                 "model": "",
                 "dataset": "datasets/",
                 "space": "spaces/",
             }[kind]
-            card_data = item.get("cardData")
-            runtime = item.get("runtime")
+            card_data = truth_item.get("cardData")
+            runtime = truth_item.get("runtime")
             asset_metadata = {
                 "private": item.get("private"),
                 "author": item.get("author"),
@@ -775,6 +855,7 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
                 "card_present": isinstance(card_data, dict) and bool(card_data),
                 "card_data": card_data if isinstance(card_data, dict) else {},
                 "runtime": runtime if isinstance(runtime, dict) else {},
+                "revision": truth_item.get("sha"),
             }
             assets.append(
                 Asset(
@@ -902,12 +983,63 @@ def classify_content(result: HttpResult, text: str) -> tuple[str, str]:
         return "UNAVAILABLE", "RESTRICTED"
     if not 200 <= result.status < 400:
         return "BROKEN", f"HTTP_{result.status}"
-    lowered = text.lower()
-    if any(marker in lowered for marker in PLACEHOLDER_MARKERS):
+    visible = re.sub(r"<[^>]+>", " ", text)
+    visible = html.unescape(re.sub(r"\s+", " ", visible)).strip()
+    title = (content_title(text) or "").lower()
+    leading = visible[:800].lower()
+    placeholder_in_title = any(marker in title for marker in PLACEHOLDER_MARKERS)
+    thin_placeholder = len(visible) < 1_200 and any(
+        marker in leading for marker in PLACEHOLDER_MARKERS
+    )
+    if placeholder_in_title or thin_placeholder:
         return "MODELED", "PLACEHOLDER"
-    if len(re.sub(r"<[^>]+>", "", text).strip()) < 40:
+    if len(visible) < 40:
         return "MODELED", "EMPTY_OR_THIN"
     return "LIVE", "REAL"
+
+
+def discover_domain_routes(
+    base_url: str,
+    hostname: str,
+    timeout: float,
+) -> tuple[set[str], list[str]]:
+    warnings: list[str] = []
+    routes = set(DOMAIN_ROUTES.get(hostname, ("/",)))
+    root_url = base_url.rstrip("/") + "/"
+    result = fetch(
+        root_url,
+        headers={"Accept": "text/html,application/xhtml+xml"},
+        timeout=timeout,
+        max_bytes=750_000,
+    )
+    if not 200 <= result.status < 400:
+        warnings.append(
+            f"{hostname}: route discovery unavailable (HTTP {result.status})"
+        )
+        return routes, warnings
+    text = decode_body(result)
+    candidates = re.findall(
+        r"""href\s*=\s*["']([^"'#]+(?:#[^"']*)?)["']""",
+        text,
+        flags=re.IGNORECASE,
+    )
+    for candidate in candidates:
+        absolute = urllib.parse.urljoin(root_url, html.unescape(candidate))
+        parsed = urllib.parse.urlparse(absolute)
+        if (parsed.hostname or "").lower() != hostname:
+            continue
+        path = parsed.path or "/"
+        suffix = Path(path.rstrip("/")).suffix.lower()
+        if suffix in NON_NAVIGATION_SUFFIXES:
+            continue
+        routes.add(path)
+        if len(routes) >= MAX_DISCOVERED_ROUTES_PER_DOMAIN:
+            warnings.append(
+                f"{hostname}: discovered routes capped at "
+                f"{MAX_DISCOVERED_ROUTES_PER_DOMAIN}"
+            )
+            break
+    return routes, warnings
 
 
 def probe_domain_route(
@@ -973,14 +1105,31 @@ def collect_domains(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
     errors: list[str] = []
     warnings: list[str] = []
     tasks: list[tuple[str, str, str]] = []
+    declared_route_count = 0
+    discovered_route_count = 0
     for domain in config.domains:
         try:
             base_url, hostname = normalize_domain(domain)
         except ValueError as exc:
             errors.append(sanitize_error(exc))
             continue
-        routes = DOMAIN_ROUTES.get(hostname, ("/",))
-        tasks.extend((base_url, hostname, route) for route in routes)
+        declared_routes = set(DOMAIN_ROUTES.get(hostname, ("/",)))
+        declared_route_count += len(declared_routes)
+        try:
+            routes, discovery_warnings = discover_domain_routes(
+                base_url, hostname, config.timeout
+            )
+            warnings.extend(discovery_warnings)
+        except Exception as exc:
+            routes = declared_routes
+            warnings.append(
+                f"{hostname}: route discovery failed: {sanitize_error(exc)}"
+            )
+        discovered_route_count += max(0, len(routes) - len(declared_routes))
+        tasks.extend(
+            (base_url, hostname, route)
+            for route in sorted(routes, key=lambda value: (value != "/", value))
+        )
 
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         futures = {
@@ -1021,6 +1170,8 @@ def collect_domains(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
         metadata={
             "domains": list(config.domains),
             "route_count": len(tasks),
+            "declared_route_count": declared_route_count,
+            "discovered_route_count": discovered_route_count,
             "broken_count": broken,
             "modeled_count": modeled,
         },
@@ -2513,6 +2664,34 @@ def self_test() -> dict[str, Any]:
         )
         assert classify_content(live_result, live_result.body.decode())[0] == "LIVE"
         checks.append("honesty labels")
+        roadmap_result = dataclasses.replace(
+            live_result,
+            body=(
+                b"<html><title>Evidence registry</title><body>"
+                + b"Measured operational evidence. " * 80
+                + b"A separate capability remains on the roadmap.</body></html>"
+            ),
+        )
+        assert classify_content(roadmap_result, roadmap_result.body.decode())[0] == "LIVE"
+        placeholder_result = dataclasses.replace(
+            live_result,
+            body=b"<html><title>Coming soon</title><body>Work in progress.</body></html>",
+        )
+        assert (
+            classify_content(placeholder_result, placeholder_result.body.decode())[0]
+            == "MODELED"
+        )
+        checks.append("placeholder precision")
+        assert hf_truth_label(
+            "space", {"runtime": {"stage": "RUNNING"}}
+        ) == ("LIVE", "RUNNING")
+        assert hf_truth_label(
+            "space", {"runtime": {"stage": "BUILD_ERROR"}}
+        ) == ("BROKEN", "BUILD_ERROR")
+        assert hf_truth_label(
+            "space", {"runtime": {"stage": "SLEEPING"}}
+        ) == ("UNAVAILABLE", "SLEEPING")
+        checks.append("Hugging Face runtime truth labels")
         try:
             normalize_domain("https://operator:secret@example.test")
         except ValueError as exc:
