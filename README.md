@@ -81,6 +81,10 @@ Useful audit options:
 Deep GitHub checks require a token and query default-branch protection plus the
 repository community profile. Public mode intentionally does not burn the
 unauthenticated rate limit pretending to have privileged governance evidence.
+Deep Hugging Face checks query every Space detail endpoint and record its exact
+revision, runtime stage, hardware request, and served-domain state. A sleeping
+Space is `UNAVAILABLE`, a running Space is `LIVE`, and a build/runtime/config
+error is `BROKEN`; a published card alone is only `OBSERVED`.
 
 ## API
 
