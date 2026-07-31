@@ -723,6 +723,7 @@ def hf_truth_label(kind: str, item: dict[str, Any]) -> tuple[str, str]:
 HF_PROVENANCE_FILES = (
     "hf-deploy-manifest.json",
     "SPACE_PROVENANCE.json",
+    "DATASET_PROVENANCE.json",
     "SZL_ESTATE_MANAGED.json",
     "a11oy-metadata.json",
     "publication.json",
@@ -3083,6 +3084,13 @@ def self_test() -> dict[str, Any]:
                 }
             },
             "publication.json",
+        ) == ("szl-holdings/calibration-kernel", source_revision)
+        assert provenance_source(
+            {
+                "source_repository": "szl-holdings/calibration-kernel",
+                "source_revision": source_revision,
+            },
+            "DATASET_PROVENANCE.json",
         ) == ("szl-holdings/calibration-kernel", source_revision)
         assert provenance_source(
             {
