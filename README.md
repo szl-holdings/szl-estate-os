@@ -89,7 +89,8 @@ error is `BROKEN`; a published card alone is only `OBSERVED`.
 Deep mode also queries exact model, dataset, and Space revisions and reads only
 the supported source-binding documents present at those immutable revisions:
 `hf-deploy-manifest.json`, `SPACE_PROVENANCE.json`, and
-`SZL_ESTATE_MANAGED.json`, plus the repository-owned publication contracts
+`DATASET_PROVENANCE.json`, `SZL_ESTATE_MANAGED.json`, plus the
+repository-owned publication contracts
 `a11oy-metadata.json`, `publication.json`, and `publication-manifest.json`.
 Management markers remain management-only and cannot establish artifact
 equivalence. Each Hub repository receives a
