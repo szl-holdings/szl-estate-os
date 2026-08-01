@@ -6,6 +6,13 @@ evidence-aware scores, clusters probable duplicates, records gated fate
 proposals, maintains SQLite history, emits hash-chained receipts, and serves a
 local dashboard/API.
 
+Each audit also runs the One-of-One Operating Fabric: an evidence-bound
+defensive control evaluation across cybersecurity, product, engineering,
+data/AI, operations, people, and governance. It persists lane assessments,
+control findings, and a prioritized action queue. Every action is
+`PROPOSE_ONLY`, requires approval, and contains no exploit or autonomous
+mutation path.
+
 The implementation is deliberately read-only. It does not archive repositories,
 merge assets, alter branch protections, modify Hugging Face resources, update
 DNS, or deploy domains. Those are high-risk governance actions; this system
@@ -19,6 +26,7 @@ From this directory:
 $python = "C:\Users\steph\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py self-test
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py audit
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py operating-report
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py serve
 ```
 
@@ -63,6 +71,8 @@ audit              Live read-only GitHub, Hugging Face, and domain audit
 status             Latest audit and receipt-chain status
 export             Export the latest SQLite projection to JSON
 verify-receipts    Verify payload hashes, chain links, and available signatures
+operating-report   Seven-lane controls, evidence, blockers, and action queue
+evidence-template  Template for current external-only control evidence
 serve              Dashboard, JSON API, health, readiness, and metrics
 ```
 
@@ -77,6 +87,40 @@ Useful audit options:
   --deep `
   --timeout 15
 ```
+
+### Seven-lane operating fabric
+
+The fabric evaluates controls from the same observed audit snapshot. Examples
+include organization MFA, repository secret scanning and branch protection,
+web security headers, live customer trust routes, Hub-to-source provenance,
+source availability, proposal gating, and receipt integrity. Lane scores never
+convert missing evidence into a pass. `readiness_to_claim_fully_operational`
+stays `BLOCKED` until every critical control is directly measured and passing.
+
+Filter the latest projection without rerunning the network audit:
+
+```powershell
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py operating-report --lane cybersecurity
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py operating-report --state FAIL `
+  --output .\outputs\failed-controls.json
+```
+
+Restore drills, security training, and on-call ownership cannot be inferred
+from repository or website metadata. Generate a bounded evidence template,
+replace its examples with real references and current expiry times, then admit
+it during an audit:
+
+```powershell
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py evidence-template `
+  --output .\outputs\operating-evidence.json
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py audit --deep `
+  --evidence .\outputs\operating-evidence.json
+```
+
+External assertions are labeled `ATTESTED`, not `MEASURED`, and therefore do
+not make a lane green by themselves. Only the three external-only control IDs
+are accepted; the evidence bundle cannot override directly observed cyber,
+product, engineering, data/AI, or governance findings.
 
 Deep GitHub checks require a token and query default-branch protection plus the
 repository community profile. Public mode intentionally does not burn the
@@ -134,6 +178,8 @@ GET /readyz                   Database and latest-audit readiness
 GET /api/v1/status            Latest audit, source scopes, counts, receipt state
 GET /api/v1/assets            Latest assets; filters: type, status, limit
 GET /api/v1/proposals         Gated proposals; filters: status, limit
+GET /api/v1/operating-fabric  Lanes, controls, and proposal-only action queue;
+                              filters: lane, state
 GET /api/v1/receipts          Receipt metadata and chain verification
 GET /metrics                  Prometheus text exposition
 ```
@@ -147,6 +193,8 @@ Loopback is the safe default. A non-loopback bind requires both
 - `MEASURED`: retrieved and evaluated during the audit.
 - `PARTIAL`: useful evidence was retrieved, but at least one source or scope is
   incomplete.
+- `ATTESTED`: a current operator assertion was admitted with source, reference,
+  owner, expiry, and bundle hash; it was not directly measured by Estate OS.
 - `OBSERVED`: the asset exists in a live inventory, but runtime availability was
   not proved.
 - `LIVE`: the specific route or runtime state was directly observed live.
