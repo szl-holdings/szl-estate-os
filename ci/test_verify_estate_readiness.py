@@ -396,6 +396,12 @@ class ReadinessTests(unittest.TestCase):
         incomplete_sources["baseline"]["source_minimums"].pop("domains")
         incomplete_headers = manifest()
         incomplete_headers["baseline"]["required_security_headers"] = []
+        malformed_prohibited_statuses = manifest()
+        malformed_prohibited_statuses["baseline"]["prohibited_status_labels"] = [
+            {}
+        ]
+        malformed_headers = manifest()
+        malformed_headers["baseline"]["required_security_headers"] = [{}]
 
         for contract in (
             missing_baseline,
@@ -404,6 +410,8 @@ class ReadinessTests(unittest.TestCase):
             empty_critical_assets,
             incomplete_sources,
             incomplete_headers,
+            malformed_prohibited_statuses,
+            malformed_headers,
         ):
             with self.subTest(contract=contract):
                 report = verify(audit(), contract, "baseline")

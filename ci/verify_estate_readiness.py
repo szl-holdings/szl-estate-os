@@ -1226,7 +1226,13 @@ def verify(
 
     configured_prohibited = baseline.get("prohibited_status_labels")
     prohibited = (
-        set(configured_prohibited) if isinstance(configured_prohibited, list) else set()
+        {
+            value
+            for value in configured_prohibited
+            if isinstance(value, str) and value
+        }
+        if isinstance(configured_prohibited, list)
+        else set()
     )
     prohibited_assets = [
         item
@@ -1246,6 +1252,16 @@ def verify(
     configured_critical_assets = manifest.get("critical_assets")
     critical_assets = (
         configured_critical_assets if isinstance(configured_critical_assets, list) else []
+    )
+    configured_security_headers = baseline.get("required_security_headers")
+    required_security_headers = (
+        [
+            value
+            for value in configured_security_headers
+            if isinstance(value, str) and value
+        ]
+        if isinstance(configured_security_headers, list)
+        else []
     )
     for contract in critical_assets:
         if not isinstance(contract, dict) or not contract.get("asset_id"):
@@ -1276,10 +1292,14 @@ def verify(
         checks.append(result(f"asset.{asset_id}", state, detail))
 
         if asset_id.startswith("domain:route:"):
-            headers = (asset.get("metadata") or {}).get("security_headers") or {}
+            metadata = asset.get("metadata")
+            configured_headers = (
+                metadata.get("security_headers") if isinstance(metadata, dict) else None
+            )
+            headers = configured_headers if isinstance(configured_headers, dict) else {}
             missing = [
                 header
-                for header in baseline.get("required_security_headers") or []
+                for header in required_security_headers
                 if not headers.get(header)
             ]
             checks.append(
