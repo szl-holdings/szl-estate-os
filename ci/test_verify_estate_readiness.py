@@ -854,6 +854,40 @@ class ReadinessTests(unittest.TestCase):
             check(report, f"production.requirement.{requirement}")["detail"],
         )
 
+    def test_github_required_status_cannot_override_operational_gate(self) -> None:
+        contract = single_deployment_manifest()
+        critical_assets = contract["critical_assets"]
+        assert isinstance(critical_assets, list)
+        repository_contract = next(
+            asset
+            for asset in critical_assets
+            if isinstance(asset, dict)
+            and asset.get("asset_id") == PRIMARY_REPOSITORY_ASSET_ID
+        )
+        repository_contract["required_status"] = "ARCHIVED"
+
+        value = audit()
+        add_audited_deployment(value)
+        assets = value["assets"]
+        assert isinstance(assets, list)
+        repository = next(
+            asset
+            for asset in assets
+            if isinstance(asset, dict)
+            and asset.get("asset_id") == PRIMARY_REPOSITORY_ASSET_ID
+        )
+        repository["status_label"] = "ARCHIVED"
+        repository["operational_status"] = "DISABLED"
+        report = verify(value, contract, "baseline")
+
+        self.assertEqual(
+            check(report, "manifest.baseline_contract")["state"], "FAIL"
+        )
+        repository_check = check(report, f"asset.{PRIMARY_REPOSITORY_ASSET_ID}")
+        self.assertEqual(repository_check["state"], "FAIL")
+        self.assertIn("status=ARCHIVED", repository_check["detail"])
+        self.assertIn("operational_status=DISABLED", repository_check["detail"])
+
     def test_space_witness_must_match_verified_runtime_source(self) -> None:
         requirement = "credential_backed_deployment_witness"
         target_asset_id = "huggingface:space:szlholdings/a11oy"

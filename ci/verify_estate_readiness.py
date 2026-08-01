@@ -277,14 +277,22 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
                 len(repository) != 2
                 or repository[0].lower() != github_organization.lower()
                 or not repository[1]
+                or "required_status" in contract
+                or (public and "evidence_requirement" in contract)
+                or (
+                    not public
+                    and contract.get("evidence_requirement")
+                    != "AUTHENTICATED_INVENTORY"
+                )
             ):
-                return "FAIL", "critical GitHub asset identity is invalid"
+                return "FAIL", "critical GitHub asset contract is invalid"
             observed_kinds.add("github")
         elif domain_identity is not None:
             if (
                 domain_identity[0] not in canonical_domains
                 or contract.get("required_status") != "LIVE"
                 or public is not True
+                or "evidence_requirement" in contract
             ):
                 return "FAIL", "critical domain asset contract is invalid"
             observed_kinds.add("domains")
@@ -293,6 +301,7 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
                 space_identity[0].lower() != huggingface_organization.lower()
                 or contract.get("required_status") != "LIVE"
                 or public is not True
+                or "evidence_requirement" in contract
             ):
                 return "FAIL", "critical Hugging Face asset contract is invalid"
             observed_kinds.add("huggingface")
@@ -473,6 +482,7 @@ def critical_runtime_alignment_state(
         not isinstance(repository_asset, dict)
         or repository_asset.get("source") != "github"
         or repository_asset.get("asset_type") != "repo"
+        or repository_asset.get("status_label") != "OBSERVED"
         or repository_asset.get("operational_status") != "ACTIVE"
         or not isinstance(repository_metadata, dict)
         or str(repository_metadata.get("default_branch_sha") or "").lower()
@@ -823,8 +833,8 @@ def production_artifact_state(
         if (
             repository_asset.get("source") != "github"
             or repository_asset.get("asset_type") != "repo"
+            or repository_asset.get("status_label") != "OBSERVED"
             or repository_asset.get("operational_status") != "ACTIVE"
-            or repository_asset.get("status_label") in {"ARCHIVED", "BROKEN"}
         ):
             return "FAIL", "repository_asset_id is not an active audited GitHub repository"
         if not isinstance(deployment_asset, dict):
@@ -1446,20 +1456,19 @@ def verify(
             continue
         observed = str(asset.get("status_label") or "UNAVAILABLE")
         required_status = contract.get("required_status")
-        if required_status:
-            state = "PASS" if observed == required_status else "FAIL"
-            detail = f"status={observed} required={required_status}"
-        elif asset_id.startswith("github:repo:"):
+        if asset_id.startswith("github:repo:"):
             operational_status = str(
                 asset.get("operational_status") or "UNAVAILABLE"
             )
             state = (
                 "PASS"
-                if observed not in {"BROKEN", "ARCHIVED"}
-                and operational_status == "ACTIVE"
+                if observed == "OBSERVED" and operational_status == "ACTIVE"
                 else "FAIL"
             )
             detail = f"status={observed} operational_status={operational_status}"
+        elif required_status:
+            state = "PASS" if observed == required_status else "FAIL"
+            detail = f"status={observed} required={required_status}"
         else:
             state = "PASS" if observed not in {"BROKEN", "ARCHIVED"} else "FAIL"
             detail = f"status={observed}"
