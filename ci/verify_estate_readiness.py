@@ -847,6 +847,36 @@ def production_artifact_state(
             expected_repository_prefix
         ):
             return "FAIL", "deployment owner is not bound to the canonical repository owner"
+        if huggingface_space_identity(deployment_asset_id) is not None:
+            alignment_state, alignment_detail = critical_runtime_alignment_state(
+                deployment_asset, assets, github_owner
+            )
+            if alignment_state != "PASS":
+                return "FAIL", f"deployment Space alignment is invalid: {alignment_detail}"
+            deployment_metadata = deployment_asset.get("metadata")
+            alignment = (
+                deployment_metadata.get("github_alignment")
+                if isinstance(deployment_metadata, dict)
+                else None
+            )
+            source_repository = (
+                str(alignment.get("source_repository") or "").lower()
+                if isinstance(alignment, dict)
+                else ""
+            )
+            source_revision = (
+                str(alignment.get("source_revision") or "").lower()
+                if isinstance(alignment, dict)
+                else ""
+            )
+            if (
+                repository_asset_id.lower() != f"github:repo:{source_repository}"
+                or revision.lower() != source_revision
+            ):
+                return (
+                    "FAIL",
+                    "deployment Space witness does not match its verified runtime source",
+                )
         deployment_url = str(artifact.get("deployment_url") or "")
         target_state, target_detail = audited_live_target_state(
             assets, manifest, deployment_asset_id, deployment_url

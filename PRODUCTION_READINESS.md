@@ -68,7 +68,9 @@ verify under a provider identity and RSA key pinned separately in
 Critical Hugging Face Spaces require `EXACT_RUNTIME_HEAD`; source-head equality
 without a matching running revision is not promotable, and the declared source
 repository must belong to the canonical GitHub organization while its source,
-default-branch, and runtime revisions all agree.
+default-branch, and runtime revisions all agree. A Space deployment witness must
+name that same verified source repository and exact revision; independently
+valid but divergent alignment and deployment edges fail closed.
 Browser evidence binds the exact audited deployment revision, artifact digest,
 receipt identity, and deployment time to named desktop and mobile runs, console/network,
 keyboard, screen-reader, zoom, contrast, and WCAG 2.2 AA results plus a report

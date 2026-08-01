@@ -404,6 +404,35 @@ def add_audited_deployment(
         if deployment_asset_id.startswith("domain:route:")
         else ("huggingface", "space")
     )
+    deployment_metadata: dict[str, object] = {
+        "final_url": deployment_url,
+        "deployment": edge,
+    }
+    if source == "huggingface":
+        source_repository = repository_asset_id.removeprefix("github:repo:")
+        deployment_metadata.update(
+            {
+                "github_alignment": {
+                    "status": "EXACT_RUNTIME_HEAD",
+                    "source_repository": source_repository,
+                    "source_revision": revision,
+                    "github_default_revision": revision,
+                },
+                "runtime_build": {
+                    "status": "OBSERVED",
+                    "state": "OBSERVED",
+                    "revision": revision,
+                },
+                "provenance_docs": [
+                    {
+                        "status": "OBSERVED",
+                        "binding_kind": "ARTIFACT_SOURCE",
+                        "source_repository": source_repository,
+                        "source_revision": revision,
+                    }
+                ],
+            }
+        )
     assets = value.setdefault("assets", [])
     assert isinstance(assets, list)
     assets[:] = [
@@ -431,10 +460,7 @@ def add_audited_deployment(
             "status_label": "LIVE",
             "operational_status": "REAL",
             "url": deployment_url,
-            "metadata": {
-                "final_url": deployment_url,
-                "deployment": edge,
-            },
+            "metadata": deployment_metadata,
         },
         ]
     )
@@ -825,6 +851,88 @@ class ReadinessTests(unittest.TestCase):
         self.assertIn("operational_status=DISABLED", repository_check["detail"])
         self.assertIn(
             "not an active audited GitHub repository",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_space_witness_must_match_verified_runtime_source(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        target_asset_id = "huggingface:space:szlholdings/a11oy"
+        witness = deployment_witness(
+            repository_asset_id="github:repo:szl-holdings/killinchu",
+            deployment_asset_id=target_asset_id,
+            deployment_url="https://huggingface.co/spaces/SZLHOLDINGS/a11oy",
+            receipt_id="deployment-receipt-20260801-space",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            add_audited_deployment(value, witness)
+            assets = value["assets"]
+            assert isinstance(assets, list)
+            target = next(
+                asset
+                for asset in assets
+                if isinstance(asset, dict)
+                and asset.get("asset_id") == target_asset_id
+            )
+            metadata = target["metadata"]
+            assert isinstance(metadata, dict)
+            alignment_revision = "a" * 40
+            alignment_repository = "szl-holdings/a11oy"
+            metadata["github_alignment"] = {
+                "status": "EXACT_RUNTIME_HEAD",
+                "source_repository": alignment_repository,
+                "source_revision": alignment_revision,
+                "github_default_revision": alignment_revision,
+            }
+            metadata["runtime_build"] = {
+                "status": "OBSERVED",
+                "state": "OBSERVED",
+                "revision": alignment_revision,
+            }
+            metadata["provenance_docs"] = [
+                {
+                    "status": "OBSERVED",
+                    "binding_kind": "ARTIFACT_SOURCE",
+                    "source_repository": alignment_repository,
+                    "source_revision": alignment_revision,
+                }
+            ]
+            assets.append(
+                {
+                    "asset_id": "github:repo:szl-holdings/a11oy",
+                    "asset_type": "repo",
+                    "source": "github",
+                    "status_label": "OBSERVED",
+                    "operational_status": "ACTIVE",
+                    "metadata": {"default_branch_sha": alignment_revision},
+                }
+            )
+            value["production_evidence"] = indexed_evidence(
+                {
+                    requirement: write_artifact(
+                        root, "space-deployment.json", witness
+                    )
+                },
+                target_asset_id,
+            )
+            sign(value)
+            contract = manifest(
+                {"independent_asymmetric_evidence": True, requirement: True}
+            )
+            critical_assets = contract["critical_assets"]
+            assert isinstance(critical_assets, list)
+            contract["critical_assets"] = [
+                asset
+                for asset in critical_assets
+                if isinstance(asset, dict)
+                and not str(asset.get("asset_id") or "").startswith("domain:route:")
+            ]
+            report = verify(value, contract, "production", evidence_root=root)
+
+        self.assertEqual(check(report, f"alignment.{target_asset_id}")["state"], "PASS")
+        self.assertIn(
+            "does not match its verified runtime source",
             check(report, f"production.requirement.{requirement}")["detail"],
         )
 
