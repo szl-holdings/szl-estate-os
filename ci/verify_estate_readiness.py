@@ -138,6 +138,35 @@ def huggingface_space_identity(asset_id: str) -> tuple[str, str] | None:
     return parts[0], parts[1]
 
 
+def known_gap_contract_state(manifest: dict[str, Any]) -> tuple[str, str]:
+    known_gaps = manifest.get("known_gaps")
+    if not isinstance(known_gaps, list):
+        return "FAIL", "known-gaps register is missing or invalid"
+    gap_ids: set[str] = set()
+    for gap in known_gaps:
+        if not isinstance(gap, dict) or set(gap) != {
+            "id",
+            "severity",
+            "status",
+            "evidence",
+        }:
+            return "FAIL", "known-gap entry shape is invalid"
+        gap_id = gap.get("id")
+        evidence = gap.get("evidence")
+        if (
+            not isinstance(gap_id, str)
+            or re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,127}", gap_id) is None
+            or gap_id in gap_ids
+            or gap.get("severity") not in {"P0", "P1", "P2", "P3"}
+            or gap.get("status") not in {"ACTIVE", "CLOSED"}
+            or not isinstance(evidence, str)
+            or not evidence.strip()
+        ):
+            return "FAIL", "known-gap entry values are invalid"
+        gap_ids.add(gap_id)
+    return "PASS", "known-gaps register verified"
+
+
 def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str]:
     if (
         manifest.get("schema") != "szl.estate-critical-surface/v1"
@@ -270,6 +299,9 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
             return "FAIL", "critical asset identity is unsupported"
     if observed_kinds != BASELINE_SOURCES:
         return "FAIL", "critical asset contract does not cover every estate source"
+    gap_contract_state, gap_contract_detail = known_gap_contract_state(manifest)
+    if gap_contract_state != "PASS":
+        return gap_contract_state, gap_contract_detail
     return "PASS", "baseline and critical-surface manifest contract verified"
 
 
@@ -1407,20 +1439,31 @@ def verify(
                     f"scope={scope} required={','.join(sorted(PRODUCTION_COMPLETE_SCOPES))}",
                 )
             )
+        gap_contract, gap_contract_detail = known_gap_contract_state(manifest)
+        checks.append(result("gaps.contract", gap_contract, gap_contract_detail))
+        configured_known_gaps = manifest.get("known_gaps")
+        known_gaps = (
+            configured_known_gaps
+            if gap_contract == "PASS" and isinstance(configured_known_gaps, list)
+            else []
+        )
         active_gaps = [
             gap
-            for gap in manifest.get("known_gaps") or []
-            if isinstance(gap, dict)
-            and gap.get("status") == "ACTIVE"
-            and gap.get("severity") in {"P0", "P1"}
+            for gap in known_gaps
+            if gap.get("status") == "ACTIVE" and gap.get("severity") in {"P0", "P1"}
         ]
+        critical_gaps_clear = gap_contract == "PASS" and not active_gaps
         checks.append(
             result(
                 "gaps.critical",
-                "PASS" if not active_gaps else "FAIL",
+                "PASS" if critical_gaps_clear else "FAIL",
                 "none active"
-                if not active_gaps
-                else ", ".join(str(gap.get("id")) for gap in active_gaps),
+                if critical_gaps_clear
+                else (
+                    gap_contract_detail
+                    if gap_contract != "PASS"
+                    else ", ".join(str(gap.get("id")) for gap in active_gaps)
+                ),
             )
         )
 
@@ -1503,10 +1546,14 @@ def verify(
                 checks.append(
                     result(
                         check_id,
-                        "PASS" if not active_gaps else "FAIL",
+                        "PASS" if critical_gaps_clear else "FAIL",
                         "none active"
-                        if not active_gaps
-                        else ", ".join(str(gap.get("id")) for gap in active_gaps),
+                        if critical_gaps_clear
+                        else (
+                            gap_contract_detail
+                            if gap_contract != "PASS"
+                            else ", ".join(str(gap.get("id")) for gap in active_gaps)
+                        ),
                     )
                 )
 

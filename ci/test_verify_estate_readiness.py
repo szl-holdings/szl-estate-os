@@ -461,6 +461,98 @@ class ReadinessTests(unittest.TestCase):
                     "FAIL",
                 )
 
+    def test_known_gap_register_fails_closed(self) -> None:
+        valid = manifest()
+        valid_report = verify(audit(), valid, "production")
+        for check_id in (
+            "gaps.contract",
+            "gaps.critical",
+            "production.requirement.zero_active_critical_gaps",
+        ):
+            self.assertEqual(check(valid_report, check_id)["state"], "PASS")
+
+        missing = manifest()
+        missing.pop("known_gaps")
+        wrong_type = manifest()
+        wrong_type["known_gaps"] = {}
+        malformed_shape = manifest()
+        malformed_shape["known_gaps"] = [{"id": "missing-fields"}]
+        malformed_values = manifest()
+        malformed_values["known_gaps"] = [
+            {
+                "id": "invalid-gap",
+                "severity": "P4",
+                "status": "UNKNOWN",
+                "evidence": "",
+            }
+        ]
+        duplicate_ids = manifest()
+        duplicate_ids["known_gaps"] = [
+            {
+                "id": "duplicate-gap",
+                "severity": "P2",
+                "status": "ACTIVE",
+                "evidence": "first",
+            },
+            {
+                "id": "duplicate-gap",
+                "severity": "P3",
+                "status": "CLOSED",
+                "evidence": "second",
+            },
+        ]
+
+        for contract in (
+            missing,
+            wrong_type,
+            malformed_shape,
+            malformed_values,
+            duplicate_ids,
+        ):
+            with self.subTest(contract=contract):
+                report = verify(audit(), contract, "production")
+                self.assertEqual(
+                    check(report, "manifest.baseline_contract")["state"], "FAIL"
+                )
+                for check_id in (
+                    "gaps.contract",
+                    "gaps.critical",
+                    "production.requirement.zero_active_critical_gaps",
+                ):
+                    self.assertEqual(check(report, check_id)["state"], "FAIL")
+
+        active = manifest()
+        active["known_gaps"] = [
+            {
+                "id": "active-critical-gap",
+                "severity": "P1",
+                "status": "ACTIVE",
+                "evidence": "critical evidence is unavailable",
+            }
+        ]
+        active_report = verify(audit(), active, "production")
+        self.assertEqual(check(active_report, "gaps.contract")["state"], "PASS")
+        self.assertEqual(check(active_report, "gaps.critical")["state"], "FAIL")
+        self.assertEqual(
+            check(
+                active_report, "production.requirement.zero_active_critical_gaps"
+            )["state"],
+            "FAIL",
+        )
+
+        closed = manifest()
+        closed["known_gaps"] = [
+            {
+                "id": "closed-critical-gap",
+                "severity": "P0",
+                "status": "CLOSED",
+                "evidence": "closure evidence verified",
+            }
+        ]
+        closed_report = verify(audit(), closed, "production")
+        self.assertEqual(check(closed_report, "gaps.contract")["state"], "PASS")
+        self.assertEqual(check(closed_report, "gaps.critical")["state"], "PASS")
+
     def test_production_rejects_asymmetric_label_without_signature(self) -> None:
         report = verify(
             audit(),
