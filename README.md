@@ -59,9 +59,14 @@ The program reads:
 - `SZL_CONTROL_TOKEN` when explicitly serving beyond loopback
 
 An authenticated inventory can see more assets, but token presence alone does
-not prove complete organization scope. The report therefore uses
-`AUTHENTICATED_VISIBILITY_UNKNOWN` unless completeness is independently
-established.
+not prove complete organization scope. `AUTHENTICATED_COMPLETE` is emitted only
+when the API-reported public and private repository totals each exactly
+reconcile with the observed visibility composition of one stable, fully
+exhausted, unique inventory and collection reports no error.
+Count mismatches, pagination uncertainty, or partial visibility remain
+`PARTIAL` with `AUTHENTICATED_VISIBILITY_UNKNOWN`. The scheduled public baseline
+deliberately supplies no GitHub or Hugging Face credential; authenticated
+production inventory requires a separately approved evidence packet.
 
 ## Commands
 
@@ -117,13 +122,49 @@ it during an audit:
   --evidence .\outputs\operating-evidence.json
 ```
 
+The isolated SQLite restore runner is a raw measurement producer, not a
+promotion authority. It opens the source database read-only with `query_only`,
+restores only inside a fresh temporary directory, verifies integrity, schema,
+content, row counts, foreign keys, receipt-chain structure, corrupt/missing
+backup rejection, preserves the main database plus any WAL, SHM, and journal
+sidecars byte-for-byte, rejects report-output aliases to those source files,
+and verifies cleanup before emitting an unsigned
+`szl.sqlite-restore-measurement/v2` measurement:
+
+```powershell
+& $python .\ci\run_restore_drill.py `
+  --database .\outputs\estate.db `
+  --output .\outputs\restore-measurement.json `
+  --max-rto-seconds 900 `
+  --max-rpo-seconds 300
+```
+
+That file cannot satisfy production by itself. An approved provider must bind
+its exact digest and the promoted deployment into a signed
+`szl.estate-restore-drill/v2` wrapper. The production evidence index must then
+cover every manifest-critical deployment, and the verifier must recognize the
+provider key from `restore_provider_trusted_keys`. The committed manifest keeps
+that key map empty, so promotion deliberately remains blocked.
+
 External assertions are labeled `ATTESTED`, not `MEASURED`, and therefore do
 not make a lane green by themselves. Only the three external-only control IDs
 are accepted; the evidence bundle cannot override directly observed cyber,
 product, engineering, data/AI, or governance findings.
 
+Repository governance is evaluated from directly observed applicable rules.
+A protected default branch passes the minimum rule only when non-fast-forward
+updates are blocked, pull requests are required, at least one approval is
+required, review-thread resolution is required, and a nonempty set of status
+checks is enforced. A web-commit signoff setting is reported separately and
+cannot satisfy the full change-signoff control unless signed-commit enforcement
+is also measured. Control output lists the exact failed and unassessed asset IDs
+instead of collapsing missing coverage into a single Boolean.
+
 Deep GitHub checks require a token and query default-branch protection plus the
-repository community profile. Public mode intentionally does not burn the
+repository community profile. They also retrieve the exact default-branch Git
+commit and preserve GitHub's signature-verification result as a separate commit
+fact; reachability, SHA syntax, and runtime equality alone never count as a
+verified artifact. Public mode intentionally does not burn the
 unauthenticated rate limit pretending to have privileged governance evidence.
 Deep Hugging Face checks query every Space detail endpoint and record its exact
 revision, runtime stage, hardware request, and served-domain state. A sleeping
@@ -143,6 +184,14 @@ source revision that equals the GitHub repository's observed default-branch
 revision. `PINNED_NON_HEAD`, `REPOSITORY_ONLY`, `MANAGED_UNBOUND`,
 `NOT_DECLARED`, conflicts, and unavailable evidence remain distinct; a managed
 marker alone is never treated as source alignment.
+
+`estate/provenance_policy.py` provides the dependency-free decision boundary
+for immutable artifact provenance versus live runtime currency. An artifact
+source revision passes only when separately retrieved commit evidence marks the
+exact 40-character SHA `VERIFIED_REACHABLE`; a syntactically valid or merely
+reachable SHA is insufficient. A verified historical artifact can remain valid
+as `PINNED_NON_HEAD` while runtime currency is evaluated independently, and a
+current runtime observation can never manufacture missing artifact provenance.
 
 For running non-static Spaces, deep mode also attempts the conventional
 same-host read-only `/api/build-info` route on a Hugging Face-provided
@@ -166,6 +215,12 @@ same-origin navigation routes from the live HTML. Fragments collapse to their
 real server path, static assets are excluded, and discovery failures fall back
 to the declared root. This keeps route evidence aligned with the deployed site
 instead of treating retired, guessed paths as current contracts.
+
+The audit preserves raw required security-header values as well as presence.
+Web hardening fails closed on a wildcard or unsafe-script CSP, a short or zero
+HSTS max-age, non-`nosniff` content-type policy, or a leaking referrer policy.
+Unsafe sources are checked independently in `script-src`, `script-src-elem`,
+and `script-src-attr`; header names alone cannot turn the control green.
 
 ## API
 

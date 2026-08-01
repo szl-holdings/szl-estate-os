@@ -27,14 +27,12 @@ import hmac
 import html
 import http.server
 import json
-import math
 import os
 import re
 import secrets
 import sqlite3
 import sys
 import tempfile
-import threading
 import time
 import urllib.error
 import urllib.parse
@@ -45,8 +43,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from estate.provenance_policy import classify_provenance
 from operating_fabric import (
     LANE_ORDER,
+    assess_web_security_headers,
     evaluate_operating_fabric,
     evidence_template,
     load_evidence_bundle,
@@ -62,6 +62,8 @@ DEFAULT_DOMAINS = ("a-11-oy.com", "a11oy.net")
 DEFAULT_TIMEOUT = 12.0
 DEFAULT_WORKERS = 8
 DEFAULT_REQUEST_QUEUE_SIZE = 128
+GITHUB_COMPLETE_SCOPE = "AUTHENTICATED_COMPLETE"
+GITHUB_PARTIAL_SCOPE = "AUTHENTICATED_VISIBILITY_UNKNOWN"
 MAX_RESPONSE_BYTES = 2_000_000
 ROOT = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_DIR = ROOT / "outputs"
@@ -383,6 +385,15 @@ def sanitize_error(value: Any, limit: int = 500) -> str:
     return text[:limit]
 
 
+def normalize_http_header_value(value: Any) -> str | None:
+    """Preserve an observed header value with only outer OWS removed."""
+
+    if not isinstance(value, str) or "\r" in value or "\n" in value:
+        return None
+    normalized = value.strip(" \t")
+    return normalized or None
+
+
 def parse_datetime(value: Any) -> dt.datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -523,17 +534,300 @@ def selected_security_state(repo: dict[str, Any]) -> dict[str, str]:
     return selected
 
 
+def github_commit_fact_from_payload(
+    repository: str, revision: str, payload: Any
+) -> dict[str, Any]:
+    """Normalize one exact GitHub Git Commit API response without inference."""
+
+    normalized_repository = str(repository or "").strip().lower()
+    normalized_revision = str(revision or "").strip().lower()
+    fact: dict[str, Any] = {
+        "source_repository": normalized_repository,
+        "source_revision": normalized_revision,
+        "state": "UNAVAILABLE",
+        "evidence_source": "GITHUB_GIT_COMMIT_API",
+        "verification_reason": None,
+        "verified_at": None,
+    }
+    if (
+        not normalized_repository
+        or re.fullmatch(r"[0-9a-f]{40}", normalized_revision) is None
+        or not isinstance(payload, dict)
+    ):
+        return fact
+    payload_revision = str(payload.get("sha") or "").strip().lower()
+    verification = payload.get("verification")
+    if payload_revision != normalized_revision or not isinstance(verification, dict):
+        return fact
+    fact["verification_reason"] = verification.get("reason")
+    fact["verified_at"] = verification.get("verified_at")
+    if verification.get("verified") is True:
+        fact["state"] = "VERIFIED_REACHABLE"
+    elif verification.get("verified") is False:
+        fact["state"] = "REACHABLE_UNVERIFIED"
+    return fact
+
+
+def reconcile_github_inventory_scope(
+    *,
+    token_present: bool,
+    public_repositories: Any,
+    private_repositories: Any,
+    observed_repositories: int,
+    unique_repositories: int,
+    observed_public_repositories: int,
+    observed_private_repositories: int,
+    invalid_visibility_repositories: int,
+    pagination_complete: bool,
+    inventory_stable: bool,
+    error_count: int,
+) -> tuple[str, dict[str, Any]]:
+    """Return authenticated-complete only for an exact, error-free inventory."""
+
+    public_count_valid = (
+        isinstance(public_repositories, int)
+        and not isinstance(public_repositories, bool)
+        and public_repositories >= 0
+    )
+    private_count_valid = (
+        isinstance(private_repositories, int)
+        and not isinstance(private_repositories, bool)
+        and private_repositories >= 0
+    )
+    observed_count_valid = (
+        isinstance(observed_repositories, int)
+        and not isinstance(observed_repositories, bool)
+        and observed_repositories >= 0
+    )
+    unique_count_valid = (
+        isinstance(unique_repositories, int)
+        and not isinstance(unique_repositories, bool)
+        and unique_repositories >= 0
+    )
+    observed_public_count_valid = (
+        isinstance(observed_public_repositories, int)
+        and not isinstance(observed_public_repositories, bool)
+        and observed_public_repositories >= 0
+    )
+    observed_private_count_valid = (
+        isinstance(observed_private_repositories, int)
+        and not isinstance(observed_private_repositories, bool)
+        and observed_private_repositories >= 0
+    )
+    invalid_visibility_count_valid = (
+        isinstance(invalid_visibility_repositories, int)
+        and not isinstance(invalid_visibility_repositories, bool)
+        and invalid_visibility_repositories == 0
+    )
+    error_count_valid = (
+        isinstance(error_count, int)
+        and not isinstance(error_count, bool)
+        and error_count == 0
+    )
+    expected_repositories = (
+        public_repositories + private_repositories
+        if public_count_valid and private_count_valid
+        else None
+    )
+    observed_composition_total = (
+        observed_public_repositories
+        + observed_private_repositories
+        + invalid_visibility_repositories
+        if observed_public_count_valid
+        and observed_private_count_valid
+        and isinstance(invalid_visibility_repositories, int)
+        and not isinstance(invalid_visibility_repositories, bool)
+        and invalid_visibility_repositories >= 0
+        else None
+    )
+    visibility_reconciled = bool(
+        public_count_valid
+        and private_count_valid
+        and observed_public_count_valid
+        and observed_private_count_valid
+        and invalid_visibility_count_valid
+        and observed_public_repositories == public_repositories
+        and observed_private_repositories == private_repositories
+        and observed_composition_total == observed_repositories
+    )
+    reconciled = bool(
+        token_present is True
+        and pagination_complete is True
+        and inventory_stable is True
+        and error_count_valid
+        and expected_repositories is not None
+        and observed_count_valid
+        and unique_count_valid
+        and visibility_reconciled
+        and observed_repositories == expected_repositories
+        and unique_repositories == expected_repositories
+    )
+    if not token_present:
+        scope = "PUBLIC_ONLY"
+        reason = "No authenticated GitHub token was supplied"
+    elif reconciled:
+        scope = GITHUB_COMPLETE_SCOPE
+        reason = "Authenticated public and private repository totals exactly reconciled"
+    else:
+        scope = GITHUB_PARTIAL_SCOPE
+        reason = "Authenticated repository completeness was not established"
+    return scope, {
+        "inventory_reconciled": reconciled,
+        "inventory_reconciliation_reason": reason,
+        "expected_repository_count": expected_repositories,
+        "observed_repository_count": observed_repositories,
+        "unique_repository_count": unique_repositories,
+        "expected_public_repository_count": (
+            public_repositories if public_count_valid else None
+        ),
+        "expected_private_repository_count": (
+            private_repositories if private_count_valid else None
+        ),
+        "observed_public_repository_count": observed_public_repositories,
+        "observed_private_repository_count": observed_private_repositories,
+        "invalid_visibility_repository_count": invalid_visibility_repositories,
+        "visibility_composition_reconciled": visibility_reconciled,
+        "pagination_complete": pagination_complete,
+        "inventory_stable": inventory_stable,
+        "inventory_error_count": error_count,
+    }
+
+
+def normalize_default_branch_rules(rules: Any) -> dict[str, Any] | None:
+    """Normalize bounded rule fields used by defensive control evaluation."""
+
+    if not isinstance(rules, list):
+        return None
+    rule_types: set[str] = set()
+    rule_sources: set[str] = set()
+    required_status_checks: set[str] = set()
+    pull_request = {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": False,
+        "require_code_owner_review": False,
+        "require_last_push_approval": False,
+        "required_review_thread_resolution": False,
+    }
+    pull_request_observed = False
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        rule_type = rule.get("type")
+        if not isinstance(rule_type, str) or not rule_type:
+            continue
+        rule_types.add(rule_type)
+        source_type = rule.get("ruleset_source_type")
+        source = rule.get("ruleset_source")
+        ruleset_id = rule.get("ruleset_id")
+        if isinstance(source_type, str) and isinstance(source, str):
+            rule_sources.add(f"{source_type}:{source}:{ruleset_id}")
+        parameters = rule.get("parameters")
+        parameters = parameters if isinstance(parameters, dict) else {}
+        if rule_type == "pull_request":
+            pull_request_observed = True
+            approvals = parameters.get("required_approving_review_count")
+            if isinstance(approvals, int) and not isinstance(approvals, bool):
+                pull_request["required_approving_review_count"] = max(
+                    pull_request["required_approving_review_count"], approvals
+                )
+            for key in (
+                "dismiss_stale_reviews_on_push",
+                "require_code_owner_review",
+                "require_last_push_approval",
+                "required_review_thread_resolution",
+            ):
+                if parameters.get(key) is True:
+                    pull_request[key] = True
+        elif rule_type == "required_status_checks":
+            checks = parameters.get("required_status_checks")
+            if isinstance(checks, list):
+                for check in checks:
+                    context = (
+                        check.get("context") if isinstance(check, dict) else check
+                    )
+                    if isinstance(context, str) and context:
+                        required_status_checks.add(context)
+    return {
+        "types": sorted(rule_types),
+        "sources": sorted(rule_sources),
+        "pull_request": pull_request if pull_request_observed else None,
+        "required_status_checks": sorted(required_status_checks),
+    }
+
+
 def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
     started = time.perf_counter()
     observed = utc_now()
     token = env_token("GH_TOKEN", "GITHUB_TOKEN")
-    scope = "AUTHENTICATED_VISIBILITY_UNKNOWN" if token else "PUBLIC_ONLY"
+    scope = GITHUB_PARTIAL_SCOPE if token else "PUBLIC_ONLY"
     headers = github_headers(token)
     assets: list[Asset] = []
     errors: list[str] = []
     warnings: list[str] = []
     metadata: dict[str, Any] = {"org": config.github_org, "deep_requested": config.deep}
+    organization_metadata: dict[str, Any] = {}
     encoded_org = urllib.parse.quote(config.github_org, safe="")
+
+    def repository_snapshot_row(repo: Any) -> tuple[str, str, str, str] | None:
+        if not isinstance(repo, dict):
+            return None
+        full_name = str(repo.get("full_name") or repo.get("name") or "").strip()
+        if not full_name:
+            return None
+        private = repo.get("private")
+        if private is True:
+            visibility = "PRIVATE"
+        elif private is False:
+            visibility = "PUBLIC"
+        else:
+            visibility = "INVALID"
+        asset_id = f"github:repo:{full_name.lower()}"
+        owner = repo.get("owner")
+        owner_identity = (
+            {
+                "id": owner.get("id"),
+                "login": owner.get("login"),
+                "node_id": owner.get("node_id"),
+            }
+            if isinstance(owner, dict)
+            else None
+        )
+        governance = {
+            key: repo.get(key)
+            for key in (
+                "allow_auto_merge",
+                "allow_forking",
+                "allow_merge_commit",
+                "allow_rebase_merge",
+                "allow_squash_merge",
+                "allow_update_branch",
+                "delete_branch_on_merge",
+                "squash_merge_commit_message",
+                "squash_merge_commit_title",
+                "use_squash_pr_title_as_default",
+                "web_commit_signoff_required",
+            )
+        }
+        fingerprint_payload = {
+            "archived": repo.get("archived"),
+            "asset_id": asset_id,
+            "default_branch": repo.get("default_branch"),
+            "disabled": repo.get("disabled"),
+            "fork": repo.get("fork"),
+            "full_name": full_name,
+            "governance": governance,
+            "id": repo.get("id"),
+            "is_template": repo.get("is_template"),
+            "name": repo.get("name"),
+            "node_id": repo.get("node_id"),
+            "owner": owner_identity,
+            "private": private,
+            "security_and_analysis": repo.get("security_and_analysis"),
+            "visibility": repo.get("visibility"),
+            "visibility_class": visibility,
+        }
+        fingerprint = sha256_text(canonical_json(fingerprint_payload))
+        return full_name, asset_id, visibility, fingerprint
 
     try:
         org, org_result = get_json(
@@ -544,7 +838,7 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
         metadata["rate_limit_remaining"] = org_result.headers.get("x-ratelimit-remaining")
         metadata["rate_limit_limit"] = org_result.headers.get("x-ratelimit-limit")
         if isinstance(org, dict):
-            org_metadata = {
+            organization_metadata = {
                 key: org.get(key)
                 for key in (
                     "login",
@@ -571,7 +865,7 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
                     status_label="OBSERVED",
                     operational_status="AVAILABLE",
                     observed_at=observed,
-                    metadata=org_metadata,
+                    metadata=organization_metadata,
                 )
             )
     except SourceError as exc:
@@ -579,6 +873,8 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
 
     repo_type = "all" if token else "public"
     repository_assets: list[Asset] = []
+    inventory_snapshot: list[tuple[str, str]] = []
+    pagination_complete = False
     for page in range(1, config.max_pages + 1):
         query = urllib.parse.urlencode(
             {
@@ -602,12 +898,16 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
         if not isinstance(page_data, list):
             errors.append(f"repositories page {page}: INVALID_SHAPE")
             break
-        for repo in page_data:
-            if not isinstance(repo, dict):
+        for item_index, repo in enumerate(page_data):
+            snapshot_row = repository_snapshot_row(repo)
+            if snapshot_row is None:
+                errors.append(
+                    f"repositories page {page} item {item_index}: INVALID_REPOSITORY_SHAPE"
+                )
                 continue
-            full_name = str(repo.get("full_name") or repo.get("name") or "").strip()
-            if not full_name:
-                continue
+            full_name, asset_id, visibility, fingerprint = snapshot_row
+            inventory_snapshot.append((asset_id, fingerprint))
+            assert isinstance(repo, dict)
             security_state = selected_security_state(repo)
             repo_metadata = {
                 "visibility": repo.get("visibility"),
@@ -633,13 +933,21 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
                 "web_commit_signoff_required": repo.get("web_commit_signoff_required"),
                 "security_and_analysis": security_state,
                 "branch_protection_enabled": None,
+                "default_branch_commit_fact": None,
+                "default_branch_rules": {
+                    "status": "NOT_REQUESTED",
+                    "types": [],
+                    "sources": [],
+                    "pull_request": None,
+                    "required_status_checks": [],
+                },
                 "deep_status": "NOT_REQUESTED",
             }
             archived = bool(repo.get("archived"))
             disabled = bool(repo.get("disabled"))
             repository_assets.append(
                 Asset(
-                    asset_id=f"github:repo:{full_name.lower()}",
+                    asset_id=asset_id,
                     asset_type="repo",
                     source="github",
                     name=full_name,
@@ -653,9 +961,68 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
                 )
             )
         if len(page_data) < 100:
+            pagination_complete = True
             break
     else:
         warnings.append(f"Repository inventory stopped at max_pages={config.max_pages}")
+
+    inventory_stable = False
+    verification_pagination_complete = False
+    if token and pagination_complete:
+        verification_snapshot: list[tuple[str, str]] = []
+        for page in range(1, config.max_pages + 1):
+            query = urllib.parse.urlencode(
+                {
+                    "type": "all",
+                    "sort": "full_name",
+                    "direction": "asc",
+                    "per_page": 100,
+                    "page": page,
+                }
+            )
+            try:
+                page_data, page_result = get_json(
+                    f"https://api.github.com/orgs/{encoded_org}/repos?{query}",
+                    headers=headers,
+                    timeout=config.timeout,
+                )
+            except SourceError as exc:
+                errors.append(
+                    f"repository verification page {page}: {exc.code}: {sanitize_error(exc)}"
+                )
+                break
+            metadata["rate_limit_remaining"] = page_result.headers.get(
+                "x-ratelimit-remaining"
+            )
+            if not isinstance(page_data, list):
+                errors.append(f"repository verification page {page}: INVALID_SHAPE")
+                break
+            for item_index, repo in enumerate(page_data):
+                snapshot_row = repository_snapshot_row(repo)
+                if snapshot_row is None:
+                    errors.append(
+                        "repository verification page "
+                        f"{page} item {item_index}: INVALID_REPOSITORY_SHAPE"
+                    )
+                    continue
+                _, asset_id, _, fingerprint = snapshot_row
+                verification_snapshot.append((asset_id, fingerprint))
+            if len(page_data) < 100:
+                verification_pagination_complete = True
+                break
+        else:
+            warnings.append(
+                "Repository verification inventory stopped at "
+                f"max_pages={config.max_pages}"
+            )
+        inventory_stable = bool(
+            verification_pagination_complete
+            and sorted(verification_snapshot) == sorted(inventory_snapshot)
+        )
+        if verification_pagination_complete and not inventory_stable:
+            warnings.append(
+                "Authenticated repository inventory changed between verification snapshots"
+            )
 
     if config.deep and repository_assets:
         if not token:
@@ -673,6 +1040,12 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
                     asset.metadata["deep_error"] = "DEFAULT_BRANCH_UNAVAILABLE"
                     return asset
                 encoded_branch = urllib.parse.quote(str(branch), safe="")
+                deep_errors: list[str] = []
+                branch_measured = False
+                commit_verification_measured = False
+                rules_measured = False
+                profile_measured = False
+                branch_revision = ""
                 try:
                     branch_data, _ = get_json(
                         f"https://api.github.com/repos/{full_name}/branches/{encoded_branch}",
@@ -683,9 +1056,89 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
                         asset.metadata["branch_protection_enabled"] = bool(
                             branch_data.get("protected")
                         )
-                        asset.metadata["default_branch_sha"] = (
-                            branch_data.get("commit") or {}
-                        ).get("sha")
+                        branch_commit = branch_data.get("commit")
+                        branch_revision = str(
+                            branch_commit.get("sha")
+                            if isinstance(branch_commit, dict)
+                            else ""
+                        ).strip().lower()
+                        asset.metadata["default_branch_sha"] = branch_revision or None
+                        branch_measured = True
+                    else:
+                        deep_errors.append("branch: INVALID_SHAPE")
+                except SourceError as exc:
+                    deep_errors.append(
+                        f"branch: {exc.code}: {sanitize_error(exc)}"
+                    )
+                if re.fullmatch(r"[0-9a-f]{40}", branch_revision):
+                    try:
+                        commit_data, _ = get_json(
+                            (
+                                f"https://api.github.com/repos/{full_name}/git/commits/"
+                                f"{branch_revision}"
+                            ),
+                            headers=headers,
+                            timeout=config.timeout,
+                        )
+                        commit_fact = github_commit_fact_from_payload(
+                            asset.name, branch_revision, commit_data
+                        )
+                        asset.metadata["default_branch_commit_fact"] = commit_fact
+                        if commit_fact["state"] in {
+                            "VERIFIED_REACHABLE",
+                            "REACHABLE_UNVERIFIED",
+                        }:
+                            commit_verification_measured = True
+                        else:
+                            deep_errors.append("commit_verification: INVALID_SHAPE")
+                    except SourceError as exc:
+                        asset.metadata["default_branch_commit_fact"] = (
+                            github_commit_fact_from_payload(
+                                asset.name, branch_revision, None
+                            )
+                        )
+                        deep_errors.append(
+                            "commit_verification: "
+                            f"{exc.code}: {sanitize_error(exc)}"
+                        )
+                else:
+                    deep_errors.append(
+                        "commit_verification: DEFAULT_BRANCH_SHA_INVALID"
+                    )
+                try:
+                    rules_data, _ = get_json(
+                        f"https://api.github.com/repos/{full_name}/rules/branches/{encoded_branch}",
+                        headers=headers,
+                        timeout=config.timeout,
+                    )
+                    normalized_rules = normalize_default_branch_rules(rules_data)
+                    if normalized_rules is None:
+                        deep_errors.append("rules: INVALID_SHAPE")
+                        asset.metadata["default_branch_rules"] = {
+                            "status": "UNAVAILABLE",
+                            "types": [],
+                            "sources": [],
+                            "pull_request": None,
+                            "required_status_checks": [],
+                        }
+                    else:
+                        asset.metadata["default_branch_rules"] = {
+                            "status": "MEASURED",
+                            **normalized_rules,
+                        }
+                        rules_measured = True
+                except SourceError as exc:
+                    deep_errors.append(
+                        f"rules: {exc.code}: {sanitize_error(exc)}"
+                    )
+                    asset.metadata["default_branch_rules"] = {
+                        "status": "UNAVAILABLE",
+                        "types": [],
+                        "sources": [],
+                        "pull_request": None,
+                        "required_status_checks": [],
+                    }
+                try:
                     profile_data, _ = get_json(
                         f"https://api.github.com/repos/{full_name}/community/profile",
                         headers=headers,
@@ -709,11 +1162,26 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
                                     "pull_request_template",
                                 )
                             }
-                    asset.metadata["deep_status"] = "MEASURED"
+                        profile_measured = True
+                    else:
+                        deep_errors.append("community: INVALID_SHAPE")
                 except SourceError as exc:
-                    asset.metadata["deep_error"] = (
-                        f"{exc.code}: {sanitize_error(exc)}"
+                    deep_errors.append(
+                        f"community: {exc.code}: {sanitize_error(exc)}"
                     )
+                asset.metadata["deep_status"] = (
+                    "MEASURED"
+                    if (
+                        branch_measured
+                        and commit_verification_measured
+                        and rules_measured
+                        and profile_measured
+                    )
+                    else "PARTIAL"
+                )
+                if deep_errors:
+                    asset.metadata["deep_errors"] = deep_errors
+                    asset.metadata["deep_error"] = "; ".join(deep_errors)
                 return asset
 
             with ThreadPoolExecutor(max_workers=config.workers) as executor:
@@ -722,13 +1190,54 @@ def collect_github(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
             repository_assets.sort(key=lambda item: item.asset_id)
 
     assets.extend(repository_assets)
+    unique_repository_count = len({asset.asset_id for asset in repository_assets})
+    observed_public_repository_count = sum(
+        asset.metadata.get("private") is False for asset in repository_assets
+    )
+    observed_private_repository_count = sum(
+        asset.metadata.get("private") is True for asset in repository_assets
+    )
+    invalid_visibility_repository_count = sum(
+        not isinstance(asset.metadata.get("private"), bool)
+        for asset in repository_assets
+    )
+    scope, reconciliation = reconcile_github_inventory_scope(
+        token_present=bool(token),
+        public_repositories=organization_metadata.get("public_repos"),
+        private_repositories=organization_metadata.get("total_private_repos"),
+        observed_repositories=len(repository_assets),
+        unique_repositories=unique_repository_count,
+        observed_public_repositories=observed_public_repository_count,
+        observed_private_repositories=observed_private_repository_count,
+        invalid_visibility_repositories=invalid_visibility_repository_count,
+        pagination_complete=pagination_complete,
+        inventory_stable=inventory_stable,
+        error_count=len(errors),
+    )
+    reconciliation["verification_pagination_complete"] = (
+        verification_pagination_complete
+    )
+    metadata.update(reconciliation)
+    metadata["active_repository_count"] = sum(
+        asset.operational_status == "ACTIVE" for asset in repository_assets
+    )
+    metadata["archived_repository_count"] = sum(
+        asset.metadata.get("archived") is True for asset in repository_assets
+    )
+    metadata["disabled_repository_count"] = sum(
+        asset.metadata.get("disabled") is True for asset in repository_assets
+    )
     if not token:
         warnings.append("Private repositories and privileged organization controls are UNAVAILABLE")
+    elif scope != GITHUB_COMPLETE_SCOPE:
+        warnings.append(reconciliation["inventory_reconciliation_reason"])
     status = "MEASURED"
     if errors and assets:
         status = "PARTIAL"
     elif errors and not assets:
         status = "UNAVAILABLE"
+    elif token and scope != GITHUB_COMPLETE_SCOPE:
+        status = "PARTIAL"
     elapsed_ms = round((time.perf_counter() - started) * 1000)
     return assets, SourceReport(
         source="github",
@@ -926,6 +1435,11 @@ def collect_hf_asset_details(
                     provenance_docs.append(
                         {
                             "file": filename,
+                            "binding_kind": (
+                                "MANAGEMENT_ONLY"
+                                if filename == "SZL_ESTATE_MANAGED.json"
+                                else "ARTIFACT_SOURCE"
+                            ),
                             "status": "UNAVAILABLE",
                             "error": f"{exc.code}: {sanitize_error(exc)}",
                         }
@@ -1076,8 +1590,6 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
     errors: list[str] = []
     warnings: list[str] = []
     metadata: dict[str, Any] = {"org": config.hf_org}
-    encoded_org = urllib.parse.quote(config.hf_org, safe="")
-
     kinds = (("model", "models"), ("dataset", "datasets"), ("space", "spaces"))
     for kind, endpoint in kinds:
         query = urllib.parse.urlencode(
@@ -1358,8 +1870,8 @@ def probe_domain_route(
     )
     text = decode_body(result)
     status_label, content_state = classify_content(result, text)
-    security_headers = {
-        key: bool(result.headers.get(key))
+    security_header_values = {
+        key: normalized
         for key in (
             "strict-transport-security",
             "content-security-policy",
@@ -1367,6 +1879,13 @@ def probe_domain_route(
             "referrer-policy",
             "permissions-policy",
         )
+        if (normalized := normalize_http_header_value(result.headers.get(key)))
+    }
+    security_header_assessment = assess_web_security_headers(security_header_values)
+    assert security_header_assessment is not None
+    security_headers = {
+        key: value["passed"] is True
+        for key, value in security_header_assessment.items()
     }
     return Asset(
         asset_id=f"domain:route:{hostname}{route}".lower(),
@@ -1390,6 +1909,8 @@ def probe_domain_route(
             "title": content_title(text),
             "https": urllib.parse.urlparse(result.final_url).scheme.lower() == "https",
             "security_headers": security_headers,
+            "security_header_values": security_header_values,
+            "security_header_validation": security_header_assessment,
             "error": result.error,
             "truncated": result.truncated,
         },
@@ -2276,17 +2797,28 @@ def audit_status(source_reports: list[SourceReport], asset_count: int) -> str:
     return "PARTIAL"
 
 
-def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
+def attach_cross_estate_alignment(
+    assets: list[Asset], *, source_scope: str = "UNAVAILABLE"
+) -> dict[str, int]:
+    policy_source_scope = (
+        source_scope.strip()
+        if isinstance(source_scope, str) and source_scope.strip()
+        else "UNAVAILABLE"
+    )
     github_repositories = {
         asset.name.lower(): asset
         for asset in assets
         if asset.source == "github" and asset.asset_type == "repo"
     }
     github_repositories_by_revision: dict[str, list[Asset]] = {}
+    commit_facts: list[dict[str, Any]] = []
     for github_asset in github_repositories.values():
         revision = str(github_asset.metadata.get("default_branch_sha") or "").lower()
         if FULL_SHA_RE.fullmatch(revision):
             github_repositories_by_revision.setdefault(revision, []).append(github_asset)
+        commit_fact = github_asset.metadata.get("default_branch_commit_fact")
+        if isinstance(commit_fact, dict):
+            commit_facts.append(commit_fact)
     counts: dict[str, int] = {}
     for asset in assets:
         if asset.source != "huggingface" or asset.asset_type not in {
@@ -2458,6 +2990,58 @@ def attach_cross_estate_alignment(assets: list[Asset]) -> dict[str, int]:
                 "Management provenance exists without an artifact source binding"
             )
         asset.metadata["github_alignment"] = alignment
+        policy_repositories = {
+            str(document.get("source_repository") or "").strip().lower()
+            for document in documents
+            if isinstance(document, dict)
+            and document.get("binding_kind") == "ARTIFACT_SOURCE"
+            and document.get("status") == "OBSERVED"
+            and document.get("source_repository")
+        }
+        artifact_repository = (
+            next(iter(policy_repositories)) if len(policy_repositories) == 1 else ""
+        )
+        runtime_repository = (
+            runtime_matches[0].name.lower()
+            if len(runtime_matches) == 1
+            else artifact_repository
+        )
+        policy_repository = artifact_repository or runtime_repository
+        source_head: dict[str, Any] | None = None
+        policy_github_asset = github_repositories.get(policy_repository)
+        if policy_github_asset is not None:
+            policy_head_revision = str(
+                policy_github_asset.metadata.get("default_branch_sha") or ""
+            ).strip().lower()
+            if FULL_SHA_RE.fullmatch(policy_head_revision):
+                source_head = {
+                    "status": "OBSERVED",
+                    "source_repository": policy_repository,
+                    "source_revision": policy_head_revision,
+                }
+        runtime_evidence: dict[str, Any] | None = None
+        if isinstance(runtime_build, dict):
+            runtime_evidence = {
+                "status": (
+                    "OBSERVED"
+                    if runtime_build.get("status") == "OBSERVED"
+                    and runtime_build.get("state") == "OBSERVED"
+                    else "UNAVAILABLE"
+                ),
+                "source_repository": runtime_repository or None,
+                "source_revision": str(
+                    runtime_build.get("revision") or ""
+                ).strip().lower(),
+            }
+        asset.metadata["provenance_policy"] = classify_provenance(
+            target_id=asset.asset_id,
+            source_scope=policy_source_scope,
+            artifact_documents=documents,
+            commit_facts=commit_facts,
+            source_head=source_head,
+            runtime_evidence=runtime_evidence,
+            target_evidence_state="OBSERVED",
+        )
         status = str(alignment["status"])
         counts[status] = counts.get(status, 0) + 1
     return dict(sorted(counts.items()))
@@ -2509,7 +3093,17 @@ def run_audit(
             reports_by_source[source] = report
     assets = sorted(collected_assets, key=lambda item: item.asset_id)
     source_reports = [reports_by_source[source] for source, _ in collectors]
-    alignment_counts = attach_cross_estate_alignment(assets)
+    github_report = reports_by_source.get("github")
+    github_source_scope = (
+        github_report.scope
+        if github_report is not None
+        and isinstance(github_report.scope, str)
+        and github_report.scope.strip()
+        else "UNAVAILABLE"
+    )
+    alignment_counts = attach_cross_estate_alignment(
+        assets, source_scope=github_source_scope
+    )
     scorecards, clusters, proposals = build_analysis(audit_id, assets)
     completed_at = utc_now()
     status = audit_status(source_reports, len(assets))
@@ -3374,6 +3968,13 @@ def self_test() -> dict[str, Any]:
                     },
                     "has_pages": True,
                     "default_branch_sha": source_revision,
+                    "default_branch_commit_fact": {
+                        "source_repository": (
+                            "szl-holdings/calibration-kernel"
+                        ),
+                        "source_revision": source_revision,
+                        "state": "VERIFIED_REACHABLE",
+                    },
                 },
             ),
             Asset(
@@ -3396,6 +3997,7 @@ def self_test() -> dict[str, Any]:
                             "schema": "szl.hf-deploy-manifest/v1",
                             "source_repository": "szl-holdings/calibration-kernel",
                             "source_revision": source_revision,
+                            "binding_kind": "ARTIFACT_SOURCE",
                             "status": "OBSERVED",
                         }
                     ],
@@ -3419,15 +4021,34 @@ def self_test() -> dict[str, Any]:
                         "strict-transport-security": True,
                         "content-security-policy": True,
                         "x-content-type-options": True,
+                        "referrer-policy": True,
+                    },
+                    "security_header_values": {
+                        "strict-transport-security": (
+                            "max-age=31536000; includeSubDomains"
+                        ),
+                        "content-security-policy": (
+                            "default-src 'self'; script-src 'self'; "
+                            "object-src 'none'; frame-ancestors 'none'; "
+                            "base-uri 'self'; form-action 'self'"
+                        ),
+                        "x-content-type-options": "nosniff",
+                        "referrer-policy": "strict-origin-when-cross-origin",
                     },
                 },
             ),
         ]
-        alignment_counts = attach_cross_estate_alignment(assets)
+        alignment_counts = attach_cross_estate_alignment(
+            assets, source_scope="AUTHENTICATED_COMPLETE"
+        )
         assert alignment_counts["EXACT_HEAD"] == 1
         assert (
             assets[1].metadata["github_alignment"]["source_revision"]
             == source_revision
+        )
+        assert (
+            assets[1].metadata["provenance_policy"]["artifact_provenance"]["state"]
+            == "PASS"
         )
         checks.append("cross-estate exact-source alignment")
         assert strict_readme_source_binding(
@@ -3499,7 +4120,8 @@ def self_test() -> dict[str, Any]:
             },
         )
         reference_counts = attach_cross_estate_alignment(
-            [assets[0], source_reference_asset]
+            [assets[0], source_reference_asset],
+            source_scope="AUTHENTICATED_COMPLETE",
         )
         assert reference_counts["SOURCE_REFERENCE_ONLY"] == 1
         checks.append("runtime source-reference boundary")

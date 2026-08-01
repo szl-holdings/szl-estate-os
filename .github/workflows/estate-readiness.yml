@@ -38,16 +38,23 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py
+          python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py estate/*.py
           python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
+          python ci/test_verify_estate_readiness.py -v
+          python ci/test_github_controls.py -v
+          python ci/test_provenance_policy.py -v
 
-      - name: Run live estate audit
+      - name: Run live public estate audit
         id: live_audit
         if: always()
         continue-on-error: true
+        # This is deliberately credential-free. Authenticated organization
+        # completeness belongs to a separately authorized production packet.
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-          HF_TOKEN: ${{ secrets.ESTATE_HF_TOKEN }}
+          GH_TOKEN: ""
+          GITHUB_TOKEN: ""
+          HF_TOKEN: ""
+          HUGGING_FACE_HUB_TOKEN: ""
         run: >-
           python SZL_ONE_OF_ONE_ESTATE_OS.py audit
           --github-org szl-holdings

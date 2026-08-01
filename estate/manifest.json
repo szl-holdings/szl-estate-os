@@ -148,12 +148,13 @@
   },
   "production_trusted_keys": {},
   "deployment_provider_trusted_keys": {},
+  "restore_provider_trusted_keys": {},
   "known_gaps": [
     {
       "id": "privileged-inventory-completeness",
       "severity": "P0",
       "status": "ACTIVE",
-      "evidence": "Public inventory cannot establish private or protected completeness."
+      "evidence": "A local successor diagnostic reconciled 62 GitHub repositories, but it was not source-bound; Hugging Face remained PUBLIC_ONLY and other privileged provider asset classes were not inventoried."
     },
     {
       "id": "huggingface-source-runtime-binding",
@@ -166,6 +167,18 @@
       "severity": "P1",
       "status": "ACTIVE",
       "evidence": "The 2026-08-01 bounded DNS probe could not resolve www.a-11-oy.com."
+    },
+    {
+      "id": "a11oy-net-security-headers",
+      "severity": "P1",
+      "status": "ACTIVE",
+      "evidence": "The 2026-08-01 exact-main live baseline observed no CSP, Referrer-Policy, HSTS, or X-Content-Type-Options headers on a11oy.net/."
+    },
+    {
+      "id": "a11oy-primary-csp-enforcement",
+      "severity": "P1",
+      "status": "ACTIVE",
+      "evidence": "The 2026-08-01 live response for a-11-oy.com enforced only frame-ancestors; the broader resource policy remained report-only and allowed inline script/style."
     },
     {
       "id": "independent-signed-evidence",
