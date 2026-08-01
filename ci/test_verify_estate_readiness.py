@@ -228,6 +228,7 @@ def restore_artifact(report_path: str, report_sha256: str) -> dict[str, object]:
         "deployed_artifact_sha256": "c" * 64,
         "deployment_receipt_id": "deployment-receipt-20260801-1",
         "environment": "production",
+        "recovery_point_at": "2026-08-01T17:59:00Z",
         "started_at": "2026-08-01T18:00:00Z",
         "completed_at": "2026-08-01T18:05:00Z",
         "rto_seconds": 300,
@@ -593,8 +594,18 @@ class ReadinessTests(unittest.TestCase):
                 "does not bind the promoted deployment witness",
             ),
             (
-                lambda artifact: artifact.__setitem__("rto_seconds", 901),
+                lambda artifact: artifact.update(
+                    {"completed_at": "2026-08-01T18:15:01Z", "rto_seconds": 901}
+                ),
                 "exceeds the production policy ceiling",
+            ),
+            (
+                lambda artifact: artifact.__setitem__("rto_seconds", 1),
+                "does not match the recorded restore interval",
+            ),
+            (
+                lambda artifact: artifact.__setitem__("rpo_seconds", 1),
+                "does not match the recorded recovery point",
             ),
         ):
             with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary:

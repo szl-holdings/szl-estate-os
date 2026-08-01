@@ -700,6 +700,7 @@ def production_artifact_state(
             "deployed_artifact_sha256",
             "deployment_receipt_id",
             "environment",
+            "recovery_point_at",
             "started_at",
             "completed_at",
             "rto_seconds",
@@ -731,9 +732,16 @@ def production_artifact_state(
             or target.get("asset_type") not in {"route", "space"}
         ):
             return "FAIL", "restored target is not an audited LIVE asset"
+        recovery_point = parsed_timestamp(artifact.get("recovery_point_at"))
         started = parsed_timestamp(artifact.get("started_at"))
         completed = parsed_timestamp(artifact.get("completed_at"))
-        if started is None or completed is None or completed < started:
+        if (
+            recovery_point is None
+            or started is None
+            or completed is None
+            or started < recovery_point
+            or completed < started
+        ):
             return "FAIL", "restore drill timestamps are missing or invalid"
         freshness_state, freshness_detail = timestamp_freshness_state(
             completed,
@@ -752,9 +760,19 @@ def production_artifact_state(
                 or value < 0
             ):
                 return "FAIL", f"{field} is missing or invalid"
-        if float(artifact["rto_seconds"]) > float(policies["max_rto_seconds"]):
+        observed_rto_seconds = (completed - started).total_seconds()
+        observed_rpo_seconds = (started - recovery_point).total_seconds()
+        if not math.isclose(
+            float(artifact["rto_seconds"]), observed_rto_seconds, abs_tol=1e-9
+        ):
+            return "FAIL", "rto_seconds does not match the recorded restore interval"
+        if not math.isclose(
+            float(artifact["rpo_seconds"]), observed_rpo_seconds, abs_tol=1e-9
+        ):
+            return "FAIL", "rpo_seconds does not match the recorded recovery point"
+        if observed_rto_seconds > float(policies["max_rto_seconds"]):
             return "FAIL", "rto_seconds exceeds the production policy ceiling"
-        if float(artifact["rpo_seconds"]) > float(policies["max_rpo_seconds"]):
+        if observed_rpo_seconds > float(policies["max_rpo_seconds"]):
             return "FAIL", "rpo_seconds exceeds the production policy ceiling"
         witness_state, witness_detail = production_artifact_state(
             audit,

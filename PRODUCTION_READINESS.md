@@ -70,9 +70,11 @@ keyboard, screen-reader, zoom, contrast, and WCAG 2.2 AA results plus a report
 path whose loaded bytes must match the report digest. Recovery evidence binds a
 backup to the same deployment target, URL, revision, artifact digest, receipt,
 and environment selected by the provider-authenticated witness. Its measured
-RTO/RPO must stay below the manifest policy ceilings; its loaded report bytes,
-witnessed dependency-loss scenarios, timestamps, and closed corrective actions
-must also verify. Future or stale evidence, duplicate asset IDs, and minimal
+RTO must equal the recorded restore interval, its RPO must equal the interval
+from the recorded recovery point to drill start, and both must stay below the
+manifest policy ceilings. Its loaded report bytes, witnessed dependency-loss
+scenarios, timestamps, and closed corrective actions must also verify. Future
+or stale evidence, duplicate asset IDs, and minimal
 status-only JSON fail closed. Audit completion is bounded against the verifier's
 current time, so an internally consistent but expired signed packet cannot be
 replayed. The production requirements object must contain every known gate with
