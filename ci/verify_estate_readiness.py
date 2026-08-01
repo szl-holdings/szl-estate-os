@@ -11,6 +11,11 @@ from typing import Any
 
 
 ALIGNMENT_READY = {"EXACT_HEAD", "EXACT_RUNTIME_HEAD"}
+BASELINE_SIGNATURE_STATES = {
+    "HMAC_SHA256": "PASS",
+    "UNSIGNED": "WARN",
+}
+PRODUCTION_SIGNATURE_STATES = {"ASYMMETRIC_VERIFIED"}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -30,6 +35,13 @@ def alignment_state(asset: dict[str, Any]) -> str:
     if isinstance(alignment, dict):
         return str(alignment.get("status") or "UNAVAILABLE")
     return "UNAVAILABLE"
+
+
+def signature_state(signature_status: str, profile: str) -> str:
+    """Classify only signature states defined by the readiness contract."""
+    if profile == "baseline":
+        return BASELINE_SIGNATURE_STATES.get(signature_status, "FAIL")
+    return "PASS" if signature_status in PRODUCTION_SIGNATURE_STATES else "FAIL"
 
 
 def verify(
@@ -139,14 +151,10 @@ def verify(
 
     receipt = audit.get("receipt") or {}
     signature_status = str(receipt.get("signature_status") or "UNAVAILABLE")
-    if profile == "baseline":
-        signature_state = "WARN" if signature_status == "UNSIGNED" else "PASS"
-    else:
-        signature_state = "FAIL"
     checks.append(
         result(
             "evidence.independent_signature",
-            signature_state,
+            signature_state(signature_status, profile),
             f"receipt_signature={signature_status}; asymmetric independent evidence is required for production",
         )
     )

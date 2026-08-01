@@ -30,3 +30,5 @@ jobs:
         run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py
       - name: Run deterministic Estate OS checks
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
+      - name: Test readiness signature-state contract
+        run: python ci/test_verify_estate_readiness.py -v
