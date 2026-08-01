@@ -218,18 +218,45 @@ class ReadinessTests(unittest.TestCase):
             "browser_e2e_and_accessibility": {
                 "schema": "szl.estate-browser-evidence/v1",
                 "status": "VERIFIED",
+                "deployment_asset_id": "domain:route:a-11-oy.com/",
+                "tested_url": "https://a-11-oy.com/",
+                "tested_at": "2026-08-01T18:00:00Z",
+                "browsers": [
+                    {"name": "chromium", "form_factor": "desktop", "status": "PASS"},
+                    {"name": "webkit", "form_factor": "mobile", "status": "PASS"},
+                ],
                 "checks": {
                     "browser_e2e": "PASS",
                     "keyboard": "PASS",
                     "mobile": "PASS",
                     "accessibility": "PASS",
+                    "console_errors": "PASS",
+                    "network_errors": "PASS",
+                    "screen_reader": "PASS",
+                    "zoom_200": "PASS",
+                    "contrast": "PASS",
+                    "wcag_2_2_aa": "PASS",
                 },
+                "report_sha256": "d" * 64,
             },
             "restore_and_failure_domain_drill": {
                 "schema": "szl.estate-restore-drill/v1",
                 "status": "VERIFIED",
+                "backup_id": "backup-20260801-1",
+                "restored_target_asset_id": "domain:route:a-11-oy.com/",
+                "started_at": "2026-08-01T18:00:00Z",
+                "completed_at": "2026-08-01T18:05:00Z",
+                "rto_seconds": 300,
+                "rpo_seconds": 60,
+                "dependency_loss_scenarios": [
+                    {"name": "primary-store-loss", "status": "PASS"}
+                ],
+                "corrective_actions": [
+                    {"id": "restore-drill-1", "status": "CLOSED"}
+                ],
                 "restore_status": "PASS",
                 "failure_domain_status": "PASS",
+                "report_sha256": "e" * 64,
             },
         }
         with tempfile.TemporaryDirectory() as temporary:
@@ -335,6 +362,83 @@ class ReadinessTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 check(report, f"production.requirement.{requirement}")["detail"],
+            )
+
+    def test_production_requires_runtime_head_for_critical_spaces(self) -> None:
+        asset_id = "huggingface:space:szlholdings/a11oy"
+        value = audit()
+        value["assets"] = [
+            {
+                "asset_id": asset_id,
+                "asset_type": "space",
+                "source": "huggingface",
+                "status_label": "LIVE",
+                "metadata": {"github_alignment": {"status": "EXACT_HEAD"}},
+            }
+        ]
+        contract = manifest(
+            {"critical_huggingface_alignment": ["EXACT_RUNTIME_HEAD"]}
+        )
+        contract["critical_assets"] = [
+            {"asset_id": asset_id, "public": True, "required_status": "LIVE"}
+        ]
+        failed = verify(value, contract, "production")
+        self.assertEqual(check(failed, f"alignment.{asset_id}")["state"], "FAIL")
+        value["assets"][0]["metadata"]["github_alignment"][
+            "status"
+        ] = "EXACT_RUNTIME_HEAD"
+        passed = verify(value, contract, "production")
+        self.assertEqual(
+            check(
+                passed, "production.requirement.critical_huggingface_alignment"
+            )["state"],
+            "PASS",
+        )
+
+    def test_production_rejects_shallow_browser_and_restore_assertions(self) -> None:
+        shallow_artifacts = {
+            "browser_e2e_and_accessibility": {
+                "schema": "szl.estate-browser-evidence/v1",
+                "status": "VERIFIED",
+                "checks": {
+                    "browser_e2e": "PASS",
+                    "keyboard": "PASS",
+                    "mobile": "PASS",
+                    "accessibility": "PASS",
+                },
+            },
+            "restore_and_failure_domain_drill": {
+                "schema": "szl.estate-restore-drill/v1",
+                "status": "VERIFIED",
+                "restore_status": "PASS",
+                "failure_domain_status": "PASS",
+            },
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            add_audited_deployment(value)
+            references = {}
+            for requirement, artifact in shallow_artifacts.items():
+                path = root / f"{requirement}.json"
+                payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+                path.write_bytes(payload)
+                references[requirement] = {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            value["production_evidence"] = references
+            sign(value)
+            report = verify(
+                value,
+                manifest({requirement: True for requirement in shallow_artifacts}),
+                "production",
+                evidence_root=root,
+            )
+        for requirement in shallow_artifacts:
+            self.assertEqual(
+                check(report, f"production.requirement.{requirement}")["state"],
+                "FAIL",
             )
 
     def test_source_minimum_uses_actual_asset_inventory(self) -> None:

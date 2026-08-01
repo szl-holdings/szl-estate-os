@@ -56,6 +56,14 @@ canonical owner, environment, deployed artifact digest, and nested verified
 deployment receipt must agree byte-for-byte. Missing, unrelated, malformed, or
 internally inconsistent references fail the production profile.
 
+Critical Hugging Face Spaces require `EXACT_RUNTIME_HEAD`; source-head equality
+without a matching running revision is not promotable. Browser evidence binds
+an audited live HTTPS target to named desktop and mobile runs, console/network,
+keyboard, screen-reader, zoom, contrast, and WCAG 2.2 AA results plus a report
+digest. Recovery evidence binds a backup and audited restore target to witnessed
+dependency-loss scenarios, timestamped RTO/RPO measurements, closed corrective
+actions, and a report digest. Minimal status-only JSON fails closed.
+
 ## Execution order
 
 1. Close DNS and exact source/runtime binding gaps without changing truth labels.

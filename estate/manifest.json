@@ -130,7 +130,6 @@
   "production_requirements": {
     "authenticated_inventory": true,
     "critical_huggingface_alignment": [
-      "EXACT_HEAD",
       "EXACT_RUNTIME_HEAD"
     ],
     "independent_asymmetric_evidence": true,

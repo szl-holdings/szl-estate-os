@@ -9,14 +9,16 @@ import binascii
 import hashlib
 import hmac
 import json
+import math
 import re
 import sys
 import urllib.parse
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 
-ALIGNMENT_READY = {"EXACT_HEAD", "EXACT_RUNTIME_HEAD"}
+ALIGNMENT_READY = {"EXACT_RUNTIME_HEAD"}
 BASELINE_SIGNATURE_STATES = {
     "HMAC_SHA256": "PASS",
     "UNSIGNED": "WARN",
@@ -69,6 +71,46 @@ def signature_state(signature_status: str, profile: str) -> str:
     # Production never trusts a status label. verify_independent_signature validates
     # the signature bytes against a protected manifest-pinned public key.
     return "FAIL"
+
+
+def parsed_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        observed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return observed if observed.tzinfo is not None else None
+
+
+def audited_live_target_state(
+    assets: dict[str, dict[str, Any]], asset_id: str, url: str
+) -> tuple[str, str]:
+    asset = assets.get(asset_id)
+    if not isinstance(asset, dict):
+        return "FAIL", "deployment asset is not present in the audited inventory"
+    if (
+        asset.get("status_label") != "LIVE"
+        or asset.get("source") not in {"domains", "huggingface"}
+        or asset.get("asset_type") not in {"route", "space"}
+    ):
+        return "FAIL", "deployment asset is not an audited LIVE deployment"
+    metadata = asset.get("metadata")
+    if not isinstance(metadata, dict):
+        return "FAIL", "audited deployment metadata is missing or invalid"
+    parsed_url = urllib.parse.urlparse(url)
+    audited_urls = {
+        str(value) for value in (asset.get("url"), metadata.get("final_url")) if value
+    }
+    if (
+        parsed_url.scheme != "https"
+        or not parsed_url.hostname
+        or parsed_url.username is not None
+        or parsed_url.password is not None
+        or url not in audited_urls
+    ):
+        return "FAIL", "deployment URL does not match the audited HTTPS deployment"
+    return "PASS", f"bound deployment_asset_id={asset_id}"
 
 
 def canonical_audit_payload(audit: dict[str, Any]) -> bytes:
@@ -210,10 +252,7 @@ def production_artifact_state(
         if deployment_asset.get("status_label") != "LIVE":
             return "FAIL", "deployment_asset_id is not an audited LIVE deployment"
         repository_metadata = repository_asset.get("metadata")
-        deployment_metadata = deployment_asset.get("metadata")
-        if not isinstance(repository_metadata, dict) or not isinstance(
-            deployment_metadata, dict
-        ):
+        if not isinstance(repository_metadata, dict):
             return "FAIL", "audited deployment metadata is missing or invalid"
         repository_revision = str(repository_metadata.get("default_branch_sha") or "")
         if not hmac.compare_digest(repository_revision, revision):
@@ -229,21 +268,11 @@ def production_artifact_state(
         ):
             return "FAIL", "deployment owner is not bound to the canonical repository owner"
         deployment_url = str(artifact.get("deployment_url") or "")
-        parsed_url = urllib.parse.urlparse(deployment_url)
-        audited_urls = {
-            str(value)
-            for value in (
-                deployment_asset.get("url"),
-                deployment_metadata.get("final_url"),
-            )
-            if value
-        }
-        if (
-            parsed_url.scheme != "https"
-            or not parsed_url.hostname
-            or deployment_url not in audited_urls
-        ):
-            return "FAIL", "deployment URL does not match the audited HTTPS deployment"
+        target_state, target_detail = audited_live_target_state(
+            assets, deployment_asset_id, deployment_url
+        )
+        if target_state != "PASS":
+            return target_state, target_detail
         environment = str(artifact.get("environment") or "")
         if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", environment) is None:
             return "FAIL", "deployment environment is missing or invalid"
@@ -285,16 +314,136 @@ def production_artifact_state(
         if mismatches:
             return "FAIL", f"deployment receipt binding mismatch={','.join(mismatches)}"
     elif requirement == "browser_e2e_and_accessibility":
-        checks = artifact.get("checks") or {}
-        required = {"browser_e2e", "keyboard", "mobile", "accessibility"}
+        required_artifact_keys = {
+            "schema",
+            "status",
+            "deployment_asset_id",
+            "tested_url",
+            "tested_at",
+            "browsers",
+            "checks",
+            "report_sha256",
+        }
+        if set(artifact) != required_artifact_keys:
+            return "FAIL", "browser evidence shape is invalid"
+        deployment_asset_id = str(artifact.get("deployment_asset_id") or "")
+        tested_url = str(artifact.get("tested_url") or "")
+        target_state, target_detail = audited_live_target_state(
+            assets, deployment_asset_id, tested_url
+        )
+        if target_state != "PASS":
+            return target_state, target_detail
+        if parsed_timestamp(artifact.get("tested_at")) is None:
+            return "FAIL", "browser evidence timestamp is missing or invalid"
+        browsers = artifact.get("browsers")
+        if not isinstance(browsers, list) or len(browsers) < 2:
+            return "FAIL", "browser evidence must include desktop and mobile runs"
+        form_factors: set[str] = set()
+        for browser in browsers:
+            if not isinstance(browser, dict) or set(browser) != {
+                "name",
+                "form_factor",
+                "status",
+            }:
+                return "FAIL", "browser run shape is invalid"
+            if not str(browser.get("name") or "") or browser.get("status") != "PASS":
+                return "FAIL", "browser run is unnamed or not passing"
+            form_factors.add(str(browser.get("form_factor") or ""))
+        if not {"desktop", "mobile"}.issubset(form_factors):
+            return "FAIL", "browser evidence lacks desktop or mobile coverage"
+        checks = artifact.get("checks")
+        required = {
+            "browser_e2e",
+            "keyboard",
+            "mobile",
+            "accessibility",
+            "console_errors",
+            "network_errors",
+            "screen_reader",
+            "zoom_200",
+            "contrast",
+            "wcag_2_2_aa",
+        }
+        if not isinstance(checks, dict):
+            return "FAIL", "browser checks must be a JSON object"
         missing = sorted(name for name in required if checks.get(name) != "PASS")
         if missing:
             return "FAIL", f"required checks not passing={','.join(missing)}"
+        if SHA256_PATTERN.fullmatch(str(artifact.get("report_sha256") or "")) is None:
+            return "FAIL", "browser report digest is missing or invalid"
     elif requirement == "restore_and_failure_domain_drill":
+        required_artifact_keys = {
+            "schema",
+            "status",
+            "backup_id",
+            "restored_target_asset_id",
+            "started_at",
+            "completed_at",
+            "rto_seconds",
+            "rpo_seconds",
+            "dependency_loss_scenarios",
+            "corrective_actions",
+            "restore_status",
+            "failure_domain_status",
+            "report_sha256",
+        }
+        if set(artifact) != required_artifact_keys:
+            return "FAIL", "restore evidence shape is invalid"
         if artifact.get("restore_status") != "PASS":
             return "FAIL", "restore drill did not pass"
         if artifact.get("failure_domain_status") != "PASS":
             return "FAIL", "failure-domain drill did not pass"
+        if re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}",
+            str(artifact.get("backup_id") or ""),
+        ) is None:
+            return "FAIL", "backup identifier is missing or invalid"
+        target_id = str(artifact.get("restored_target_asset_id") or "")
+        target = assets.get(target_id)
+        if (
+            not isinstance(target, dict)
+            or target.get("status_label") != "LIVE"
+            or target.get("source") not in {"domains", "huggingface"}
+            or target.get("asset_type") not in {"route", "space"}
+        ):
+            return "FAIL", "restored target is not an audited LIVE asset"
+        started = parsed_timestamp(artifact.get("started_at"))
+        completed = parsed_timestamp(artifact.get("completed_at"))
+        if started is None or completed is None or completed < started:
+            return "FAIL", "restore drill timestamps are missing or invalid"
+        for field in ("rto_seconds", "rpo_seconds"):
+            value = artifact.get(field)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value < 0
+            ):
+                return "FAIL", f"{field} is missing or invalid"
+        scenarios = artifact.get("dependency_loss_scenarios")
+        if not isinstance(scenarios, list) or not scenarios:
+            return "FAIL", "witnessed dependency-loss scenarios are missing"
+        for scenario in scenarios:
+            if (
+                not isinstance(scenario, dict)
+                or set(scenario) != {"name", "status"}
+                or not str(scenario.get("name") or "")
+                or scenario.get("status") != "PASS"
+            ):
+                return "FAIL", "dependency-loss scenario is malformed or not passing"
+        corrective_actions = artifact.get("corrective_actions")
+        if not isinstance(corrective_actions, list) or not corrective_actions:
+            return "FAIL", "corrective-action closure evidence is missing"
+        for action in corrective_actions:
+            if (
+                not isinstance(action, dict)
+                or set(action) != {"id", "status"}
+                or not str(action.get("id") or "")
+                or action.get("status") != "CLOSED"
+            ):
+                return "FAIL", "corrective action is malformed or not closed"
+        if SHA256_PATTERN.fullmatch(str(artifact.get("report_sha256") or "")) is None:
+            return "FAIL", "restore report digest is missing or invalid"
     return "PASS", f"verified path={relative.as_posix()} artifact_sha256={digest}"
 
 
@@ -492,7 +641,12 @@ def verify(
                     )
                 )
             elif requirement == "critical_huggingface_alignment":
-                allowed = {str(value) for value in configured}
+                configured_states = (
+                    {str(value) for value in configured}
+                    if isinstance(configured, list)
+                    else set()
+                )
+                allowed = ALIGNMENT_READY
                 failed = []
                 for contract in critical_assets:
                     if not isinstance(contract, dict):
@@ -503,13 +657,18 @@ def verify(
                     asset = assets.get(asset_id)
                     if asset is None or alignment_state(asset) not in allowed:
                         failed.append(asset_id)
+                configuration_valid = configured_states == ALIGNMENT_READY
                 checks.append(
                     result(
                         check_id,
-                        "PASS" if not failed else "FAIL",
+                        "PASS" if configuration_valid and not failed else "FAIL",
                         "all critical Hugging Face alignments verified"
-                        if not failed
-                        else f"failed={','.join(failed)}",
+                        if configuration_valid and not failed
+                        else (
+                            f"invalid configured states={','.join(sorted(configured_states))}"
+                            if not configuration_valid
+                            else f"failed={','.join(failed)}"
+                        ),
                     )
                 )
             elif requirement == "independent_asymmetric_evidence":
