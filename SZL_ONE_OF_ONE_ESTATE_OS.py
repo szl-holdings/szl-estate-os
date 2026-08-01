@@ -45,9 +45,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from operating_fabric import (
+    LANE_ORDER,
+    evaluate_operating_fabric,
+    evidence_template,
+    load_evidence_bundle,
+)
+
 
 APP_NAME = "SZL_ONE_OF_ONE_ESTATE_OS"
-APP_VERSION = "2026.07.30"
+APP_VERSION = "2026.08.01"
 USER_AGENT = f"{APP_NAME}/{APP_VERSION} (+https://a-11-oy.com)"
 DEFAULT_GITHUB_ORG = "szl-holdings"
 DEFAULT_HF_ORG = "SZLHOLDINGS"
@@ -203,6 +210,52 @@ CREATE TABLE IF NOT EXISTS receipts (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS operating_lanes (
+    audit_id TEXT NOT NULL,
+    lane TEXT NOT NULL,
+    assessment TEXT NOT NULL,
+    score REAL,
+    coverage REAL NOT NULL,
+    control_count INTEGER NOT NULL,
+    critical_blockers_json TEXT NOT NULL,
+    claim_state TEXT NOT NULL,
+    PRIMARY KEY (audit_id, lane),
+    FOREIGN KEY (audit_id) REFERENCES audit_runs(audit_id)
+);
+
+CREATE TABLE IF NOT EXISTS control_findings (
+    audit_id TEXT NOT NULL,
+    control_id TEXT NOT NULL,
+    lane TEXT NOT NULL,
+    title TEXT NOT NULL,
+    state TEXT NOT NULL,
+    truth_label TEXT NOT NULL,
+    critical INTEGER NOT NULL,
+    severity TEXT NOT NULL,
+    owner_role TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    metric_json TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    PRIMARY KEY (audit_id, control_id),
+    FOREIGN KEY (audit_id) REFERENCES audit_runs(audit_id)
+);
+
+CREATE TABLE IF NOT EXISTS fabric_actions (
+    audit_id TEXT NOT NULL,
+    action_id TEXT NOT NULL,
+    control_id TEXT NOT NULL,
+    lane TEXT NOT NULL,
+    priority TEXT NOT NULL,
+    state TEXT NOT NULL,
+    owner_role TEXT NOT NULL,
+    execution_mode TEXT NOT NULL,
+    approval TEXT NOT NULL,
+    playbook TEXT NOT NULL,
+    PRIMARY KEY (audit_id, action_id),
+    FOREIGN KEY (audit_id) REFERENCES audit_runs(audit_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_audit_assets_audit
 ON audit_assets(audit_id);
 
@@ -211,6 +264,12 @@ ON proposals(audit_id, status);
 
 CREATE INDEX IF NOT EXISTS idx_receipts_audit
 ON receipts(audit_id);
+
+CREATE INDEX IF NOT EXISTS idx_control_findings_audit_lane
+ON control_findings(audit_id, lane, state);
+
+CREATE INDEX IF NOT EXISTS idx_fabric_actions_audit_priority
+ON fabric_actions(audit_id, priority);
 """
 
 
@@ -1943,6 +2002,7 @@ def persist_audit(
     scorecards: dict[str, ScoreCard],
     clusters: dict[str, str],
     proposals: list[dict[str, Any]],
+    operating_fabric: dict[str, Any],
 ) -> dict[str, Any]:
     connection = connect_db(db_path)
     try:
@@ -2039,6 +2099,71 @@ def persist_audit(
                     proposal["created_at"],
                 ),
             )
+        for lane in operating_fabric["lanes"]:
+            connection.execute(
+                """
+                INSERT INTO operating_lanes (
+                    audit_id, lane, assessment, score, coverage, control_count,
+                    critical_blockers_json, claim_state
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    audit_id,
+                    lane["lane"],
+                    lane["assessment"],
+                    lane["score"],
+                    lane["coverage"],
+                    lane["control_count"],
+                    canonical_json(lane["critical_blockers"]),
+                    lane["claim_state"],
+                ),
+            )
+        for control in operating_fabric["controls"]:
+            connection.execute(
+                """
+                INSERT INTO control_findings (
+                    audit_id, control_id, lane, title, state, truth_label,
+                    critical, severity, owner_role, observed_at, evidence_json,
+                    metric_json, response_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    audit_id,
+                    control["control_id"],
+                    control["lane"],
+                    control["title"],
+                    control["state"],
+                    control["truth_label"],
+                    int(control["critical"]),
+                    control["severity"],
+                    control["owner_role"],
+                    control["observed_at"],
+                    canonical_json(control["evidence"]),
+                    canonical_json(control["metric"]),
+                    canonical_json(control["response"]),
+                ),
+            )
+        for action in operating_fabric["action_queue"]:
+            connection.execute(
+                """
+                INSERT INTO fabric_actions (
+                    audit_id, action_id, control_id, lane, priority, state,
+                    owner_role, execution_mode, approval, playbook
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    audit_id,
+                    action["action_id"],
+                    action["control_id"],
+                    action["lane"],
+                    action["priority"],
+                    action["state"],
+                    action["owner_role"],
+                    action["execution_mode"],
+                    action["approval"],
+                    action["playbook"],
+                ),
+            )
         receipt_payload = {
             "audit_id": audit_id,
             "status": status,
@@ -2046,6 +2171,10 @@ def persist_audit(
             "sources": [report.to_dict() for report in source_reports],
             "asset_count": len(assets),
             "proposal_count": len(proposals),
+            "operating_fabric_summary": operating_fabric["summary"],
+            "operating_fabric_sha256": sha256_text(
+                canonical_json(operating_fabric)
+            ),
             "asset_snapshot_sha256": sha256_text(
                 canonical_json(
                     [
@@ -2344,6 +2473,7 @@ def run_audit(
     config: AuditConfig,
     db_path: Path,
     export_path: Path,
+    evidence_bundle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     audit_id = f"audit-{uuid.uuid4().hex}"
     started_at = utc_now()
@@ -2382,6 +2512,15 @@ def run_audit(
     scorecards, clusters, proposals = build_analysis(audit_id, assets)
     completed_at = utc_now()
     status = audit_status(source_reports, len(assets))
+    operating_fabric = evaluate_operating_fabric(
+        audit_id,
+        assets,
+        source_reports,
+        proposals,
+        completed_at,
+        receipt_chain=verify_receipt_chain(db_path),
+        evidence_bundle=evidence_bundle,
+    )
     receipt = persist_audit(
         db_path,
         audit_id=audit_id,
@@ -2394,6 +2533,7 @@ def run_audit(
         scorecards=scorecards,
         clusters=clusters,
         proposals=proposals,
+        operating_fabric=operating_fabric,
     )
     payload = {
         "meta": {
@@ -2428,6 +2568,7 @@ def run_audit(
             for asset in assets
         ],
         "proposals": proposals,
+        "operating_fabric": operating_fabric,
         "receipt": receipt,
     }
     write_json_atomic(export_path, payload)
@@ -2500,6 +2641,7 @@ def load_status(db_path: Path) -> dict[str, Any]:
             (audit_id,),
         ).fetchall()
         chain = verify_receipt_chain(db_path)
+        operating_fabric = load_operating_fabric(db_path)
         return {
             "status": run["status"],
             "audit_id": audit_id,
@@ -2514,6 +2656,7 @@ def load_status(db_path: Path) -> dict[str, Any]:
             "fate_counts": {row["proposed_fate"]: row["count"] for row in fate_rows},
             "receipt_hash": run["receipt_hash"],
             "receipt_chain": chain,
+            "operating_fabric": operating_fabric["summary"],
             "app_version": run["app_version"],
             "mutation_policy": "READ_ONLY",
         }
@@ -2650,6 +2793,178 @@ def load_receipts(db_path: Path, limit: int = 100) -> list[dict[str, Any]]:
         connection.close()
 
 
+def load_operating_fabric(
+    db_path: Path,
+    *,
+    lane: str | None = None,
+    state: str | None = None,
+) -> dict[str, Any]:
+    connection = connect_db(db_path)
+    try:
+        audit_id = latest_audit_id(connection)
+        if audit_id is None:
+            return {
+                "status": "UNAVAILABLE",
+                "reason": "No operating-fabric evaluation has been recorded",
+                "summary": {
+                    "lane_count": 0,
+                    "control_count": 0,
+                    "action_count": 0,
+                    "readiness_to_claim_fully_operational": "BLOCKED",
+                },
+                "lanes": [],
+                "controls": [],
+                "action_queue": [],
+            }
+        lane_rows = connection.execute(
+            "SELECT * FROM operating_lanes WHERE audit_id = ?",
+            (audit_id,),
+        ).fetchall()
+        control_clauses = ["audit_id = ?"]
+        control_parameters: list[Any] = [audit_id]
+        if lane:
+            control_clauses.append("lane = ?")
+            control_parameters.append(lane)
+        if state:
+            control_clauses.append("state = ?")
+            control_parameters.append(state)
+        control_rows = connection.execute(
+            f"""
+            SELECT * FROM control_findings
+            WHERE {' AND '.join(control_clauses)}
+            ORDER BY lane, control_id
+            """,
+            control_parameters,
+        ).fetchall()
+        action_clauses = ["audit_id = ?"]
+        action_parameters: list[Any] = [audit_id]
+        if lane:
+            action_clauses.append("lane = ?")
+            action_parameters.append(lane)
+        if state:
+            action_clauses.append("state = ?")
+            action_parameters.append(state)
+        action_rows = connection.execute(
+            f"""
+            SELECT * FROM fabric_actions
+            WHERE {' AND '.join(action_clauses)}
+            ORDER BY
+                CASE priority
+                    WHEN 'CRITICAL' THEN 1
+                    WHEN 'HIGH' THEN 2
+                    WHEN 'MEDIUM' THEN 3
+                    ELSE 4
+                END,
+                control_id
+            """,
+            action_parameters,
+        ).fetchall()
+        lane_rank = {name: index for index, name in enumerate(LANE_ORDER)}
+        all_lanes = sorted(
+            [
+                {
+                    "lane": row["lane"],
+                    "assessment": row["assessment"],
+                    "score": row["score"],
+                    "coverage": row["coverage"],
+                    "control_count": row["control_count"],
+                    "critical_blockers": json_load(row["critical_blockers_json"]),
+                    "claim_state": row["claim_state"],
+                }
+                for row in lane_rows
+            ],
+            key=lambda item: lane_rank.get(item["lane"], 99),
+        )
+        lanes = [item for item in all_lanes if lane is None or item["lane"] == lane]
+        controls = [
+            {
+                "control_id": row["control_id"],
+                "lane": row["lane"],
+                "title": row["title"],
+                "state": row["state"],
+                "truth_label": row["truth_label"],
+                "critical": bool(row["critical"]),
+                "severity": row["severity"],
+                "owner_role": row["owner_role"],
+                "observed_at": row["observed_at"],
+                "evidence": json_load(row["evidence_json"]),
+                "metric": json_load(row["metric_json"]),
+                "response": json_load(row["response_json"]),
+            }
+            for row in control_rows
+        ]
+        actions = [
+            {
+                "action_id": row["action_id"],
+                "control_id": row["control_id"],
+                "lane": row["lane"],
+                "priority": row["priority"],
+                "state": row["state"],
+                "owner_role": row["owner_role"],
+                "execution_mode": row["execution_mode"],
+                "approval": row["approval"],
+                "playbook": row["playbook"],
+            }
+            for row in action_rows
+        ]
+        all_control_rows = connection.execute(
+            "SELECT state, COUNT(*) AS count FROM control_findings WHERE audit_id = ? GROUP BY state",
+            (audit_id,),
+        ).fetchall()
+        truth_rows = connection.execute(
+            "SELECT truth_label, COUNT(*) AS count FROM control_findings WHERE audit_id = ? GROUP BY truth_label",
+            (audit_id,),
+        ).fetchall()
+        truth_counts = {row["truth_label"]: row["count"] for row in truth_rows}
+        total_controls = sum(row["count"] for row in all_control_rows)
+        total_actions = connection.execute(
+            "SELECT COUNT(*) AS count FROM fabric_actions WHERE audit_id = ?",
+            (audit_id,),
+        ).fetchone()["count"]
+        assessment_counts: dict[str, int] = {}
+        for item in all_lanes:
+            assessment_counts[item["assessment"]] = assessment_counts.get(item["assessment"], 0) + 1
+        return {
+            "status": (
+                "MEASURED"
+                if total_controls and truth_counts.get("MEASURED") == total_controls
+                else "PARTIAL"
+                if total_controls
+                else "UNAVAILABLE"
+            ),
+            "schema": "szl.operating-fabric/v1",
+            "audit_id": audit_id,
+            "filters": {"lane": lane, "state": state},
+            "execution_policy": "DEFENSIVE_READ_ONLY; RESPONSES_PROPOSE_ONLY; APPROVAL_REQUIRED",
+            "summary": {
+                "lane_count": len(all_lanes),
+                "control_count": total_controls,
+                "action_count": total_actions,
+                "state_counts": {row["state"]: row["count"] for row in all_control_rows},
+                "truth_counts": truth_counts,
+                "evaluation_truth": (
+                    "MEASURED"
+                    if total_controls and truth_counts.get("MEASURED") == total_controls
+                    else "PARTIAL"
+                    if total_controls
+                    else "UNAVAILABLE"
+                ),
+                "assessment_counts": assessment_counts,
+                "readiness_to_claim_fully_operational": (
+                    "SUPPORTED"
+                    if all_lanes
+                    and all(item["claim_state"] == "SUPPORTED" for item in all_lanes)
+                    else "BLOCKED"
+                ),
+            },
+            "lanes": lanes,
+            "controls": controls,
+            "action_queue": actions,
+        }
+    finally:
+        connection.close()
+
+
 DASHBOARD_HTML = """<!doctype html>
 <html lang="en">
 <head>
@@ -2721,10 +3036,20 @@ DASHBOARD_HTML = """<!doctype html>
     <div class="card"><span class="mono">Proposals</span><b id="proposals">-</b></div>
     <div class="card"><span class="mono">Live routes/spaces</span><b id="live">-</b></div>
     <div class="card"><span class="mono">Broken</span><b id="broken">-</b></div>
+    <div class="card"><span class="mono">Operating lanes</span><b id="lanecount">-</b></div>
+    <div class="card"><span class="mono">Full-operation claim</span><b id="claim" style="font-size:18px">-</b></div>
     <div class="card wide"><span class="mono">Latest audit</span><b id="audit" style="font-size:18px">-</b></div>
     <div class="card wide"><span class="mono">Receipt chain</span><b id="chain" style="font-size:18px">-</b></div>
   </div>
   <section><h2>Source truth</h2><div id="sources" class="card"></div></section>
+  <section><h2>Seven-lane operating fabric</h2><div class="table-wrap"><table>
+    <thead><tr><th>Lane</th><th>Assessment</th><th>Score</th><th>Coverage</th><th>Claim</th></tr></thead>
+    <tbody id="lanes"></tbody>
+  </table></div></section>
+  <section><h2>Defensive action queue</h2><div class="table-wrap"><table>
+    <thead><tr><th>Priority</th><th>Lane</th><th>Control</th><th>Mode</th><th>Playbook</th></tr></thead>
+    <tbody id="fabric-actions"></tbody>
+  </table></div></section>
   <section><h2>Governance queue</h2><div class="table-wrap"><table>
     <thead><tr><th>Risk</th><th>Fate</th><th>Asset</th><th>Why</th></tr></thead>
     <tbody id="queue"></tbody>
@@ -2741,20 +3066,31 @@ const pill = value => `<span class="pill ${esc(value)}">${esc(value)}</span>`;
 Promise.all([
   fetch("/api/v1/status").then(r => r.json()),
   fetch("/api/v1/proposals?limit=25").then(r => r.json()),
-  fetch("/api/v1/assets?limit=100").then(r => r.json())
-]).then(([status, proposalData, assetData]) => {
+  fetch("/api/v1/assets?limit=100").then(r => r.json()),
+  fetch("/api/v1/operating-fabric").then(r => r.json())
+]).then(([status, proposalData, assetData, fabric]) => {
   document.getElementById("stamp").textContent = status.status || "UNAVAILABLE";
   document.getElementById("stamp").classList.add(status.status || "UNAVAILABLE");
   document.getElementById("assets").textContent = status.asset_count ?? 0;
   document.getElementById("proposals").textContent = status.proposal_count ?? 0;
   document.getElementById("live").textContent = status.status_counts?.LIVE ?? 0;
   document.getElementById("broken").textContent = status.status_counts?.BROKEN ?? 0;
+  document.getElementById("lanecount").textContent = fabric.summary?.lane_count ?? 0;
+  document.getElementById("claim").textContent = fabric.summary?.readiness_to_claim_fully_operational || "BLOCKED";
   document.getElementById("audit").textContent = status.audit_id || "No audit";
   document.getElementById("chain").textContent = status.receipt_chain?.status || "UNAVAILABLE";
   const sources = status.source_reports || [];
   document.getElementById("sources").innerHTML = sources.length ? sources.map(source =>
     `<div class="source"><span><b>${esc(source.source)}</b><br><small>${esc(source.scope)} · ${source.count} assets · ${source.elapsed_ms} ms</small></span>${pill(source.status)}</div>`
   ).join("") : `<span class="empty">No source reports yet.</span>`;
+  const lanes = fabric.lanes || [];
+  document.getElementById("lanes").innerHTML = lanes.length ? lanes.map(item =>
+    `<tr><td><b>${esc(item.lane)}</b></td><td>${pill(item.assessment)}</td><td>${item.score ?? "UNAVAILABLE"}</td><td>${Math.round((item.coverage || 0) * 100)}%</td><td>${pill(item.claim_state)}</td></tr>`
+  ).join("") : `<tr><td colspan="5" class="empty">Run an audit to evaluate every operating lane.</td></tr>`;
+  const fabricActions = fabric.action_queue || [];
+  document.getElementById("fabric-actions").innerHTML = fabricActions.length ? fabricActions.slice(0, 25).map(item =>
+    `<tr><td>${pill(item.priority)}</td><td>${esc(item.lane)}</td><td>${esc(item.control_id)}</td><td>${pill(item.execution_mode)}</td><td>${esc(item.playbook)}</td></tr>`
+  ).join("") : `<tr><td colspan="5" class="empty">No defensive actions are currently proposed.</td></tr>`;
   const proposals = proposalData.items || [];
   document.getElementById("queue").innerHTML = proposals.length ? proposals.map(item =>
     `<tr><td>${pill(item.risk_level)}</td><td>${pill(item.proposed_fate)}</td><td>${item.asset_url ? `<a href="${esc(item.asset_url)}" target="_blank" rel="noreferrer">${esc(item.asset_name)}</a>` : esc(item.asset_name)}</td><td>${esc((item.rationale || [])[0])}</td></tr>`
@@ -2847,6 +3183,9 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
                         "status": "READY" if ready else "UNAVAILABLE",
                         "database": str(self.db_path),
                         "latest_audit": status.get("audit_id"),
+                        "full_operation_claim": (status.get("operating_fabric") or {}).get(
+                            "readiness_to_claim_fully_operational", "BLOCKED"
+                        ),
                     },
                 )
             except sqlite3.Error as exc:
@@ -2882,6 +3221,14 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
             items = load_proposals(self.db_path, status=status, limit=limit)
             self.send_json(200, {"count": len(items), "items": items})
             return
+        if path == "/api/v1/operating-fabric":
+            lane = (query.get("lane") or [None])[0]
+            state = (query.get("state") or [None])[0]
+            self.send_json(
+                200,
+                load_operating_fabric(self.db_path, lane=lane, state=state),
+            )
+            return
         if path == "/api/v1/receipts":
             limit = safe_int((query.get("limit") or ["100"])[0], 100)
             items = load_receipts(self.db_path, limit=limit)
@@ -2896,6 +3243,7 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
             return
         if path == "/metrics":
             status = load_status(self.db_path)
+            operating_fabric = load_operating_fabric(self.db_path)
             lines = [
                 "# HELP szl_estate_assets Assets in the latest estate audit.",
                 "# TYPE szl_estate_assets gauge",
@@ -2907,6 +3255,16 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
             for label, count in (status.get("status_counts") or {}).items():
                 safe_label = str(label).replace("\\", "\\\\").replace('"', '\\"')
                 lines.append(f'szl_estate_truth_state{{state="{safe_label}"}} {count}')
+            for label, count in (operating_fabric.get("summary", {}).get("state_counts") or {}).items():
+                safe_label = str(label).replace("\\", "\\\\").replace('"', '\\"')
+                lines.append(f'szl_operating_controls{{state="{safe_label}"}} {count}')
+            for lane in operating_fabric.get("lanes") or []:
+                safe_lane = str(lane["lane"]).replace("\\", "\\\\").replace('"', '\\"')
+                score = lane["score"] if lane["score"] is not None else -1
+                lines.append(f'szl_operating_lane_score{{lane="{safe_lane}"}} {score}')
+                lines.append(
+                    f'szl_operating_lane_coverage{{lane="{safe_lane}"}} {lane["coverage"]}'
+                )
             self.send_text(
                 200,
                 "\n".join(lines) + "\n",
@@ -3142,6 +3500,67 @@ def self_test() -> dict[str, Any]:
                 elapsed_ms=1,
             )
         ]
+        operating_fabric = evaluate_operating_fabric(
+            audit_id,
+            assets,
+            reports,
+            proposals,
+            observed,
+            receipt_chain=verify_receipt_chain(db_path),
+        )
+        assert len(operating_fabric["lanes"]) == 7
+        assert all(
+            action["execution_mode"] == "PROPOSE_ONLY"
+            and action["approval"] == "REQUIRED"
+            for action in operating_fabric["action_queue"]
+        )
+        proposal_gate = next(
+            control
+            for control in operating_fabric["controls"]
+            if control["control_id"] == "governance.proposal_gate"
+        )
+        assert proposal_gate["state"] == "PASS"
+        assert operating_fabric["summary"]["readiness_to_claim_fully_operational"] == "BLOCKED"
+        checks.append("seven-lane defensive operating fabric")
+        evidence_path = root / "operating-evidence.json"
+        evidence_payload = evidence_template()
+        evidence_now = parse_datetime(observed)
+        assert evidence_now is not None
+        for assertion in evidence_payload["assertions"]:
+            assertion["observed_at"] = (evidence_now - dt.timedelta(minutes=5)).isoformat()
+            assertion["expires_at"] = (evidence_now + dt.timedelta(days=1)).isoformat()
+            assertion["reference"] = f"urn:szl:self-test:{assertion['control_id']}"
+        write_json_atomic(evidence_path, evidence_payload)
+        admitted_bundle = load_evidence_bundle(evidence_path)
+        attested_fabric = evaluate_operating_fabric(
+            audit_id,
+            assets,
+            reports,
+            proposals,
+            observed,
+            receipt_chain=verify_receipt_chain(db_path),
+            evidence_bundle=admitted_bundle,
+        )
+        people_controls = [
+            control
+            for control in attested_fabric["controls"]
+            if control["lane"] == "people"
+        ]
+        assert people_controls and all(
+            control["truth_label"] == "ATTESTED" for control in people_controls
+        )
+        assert attested_fabric["summary"]["readiness_to_claim_fully_operational"] == "BLOCKED"
+        rejected_payload = evidence_template()
+        rejected_payload["assertions"][0]["control_id"] = "cybersecurity.identity_mfa"
+        rejected_path = root / "rejected-evidence.json"
+        write_json_atomic(rejected_path, rejected_payload)
+        try:
+            load_evidence_bundle(rejected_path)
+        except ValueError as exc:
+            assert "not accepted" in str(exc)
+        else:
+            raise AssertionError("External evidence overrode a directly observed control")
+        checks.append("bounded attested-evidence admission")
         receipt = persist_audit(
             db_path,
             audit_id=audit_id,
@@ -3154,6 +3573,7 @@ def self_test() -> dict[str, Any]:
             scorecards=scorecards,
             clusters=clusters,
             proposals=proposals,
+            operating_fabric=operating_fabric,
         )
         assert receipt["receipt_hash"]
         checks.append("audit persistence")
@@ -3164,10 +3584,15 @@ def self_test() -> dict[str, Any]:
         assert status["asset_count"] == len(assets)
         assert status["audit_id"] == audit_id
         checks.append("status projection")
+        stored_fabric = load_operating_fabric(db_path)
+        assert stored_fabric["summary"]["lane_count"] == 7
+        assert len(stored_fabric["controls"]) == operating_fabric["summary"]["control_count"]
+        checks.append("operating-fabric persistence")
         exported = {
             "status": status,
             "assets": load_assets(db_path),
             "proposals": load_proposals(db_path),
+            "operating_fabric": stored_fabric,
         }
         write_json_atomic(export_path, exported)
         assert export_path.exists() and export_path.stat().st_size > 0
@@ -3269,6 +3694,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_EXPORT,
         help=f"Latest audit JSON path (default: {DEFAULT_EXPORT})",
     )
+    audit_parser.add_argument(
+        "--evidence",
+        type=Path,
+        help="Optional szl.operating-evidence/v1 JSON bundle for external-only controls",
+    )
 
     status_parser = subparsers.add_parser("status", help="Show the latest audit status")
     add_db_argument(status_parser)
@@ -3285,6 +3715,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify the local receipt hash chain and signatures",
     )
     add_db_argument(verify_parser)
+
+    operating_parser = subparsers.add_parser(
+        "operating-report",
+        help="Show the latest seven-lane defensive operating-fabric evaluation",
+    )
+    add_db_argument(operating_parser)
+    operating_parser.add_argument("--lane", choices=LANE_ORDER)
+    operating_parser.add_argument(
+        "--state",
+        choices=("PASS", "PARTIAL", "FAIL", "UNAVAILABLE"),
+    )
+    operating_parser.add_argument("--output", type=Path)
+
+    template_parser = subparsers.add_parser(
+        "evidence-template",
+        help="Emit a template for external-only operating evidence",
+    )
+    template_parser.add_argument("--output", type=Path)
 
     serve_parser = subparsers.add_parser(
         "serve",
@@ -3309,6 +3757,7 @@ def command_export(db_path: Path, output_path: Path) -> dict[str, Any]:
         "assets": load_assets(db_path, limit=1000),
         "proposals": load_proposals(db_path, limit=1000),
         "receipts": load_receipts(db_path, limit=1000),
+        "operating_fabric": load_operating_fabric(db_path),
     }
     write_json_atomic(output_path, payload)
     return {
@@ -3325,6 +3774,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "self-test":
             print(pretty_json(self_test()))
+            return 0
+        if args.command == "evidence-template":
+            payload = evidence_template()
+            if args.output:
+                write_json_atomic(args.output.resolve(), payload)
+                print(pretty_json({"status": "WRITTEN", "output": str(args.output.resolve())}))
+            else:
+                print(pretty_json(payload))
             return 0
         db_path = args.db.resolve()
         if args.command == "audit":
@@ -3343,7 +3800,15 @@ def main(argv: list[str] | None = None) -> int:
                 workers=args.workers,
                 max_pages=args.max_pages,
             )
-            payload = run_audit(config, db_path, args.output.resolve())
+            evidence_bundle = load_evidence_bundle(
+                args.evidence.resolve() if args.evidence else None
+            )
+            payload = run_audit(
+                config,
+                db_path,
+                args.output.resolve(),
+                evidence_bundle=evidence_bundle,
+            )
             summary = {
                 "status": payload["meta"]["status"],
                 "audit_id": payload["meta"]["audit_id"],
@@ -3354,6 +3819,7 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "source_reports": payload["source_reports"],
                 "receipt": payload["receipt"],
+                "operating_fabric": payload["operating_fabric"]["summary"],
                 "database": str(db_path),
                 "output": str(args.output.resolve()),
             }
@@ -3369,6 +3835,22 @@ def main(argv: list[str] | None = None) -> int:
             result = verify_receipt_chain(db_path)
             print(pretty_json(result))
             return 0 if result["chain_valid"] else 3
+        if args.command == "operating-report":
+            result = load_operating_fabric(db_path, lane=args.lane, state=args.state)
+            if args.output:
+                write_json_atomic(args.output.resolve(), result)
+                print(
+                    pretty_json(
+                        {
+                            "status": "WRITTEN",
+                            "output": str(args.output.resolve()),
+                            "summary": result["summary"],
+                        }
+                    )
+                )
+            else:
+                print(pretty_json(result))
+            return 0
         if args.command == "serve":
             serve(db_path, args.host, args.port, args.allow_remote)
             return 0
