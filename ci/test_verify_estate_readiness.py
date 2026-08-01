@@ -1,0 +1,888 @@
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from verify_estate_readiness import (
+    PRODUCTION_SIGNATURE_ALGORITHM,
+    RSA_SHA256_DIGEST_INFO_PREFIX,
+    canonical_audit_payload,
+    canonical_deployment_receipt_payload,
+    signature_state,
+    verify,
+)
+
+
+RSA_N = int(
+    "c85428138c4e6e830e0e5bce6e2d9b17fa0ff20fb0868102a0937629dbb97afd"
+    "6ce48f1ee0ae903063bb6a59636e3004745f838f9006f7e0b0dce67b9ba244ef"
+    "49677db0f6d9606b740833e2d57cc85cdb9cf895ae70e458c63f3c36a0d7ee05"
+    "e865824d98dcce9a485cf8d30fcb1df61a5a81a3231de377d5d919bb4d726041"
+    "4446ba3775c471b6f701236e6b0a5c28e7660e75d0ce78c13200d165c9ad4c95"
+    "bbbc6b6725f3ae26b310c1a749e19493cd60718fbf7bd2f271bb259921638c19a"
+    "df242d10315beea9dd0197a9e4bbb4ed1c69ae71ec2bb2ceebb30396952f54af8"
+    "e1fc63e95212849b1d91b220c0033f521489f2dda4d7d8f626fb47a4b52b3b",
+    16,
+)
+RSA_E = 65537
+RSA_D = int(
+    "13c38a95b3f988f0fca2dd2bd9d13022af1eedb6ec06083e6e526ee52175d53e"
+    "ff9f42e48749892972e3565fbb456f7ab02fa7f5398576792f658e50ea55a730"
+    "aa44dab7925f9fd115083a23b6114db9e904fa44ca2bf0ac290b4d52f4b73082"
+    "c66258554c22db0296e7cb24a93cc0cddccf1b2d9d1bd775397d1bd534aed5bf"
+    "37f795c99745e3aa66e100b40a522f9f7873b55be6ec3dbea79dc594a90fe00c"
+    "b79fe9034a2462a7d8c71d7d564669de93659a1c62516eab6598bb6d8b48594a"
+    "0dac3df4d9c4442f7848549a4d366bf6ae51e33e09eaff8822928fd1e9dabdad"
+    "71d49d2cbf41410d89d0c965121a7b7be91d789f608e6e41de7c76d938745f1",
+    16,
+)
+
+
+def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]:
+    return {
+        "baseline": {"source_minimums": {}},
+        "canonical_identities": {"github_organization": "szl-holdings"},
+        "critical_assets": [],
+        "known_gaps": [],
+        "production_requirements": requirements or {},
+        "production_policies": {
+            "max_deployment_age_seconds": 86400,
+            "max_browser_age_seconds": 7200,
+            "max_restore_age_seconds": 2592000,
+            "max_rto_seconds": 900,
+            "max_rpo_seconds": 300,
+        },
+        "production_trusted_keys": {
+            "test-key": {
+                "algorithm": PRODUCTION_SIGNATURE_ALGORITHM,
+                "modulus_hex": format(RSA_N, "x"),
+                "exponent": RSA_E,
+            }
+        },
+        "deployment_provider_trusted_keys": {
+            "test-provider-key": {
+                "algorithm": PRODUCTION_SIGNATURE_ALGORITHM,
+                "provider": "github-deployments",
+                "modulus_hex": format(RSA_N, "x"),
+                "exponent": RSA_E,
+            }
+        },
+    }
+
+
+def audit() -> dict[str, object]:
+    return {
+        "meta": {
+            "audit_id": "audit-20260801-1",
+            "completed_at": "2026-08-01T19:00:00Z",
+        },
+        "assets": [],
+        "source_reports": [
+            {"source": "github", "scope": "AUTHENTICATED_COMPLETE"},
+            {"source": "huggingface", "scope": "AUTHENTICATED_COMPLETE"},
+        ],
+        "receipt": {"signature_status": "ASYMMETRIC_VERIFIED"},
+    }
+
+
+def sign_payload(payload: bytes) -> str:
+    width = (RSA_N.bit_length() + 7) // 8
+    digest_info = RSA_SHA256_DIGEST_INFO_PREFIX + hashlib.sha256(payload).digest()
+    encoded = (
+        b"\x00\x01"
+        + (b"\xff" * (width - len(digest_info) - 3))
+        + b"\x00"
+        + digest_info
+    )
+    signature = pow(int.from_bytes(encoded, "big"), RSA_D, RSA_N).to_bytes(
+        width, "big"
+    )
+    return base64.b64encode(signature).decode("ascii")
+
+
+def sign_deployment_receipt(receipt: dict[str, object]) -> None:
+    receipt["provider_signature"] = {
+        "algorithm": PRODUCTION_SIGNATURE_ALGORITHM,
+        "key_id": "test-provider-key",
+        "signature_base64": "",
+    }
+    receipt["provider_signature"]["signature_base64"] = sign_payload(
+        canonical_deployment_receipt_payload(receipt)
+    )
+
+
+def deployment_witness() -> dict[str, object]:
+    repository_asset_id = "github:repo:szl-holdings/a11oy"
+    deployment_asset_id = "domain:route:a-11-oy.com/"
+    revision = "b" * 40
+    artifact_sha256 = "c" * 64
+    deployment_url = "https://a-11-oy.com/"
+    deployed_at = "2026-08-01T17:55:00Z"
+    environment = "production"
+    owner = "szl-holdings"
+    receipt_id = "deployment-receipt-20260801-1"
+    bindings = {
+        "repository_asset_id": repository_asset_id,
+        "deployment_asset_id": deployment_asset_id,
+        "deployment_revision": revision,
+        "deployed_artifact_sha256": artifact_sha256,
+        "deployed_at": deployed_at,
+        "environment": environment,
+        "deployment_url": deployment_url,
+        "owner": owner,
+    }
+    receipt = {
+        "schema": "szl.deployment-receipt/v1",
+        "status": "VERIFIED",
+        **bindings,
+        "receipt_id": receipt_id,
+        "provider": "github-deployments",
+    }
+    sign_deployment_receipt(receipt)
+    return {
+        "schema": "szl.estate-deployment-witness/v1",
+        "status": "VERIFIED",
+        **bindings,
+        "credential_scope": "DEPLOYMENT_READ_ONLY",
+        "deployment_receipt": receipt,
+    }
+
+
+def browser_artifact(report_path: str, report_sha256: str) -> dict[str, object]:
+    return {
+        "schema": "szl.estate-browser-evidence/v1",
+        "status": "VERIFIED",
+        "deployment_asset_id": "domain:route:a-11-oy.com/",
+        "tested_url": "https://a-11-oy.com/",
+        "tested_at": "2026-08-01T18:00:00Z",
+        "deployment_revision": "b" * 40,
+        "deployed_artifact_sha256": "c" * 64,
+        "deployment_receipt_id": "deployment-receipt-20260801-1",
+        "browsers": [
+            {"name": "chromium", "form_factor": "desktop", "status": "PASS"},
+            {"name": "webkit", "form_factor": "mobile", "status": "PASS"},
+        ],
+        "checks": {
+            name: "PASS"
+            for name in (
+                "browser_e2e",
+                "keyboard",
+                "mobile",
+                "accessibility",
+                "console_errors",
+                "network_errors",
+                "screen_reader",
+                "zoom_200",
+                "contrast",
+                "wcag_2_2_aa",
+            )
+        },
+        "report_path": report_path,
+        "report_sha256": report_sha256,
+    }
+
+
+def restore_artifact(report_path: str, report_sha256: str) -> dict[str, object]:
+    return {
+        "schema": "szl.estate-restore-drill/v1",
+        "status": "VERIFIED",
+        "backup_id": "backup-20260801-1",
+        "restored_target_asset_id": "domain:route:a-11-oy.com/",
+        "deployment_url": "https://a-11-oy.com/",
+        "deployment_revision": "b" * 40,
+        "deployed_artifact_sha256": "c" * 64,
+        "deployment_receipt_id": "deployment-receipt-20260801-1",
+        "environment": "production",
+        "started_at": "2026-08-01T18:00:00Z",
+        "completed_at": "2026-08-01T18:05:00Z",
+        "rto_seconds": 300,
+        "rpo_seconds": 60,
+        "dependency_loss_scenarios": [
+            {"name": "primary-store-loss", "status": "PASS"}
+        ],
+        "corrective_actions": [{"id": "restore-drill-1", "status": "CLOSED"}],
+        "restore_status": "PASS",
+        "failure_domain_status": "PASS",
+        "report_path": report_path,
+        "report_sha256": report_sha256,
+    }
+
+
+def write_report(root: Path, name: str) -> tuple[str, str]:
+    payload = json.dumps(
+        {"schema": "szl.test-report/v1", "name": name, "status": "PASS"},
+        sort_keys=True,
+    ).encode("utf-8")
+    path = root / name
+    path.write_bytes(payload)
+    return path.name, hashlib.sha256(payload).hexdigest()
+
+
+def write_artifact(root: Path, name: str, artifact: dict[str, object]) -> dict[str, str]:
+    path = root / name
+    payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+    path.write_bytes(payload)
+    return {
+        "artifact_path": path.name,
+        "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def add_audited_deployment(value: dict[str, object]) -> None:
+    witness = deployment_witness()
+    receipt = witness["deployment_receipt"]
+    assert isinstance(receipt, dict)
+    edge = {
+        "schema": "szl.audit-deployment-edge/v1",
+        **{
+            field: receipt[field]
+            for field in (
+                "repository_asset_id",
+                "deployment_asset_id",
+                "deployment_revision",
+                "deployed_artifact_sha256",
+                "deployed_at",
+                "environment",
+                "deployment_url",
+                "owner",
+                "receipt_id",
+            )
+        },
+    }
+    value["assets"] = [
+        {
+            "asset_id": "github:repo:szl-holdings/a11oy",
+            "asset_type": "repo",
+            "source": "github",
+            "status_label": "OBSERVED",
+            "url": "https://github.com/szl-holdings/a11oy",
+            "metadata": {"default_branch_sha": "b" * 40},
+        },
+        {
+            "asset_id": "domain:route:a-11-oy.com/",
+            "asset_type": "route",
+            "source": "domains",
+            "status_label": "LIVE",
+            "url": "https://a-11-oy.com/",
+            "metadata": {
+                "final_url": "https://a-11-oy.com/",
+                "deployment": edge,
+            },
+        },
+    ]
+
+
+def sign(value: dict[str, object], key_id: str = "test-key") -> None:
+    receipt = value["receipt"]
+    assert isinstance(receipt, dict)
+    receipt["asymmetric_signature"] = {
+        "algorithm": PRODUCTION_SIGNATURE_ALGORITHM,
+        "key_id": key_id,
+        "signature_base64": "",
+    }
+    payload = canonical_audit_payload(value)
+    receipt["asymmetric_signature"]["signature_base64"] = sign_payload(payload)
+
+
+def check(report: dict[str, object], check_id: str) -> dict[str, str]:
+    checks = report["checks"]
+    assert isinstance(checks, list)
+    return next(item for item in checks if item["id"] == check_id)
+
+
+class ReadinessTests(unittest.TestCase):
+    def test_baseline_accepts_only_known_local_evidence(self) -> None:
+        self.assertEqual(signature_state("HMAC_SHA256", "baseline"), "PASS")
+        self.assertEqual(signature_state("UNSIGNED", "baseline"), "WARN")
+
+    def test_baseline_rejects_missing_or_invented_states(self) -> None:
+        for status in ("UNAVAILABLE", "SIGNED", "VERIFIED", "UNKNOWN"):
+            with self.subTest(status=status):
+                self.assertEqual(signature_state(status, "baseline"), "FAIL")
+
+    def test_production_rejects_asymmetric_label_without_signature(self) -> None:
+        report = verify(
+            audit(),
+            manifest({"independent_asymmetric_evidence": True}),
+            "production",
+        )
+        self.assertEqual(check(report, "evidence.independent_signature")["state"], "FAIL")
+
+    def test_production_verifies_real_signature_and_rejects_tampering(self) -> None:
+        value = audit()
+        sign(value)
+        contract = manifest({"independent_asymmetric_evidence": True})
+        report = verify(value, contract, "production")
+        self.assertEqual(check(report, "evidence.independent_signature")["state"], "PASS")
+        value["assets"] = [{"asset_id": "tampered"}]
+        tampered = verify(value, contract, "production")
+        self.assertEqual(
+            check(tampered, "evidence.independent_signature")["state"], "FAIL"
+        )
+
+    def test_production_rejects_unknown_signing_key(self) -> None:
+        value = audit()
+        sign(value, key_id="unknown-key")
+        report = verify(
+            value,
+            manifest({"independent_asymmetric_evidence": True}),
+            "production",
+        )
+        self.assertIn(
+            "trusted key unavailable",
+            check(report, "evidence.independent_signature")["detail"],
+        )
+
+    def test_production_requires_completeness_proven_scopes(self) -> None:
+        value = audit()
+        contract = manifest({"authenticated_inventory": True})
+        report = verify(value, contract, "production")
+        self.assertEqual(
+            check(report, "production.requirement.authenticated_inventory")["state"],
+            "PASS",
+        )
+        value["source_reports"][0]["scope"] = "AUTHENTICATED_VISIBILITY_UNKNOWN"
+        failed = verify(value, contract, "production")
+        self.assertEqual(check(failed, "scope.github")["state"], "FAIL")
+
+    def test_production_enforces_signed_artifact_requirements(self) -> None:
+        requirements = {
+            "independent_asymmetric_evidence": True,
+            "credential_backed_deployment_witness": True,
+            "browser_e2e_and_accessibility": True,
+            "restore_and_failure_domain_drill": True,
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            browser_report = write_report(root, "browser-report.json")
+            restore_report = write_report(root, "restore-report.json")
+            artifacts = {
+                "credential_backed_deployment_witness": deployment_witness(),
+                "browser_e2e_and_accessibility": browser_artifact(*browser_report),
+                "restore_and_failure_domain_drill": restore_artifact(*restore_report),
+            }
+            value = audit()
+            add_audited_deployment(value)
+            references = {}
+            for requirement, artifact in artifacts.items():
+                path = root / f"{requirement}.json"
+                payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+                path.write_bytes(payload)
+                references[requirement] = {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            value["production_evidence"] = references
+            sign(value)
+            report = verify(
+                value, manifest(requirements), "production", evidence_root=root
+            )
+        for requirement in requirements:
+            self.assertEqual(
+                check(report, f"production.requirement.{requirement}")["state"],
+                "PASS",
+            )
+
+    def test_production_rejects_tampered_artifact(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "deployment.json"
+            payload = json.dumps(deployment_witness(), sort_keys=True).encode("utf-8")
+            path.write_bytes(payload)
+            value = audit()
+            add_audited_deployment(value)
+            value["production_evidence"] = {
+                requirement: {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            }
+            sign(value)
+            path.write_text("{}", encoding="utf-8")
+            report = verify(
+                value,
+                manifest(
+                    {
+                        "independent_asymmetric_evidence": True,
+                        requirement: True,
+                    }
+                ),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "digest mismatch",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_production_binds_deployment_witness_to_audited_assets(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        contract = manifest({"independent_asymmetric_evidence": True, requirement: True})
+        contract["canonical_identities"] = {
+            "github_organization": "szl-holdings"
+        }
+        for mutation, expected in (
+            (
+                lambda witness: witness.__setitem__(
+                    "deployment_asset_id", "domain:route:unrelated.example/"
+                ),
+                "not present in the audited inventory",
+            ),
+            (
+                lambda witness: witness.__setitem__("deployment_revision", "d" * 40),
+                "does not match the audited repository head",
+            ),
+            (
+                lambda witness: witness["deployment_receipt"].__setitem__(
+                    "deployed_artifact_sha256", "d" * 64
+                ),
+                "receipt binding mismatch",
+            ),
+            (
+                lambda witness: witness.__setitem__("deployment_revision", ""),
+                "deployment revision is missing or invalid",
+            ),
+        ):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                witness = deployment_witness()
+                mutation(witness)
+                path = root / "deployment.json"
+                payload = json.dumps(witness, sort_keys=True).encode("utf-8")
+                path.write_bytes(payload)
+                value = audit()
+                add_audited_deployment(value)
+                value["production_evidence"] = {
+                    requirement: {
+                        "artifact_path": path.name,
+                        "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                    }
+                }
+                sign(value)
+                report = verify(
+                    value, contract, "production", evidence_root=root
+                )
+            self.assertIn(
+                expected,
+                check(report, f"production.requirement.{requirement}")["detail"],
+            )
+
+    def test_production_requires_audited_repository_deployment_edge(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            witness = deployment_witness()
+            path = root / "deployment.json"
+            payload = json.dumps(witness, sort_keys=True).encode("utf-8")
+            path.write_bytes(payload)
+            value = audit()
+            add_audited_deployment(value)
+            value["assets"][1]["metadata"].pop("deployment")
+            value["production_evidence"] = {
+                requirement: {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            }
+            sign(value)
+            report = verify(
+                value,
+                manifest({"independent_asymmetric_evidence": True, requirement: True}),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "repository-to-deployment edge",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_deployment_receipt_requires_provider_authentication(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            witness = deployment_witness()
+            witness["deployment_receipt"]["provider"] = "untrusted-provider"
+            value = audit()
+            add_audited_deployment(value)
+            value["production_evidence"] = {
+                requirement: write_artifact(root, "deployment.json", witness)
+            }
+            sign(value)
+            report = verify(
+                value,
+                manifest({"independent_asymmetric_evidence": True, requirement: True}),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "provider authentication failed",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_browser_report_digest_binds_loaded_report_bytes(self) -> None:
+        requirement = "browser_e2e_and_accessibility"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report_path, report_sha256 = write_report(root, "browser-report.json")
+            value = audit()
+            add_audited_deployment(value)
+            value["production_evidence"] = {
+                "credential_backed_deployment_witness": write_artifact(
+                    root, "deployment.json", deployment_witness()
+                ),
+                requirement: write_artifact(
+                    root,
+                    "browser.json",
+                    browser_artifact(report_path, report_sha256),
+                ),
+            }
+            sign(value)
+            (root / report_path).write_bytes(b"tampered browser report")
+            report = verify(
+                value,
+                manifest({"independent_asymmetric_evidence": True, requirement: True}),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "report digest mismatch",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_restore_binds_promoted_deployment_and_policy_ceilings(self) -> None:
+        requirement = "restore_and_failure_domain_drill"
+        for mutation, expected in (
+            (
+                lambda artifact: artifact.__setitem__("deployment_revision", "f" * 40),
+                "does not bind the promoted deployment witness",
+            ),
+            (
+                lambda artifact: artifact.__setitem__("rto_seconds", 901),
+                "exceeds the production policy ceiling",
+            ),
+        ):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                artifact = restore_artifact(*write_report(root, "restore-report.json"))
+                mutation(artifact)
+                value = audit()
+                add_audited_deployment(value)
+                value["production_evidence"] = {
+                    "credential_backed_deployment_witness": write_artifact(
+                        root, "deployment.json", deployment_witness()
+                    ),
+                    requirement: write_artifact(root, "restore.json", artifact),
+                }
+                sign(value)
+                report = verify(
+                    value,
+                    manifest(
+                        {"independent_asymmetric_evidence": True, requirement: True}
+                    ),
+                    "production",
+                    evidence_root=root,
+                )
+            self.assertIn(
+                expected,
+                check(report, f"production.requirement.{requirement}")["detail"],
+            )
+
+    def test_evidence_timestamps_reject_stale_and_future_observations(self) -> None:
+        requirement = "browser_e2e_and_accessibility"
+        for tested_at, expected in (
+            ("2026-08-01T16:30:00Z", "evidence is stale"),
+            ("2026-08-01T19:00:01Z", "later than audit completion"),
+        ):
+            with self.subTest(tested_at=tested_at), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                artifact = browser_artifact(*write_report(root, "browser-report.json"))
+                artifact["tested_at"] = tested_at
+                value = audit()
+                add_audited_deployment(value)
+                value["production_evidence"] = {
+                    "credential_backed_deployment_witness": write_artifact(
+                        root, "deployment.json", deployment_witness()
+                    ),
+                    requirement: write_artifact(root, "browser.json", artifact),
+                }
+                sign(value)
+                report = verify(
+                    value,
+                    manifest(
+                        {"independent_asymmetric_evidence": True, requirement: True}
+                    ),
+                    "production",
+                    evidence_root=root,
+                )
+            self.assertIn(
+                expected,
+                check(report, f"production.requirement.{requirement}")["detail"],
+            )
+
+    def test_production_requires_runtime_head_for_critical_spaces(self) -> None:
+        asset_id = "huggingface:space:szlholdings/a11oy"
+        value = audit()
+        value["assets"] = [
+            {
+                "asset_id": "github:repo:szl-holdings/a11oy",
+                "asset_type": "repo",
+                "source": "github",
+                "status_label": "OBSERVED",
+                "metadata": {"default_branch_sha": "b" * 40},
+            },
+            {
+                "asset_id": asset_id,
+                "asset_type": "space",
+                "source": "huggingface",
+                "status_label": "LIVE",
+                "metadata": {
+                    "github_alignment": {
+                        "status": "EXACT_HEAD",
+                        "source_repository": "szl-holdings/a11oy",
+                        "source_revision": "b" * 40,
+                        "github_default_revision": "b" * 40,
+                    },
+                    "runtime_build": {
+                        "status": "OBSERVED",
+                        "state": "OBSERVED",
+                        "revision": "b" * 40,
+                    },
+                    "provenance_docs": [
+                        {
+                            "status": "OBSERVED",
+                            "binding_kind": "ARTIFACT_SOURCE",
+                            "source_repository": "szl-holdings/a11oy",
+                            "source_revision": "b" * 40,
+                        }
+                    ],
+                },
+            }
+        ]
+        contract = manifest(
+            {"critical_huggingface_alignment": ["EXACT_RUNTIME_HEAD"]}
+        )
+        contract["critical_assets"] = [
+            {"asset_id": asset_id, "public": True, "required_status": "LIVE"}
+        ]
+        failed = verify(value, contract, "production")
+        self.assertEqual(check(failed, f"alignment.{asset_id}")["state"], "FAIL")
+        value["assets"][1]["metadata"]["github_alignment"][
+            "status"
+        ] = "EXACT_RUNTIME_HEAD"
+        passed = verify(value, contract, "production")
+        self.assertEqual(
+            check(
+                passed, "production.requirement.critical_huggingface_alignment"
+            )["state"],
+            "PASS",
+        )
+        value["assets"][1]["metadata"]["provenance_docs"][0][
+            "source_repository"
+        ] = "szl-holdings/unrelated"
+        wrong_source = verify(value, contract, "production")
+        self.assertEqual(
+            check(wrong_source, f"alignment.{asset_id}")["state"], "FAIL"
+        )
+
+    def test_production_rejects_runtime_source_outside_canonical_org(self) -> None:
+        asset_id = "huggingface:space:szlholdings/a11oy"
+        value = audit()
+        value["assets"] = [
+            {
+                "asset_id": "github:repo:other-org/a11oy",
+                "asset_type": "repo",
+                "source": "github",
+                "status_label": "OBSERVED",
+                "metadata": {"default_branch_sha": "b" * 40},
+            },
+            {
+                "asset_id": asset_id,
+                "asset_type": "space",
+                "source": "huggingface",
+                "status_label": "LIVE",
+                "metadata": {
+                    "github_alignment": {
+                        "status": "EXACT_RUNTIME_HEAD",
+                        "source_repository": "other-org/a11oy",
+                        "source_revision": "b" * 40,
+                        "github_default_revision": "b" * 40,
+                    },
+                    "runtime_build": {
+                        "status": "OBSERVED",
+                        "state": "OBSERVED",
+                        "revision": "b" * 40,
+                    },
+                    "provenance_docs": [
+                        {
+                            "status": "OBSERVED",
+                            "binding_kind": "ARTIFACT_SOURCE",
+                            "source_repository": "other-org/a11oy",
+                            "source_revision": "b" * 40,
+                        }
+                    ],
+                },
+            },
+        ]
+        contract = manifest(
+            {"critical_huggingface_alignment": ["EXACT_RUNTIME_HEAD"]}
+        )
+        contract["critical_assets"] = [
+            {"asset_id": asset_id, "public": True, "required_status": "LIVE"}
+        ]
+        report = verify(value, contract, "production")
+        self.assertIn(
+            "outside the canonical organization",
+            check(report, f"alignment.{asset_id}")["detail"],
+        )
+
+    def test_browser_evidence_rejects_stale_deployment_binding(self) -> None:
+        requirement = "browser_e2e_and_accessibility"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            add_audited_deployment(value)
+            artifact = browser_artifact(*write_report(root, "browser-report.json"))
+            artifact["deployment_revision"] = "f" * 40
+            path = root / "browser.json"
+            payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+            path.write_bytes(payload)
+            witness_path = root / "deployment.json"
+            witness_payload = json.dumps(
+                deployment_witness(), sort_keys=True
+            ).encode("utf-8")
+            witness_path.write_bytes(witness_payload)
+            value["production_evidence"] = {
+                requirement: {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                },
+                "credential_backed_deployment_witness": {
+                    "artifact_path": witness_path.name,
+                    "artifact_sha256": hashlib.sha256(witness_payload).hexdigest(),
+                },
+            }
+            sign(value)
+            report = verify(
+                value,
+                manifest({"independent_asymmetric_evidence": True, requirement: True}),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "does not bind the promoted deployment witness",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_production_rejects_shallow_browser_and_restore_assertions(self) -> None:
+        shallow_artifacts = {
+            "browser_e2e_and_accessibility": {
+                "schema": "szl.estate-browser-evidence/v1",
+                "status": "VERIFIED",
+                "checks": {
+                    "browser_e2e": "PASS",
+                    "keyboard": "PASS",
+                    "mobile": "PASS",
+                    "accessibility": "PASS",
+                },
+            },
+            "restore_and_failure_domain_drill": {
+                "schema": "szl.estate-restore-drill/v1",
+                "status": "VERIFIED",
+                "restore_status": "PASS",
+                "failure_domain_status": "PASS",
+            },
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            add_audited_deployment(value)
+            references = {}
+            for requirement, artifact in shallow_artifacts.items():
+                path = root / f"{requirement}.json"
+                payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+                path.write_bytes(payload)
+                references[requirement] = {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            value["production_evidence"] = references
+            sign(value)
+            report = verify(
+                value,
+                manifest({requirement: True for requirement in shallow_artifacts}),
+                "production",
+                evidence_root=root,
+            )
+        for requirement in shallow_artifacts:
+            self.assertEqual(
+                check(report, f"production.requirement.{requirement}")["state"],
+                "FAIL",
+            )
+
+    def test_source_minimum_uses_actual_asset_inventory(self) -> None:
+        value = audit()
+        value["source_reports"] = [
+            {"source": "github", "status": "MEASURED", "count": 2}
+        ]
+        value["assets"] = [
+            {"asset_id": "github:one", "source": "github", "status_label": "OBSERVED"}
+        ]
+        contract = manifest()
+        contract["baseline"] = {
+            "source_minimums": {"github": 2},
+            "required_source_status": "MEASURED",
+        }
+        failed = verify(value, contract, "baseline")
+        self.assertEqual(check(failed, "source.github")["state"], "FAIL")
+        value["assets"].append(
+            {"asset_id": "github:two", "source": "github", "status_label": "OBSERVED"}
+        )
+        passed = verify(value, contract, "baseline")
+        self.assertEqual(check(passed, "source.github")["state"], "PASS")
+
+    def test_duplicate_asset_ids_fail_closed(self) -> None:
+        value = audit()
+        value["assets"] = [
+            {"asset_id": "github:duplicate", "source": "github"},
+            {"asset_id": "github:duplicate", "source": "github"},
+        ]
+        report = verify(value, manifest(), "baseline")
+        self.assertEqual(check(report, "assets.unique_ids")["state"], "FAIL")
+        self.assertIn("github:duplicate", check(report, "assets.unique_ids")["detail"])
+
+    def test_unknown_enabled_requirement_fails_closed(self) -> None:
+        report = verify(
+            audit(), manifest({"future_requirement": True}), "production"
+        )
+        self.assertEqual(
+            check(report, "production.requirement.future_requirement")["state"],
+            "FAIL",
+        )
+
+    def test_workflow_aggregates_independent_evidence_after_failures(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "estate-readiness.yml"
+        ).read_text(encoding="utf-8")
+        for step_id in (
+            "deterministic",
+            "live_audit",
+            "baseline",
+            "receipt_chain",
+            "stress",
+        ):
+            self.assertIn(f"id: {step_id}", workflow)
+        self.assertGreaterEqual(workflow.count("if: always()"), 6)
+        self.assertGreaterEqual(workflow.count("continue-on-error: true"), 5)
+        self.assertIn("Aggregate evidence outcomes", workflow)
+
+
+if __name__ == "__main__":
+    unittest.main()

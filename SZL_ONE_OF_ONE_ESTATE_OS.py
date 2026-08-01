@@ -61,6 +61,7 @@ DEFAULT_HF_ORG = "SZLHOLDINGS"
 DEFAULT_DOMAINS = ("a-11-oy.com", "a11oy.net")
 DEFAULT_TIMEOUT = 12.0
 DEFAULT_WORKERS = 8
+DEFAULT_REQUEST_QUEUE_SIZE = 128
 MAX_RESPONSE_BYTES = 2_000_000
 ROOT = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_DIR = ROOT / "outputs"
@@ -3123,7 +3124,14 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
 
     def security_headers(self) -> None:
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+        )
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
         self.send_header("Cache-Control", "no-store")
         self.send_header(
             "Content-Security-Policy",
@@ -3181,7 +3189,7 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
                     {
                         "ok": ready,
                         "status": "READY" if ready else "UNAVAILABLE",
-                        "database": str(self.db_path),
+                        "database": "AVAILABLE" if ready else "UNAVAILABLE",
                         "latest_audit": status.get("audit_id"),
                         "full_operation_claim": (status.get("operating_fabric") or {}).get(
                             "readiness_to_claim_fully_operational", "BLOCKED"
@@ -3281,6 +3289,15 @@ def safe_int(value: Any, default: int) -> int:
         return default
 
 
+class EstateHTTPServer(http.server.ThreadingHTTPServer):
+    """Threaded read-only server with a burst-capable accept queue."""
+
+    allow_reuse_address = True
+    block_on_close = True
+    daemon_threads = True
+    request_queue_size = DEFAULT_REQUEST_QUEUE_SIZE
+
+
 def serve(db_path: Path, host: str, port: int, allow_remote: bool) -> None:
     loopback_hosts = {"127.0.0.1", "localhost", "::1"}
     is_loopback = host in loopback_hosts
@@ -3300,8 +3317,7 @@ def serve(db_path: Path, host: str, port: int, allow_remote: bool) -> None:
             "control_token": control_token,
         },
     )
-    server = http.server.ThreadingHTTPServer((host, port), handler)
-    server.daemon_threads = True
+    server = EstateHTTPServer((host, port), handler)
     print(
         pretty_json(
             {
@@ -3324,6 +3340,9 @@ def serve(db_path: Path, host: str, port: int, allow_remote: bool) -> None:
 
 def self_test() -> dict[str, Any]:
     checks: list[str] = []
+    if EstateHTTPServer.request_queue_size < DEFAULT_WORKERS * 8:
+        raise AssertionError("HTTP accept queue is below the burst-safety floor")
+    checks.append("burst-capable HTTP accept queue")
     observed = utc_now()
     source_revision = "a" * 40
     with tempfile.TemporaryDirectory(prefix="szl-estate-os-") as temporary:
