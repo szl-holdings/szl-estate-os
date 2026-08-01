@@ -49,13 +49,18 @@ zero active P0/P1 gaps, credential-backed deployment proof, browser/accessibilit
 evidence, and recovery evidence. The production profile is expected to fail
 until those artifacts exist.
 
-The deployment witness is an exact graph edge, not a status assertion. Its
-repository and deployment asset IDs must exist in the signed audit; its source
-revision must equal the audited protected repository head; and its HTTPS URL,
-canonical owner, environment, deployed artifact digest, and nested deployment
-receipt must agree byte-for-byte with an independently observed
-repository-to-deployment edge in the audit inventory. Missing, unrelated,
-malformed, or internally inconsistent references fail the production profile.
+Deployment evidence covers the complete manifest-declared critical deployment
+set, not one selected target. Each witness, browser packet, and restore packet
+uses a signed evidence index keyed by the exact critical domain-route or Space
+asset ID; missing or extra targets fail before artifact evaluation. Each witness
+is an exact graph edge, not a status assertion. Its repository and deployment
+asset IDs must exist in the signed audit; the repository must be operationally
+`ACTIVE`; its source revision must equal the audited protected repository head;
+and its HTTPS URL, canonical owner, environment, deployed artifact digest, and
+nested deployment receipt must agree byte-for-byte with an independently
+observed repository-to-deployment edge in the audit inventory. Missing,
+unrelated, malformed, or internally inconsistent references fail the production
+profile.
 The receipt is not trusted because it says `VERIFIED`: its canonical bytes must
 verify under a provider identity and RSA key pinned separately in
 `deployment_provider_trusted_keys`.

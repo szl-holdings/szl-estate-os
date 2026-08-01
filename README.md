@@ -253,9 +253,11 @@ bounded read-only API stress profile as independent steps. A final aggregate
 gate fails if any step fails, while the evidence packet is still uploaded for
 diagnosis. Production evidence additionally requires provider-authenticated
 deployment receipts, exact report-file digests, canonical source ownership,
-fresh timestamps, and restore results within manifest RTO/RPO ceilings. Its
-JSON, Markdown, and stress reports are retained as workflow artifacts rather
-than committed as mutable snapshots.
+fresh timestamps, and restore results within manifest RTO/RPO ceilings. Signed
+evidence indexes must cover every manifest-critical domain route and Space for
+the witness, browser, and restore gates; a single selected deployment cannot
+certify the estate. Its JSON, Markdown, and stress reports are retained as
+workflow artifacts rather than committed as mutable snapshots.
 
 Run the same gates locally after an audit:
 

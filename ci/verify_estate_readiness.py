@@ -43,6 +43,7 @@ PRODUCTION_ARTIFACT_SCHEMAS = {
     "browser_e2e_and_accessibility": "szl.estate-browser-evidence/v1",
     "restore_and_failure_domain_drill": "szl.estate-restore-drill/v1",
 }
+PRODUCTION_EVIDENCE_INDEX_SCHEMA = "szl.estate-production-evidence-index/v1"
 BASELINE_SOURCES = {"github", "huggingface", "domains"}
 BASELINE_PROHIBITED_STATUS_LABELS = {"BROKEN"}
 BASELINE_REQUIRED_SECURITY_HEADERS = {
@@ -416,6 +417,23 @@ def audited_live_target_state(
     return "PASS", f"bound deployment_asset_id={asset_id}"
 
 
+def critical_deployment_asset_ids(manifest: dict[str, Any]) -> set[str]:
+    critical_assets = manifest.get("critical_assets")
+    if not isinstance(critical_assets, list):
+        return set()
+    return {
+        str(contract.get("asset_id"))
+        for contract in critical_assets
+        if isinstance(contract, dict)
+        and contract.get("required_status") == "LIVE"
+        and (
+            domain_route_identity(str(contract.get("asset_id") or "")) is not None
+            or huggingface_space_identity(str(contract.get("asset_id") or ""))
+            is not None
+        )
+    }
+
+
 def critical_runtime_alignment_state(
     asset: dict[str, Any],
     assets: dict[str, dict[str, Any]],
@@ -455,6 +473,7 @@ def critical_runtime_alignment_state(
         not isinstance(repository_asset, dict)
         or repository_asset.get("source") != "github"
         or repository_asset.get("asset_type") != "repo"
+        or repository_asset.get("operational_status") != "ACTIVE"
         or not isinstance(repository_metadata, dict)
         or str(repository_metadata.get("default_branch_sha") or "").lower()
         != source_revision
@@ -563,15 +582,42 @@ def verify_independent_signature(
     return verify_rsa_signature(payload, signature, keys)
 
 
+def production_evidence_references(
+    audit: dict[str, Any],
+    requirement: str,
+) -> tuple[dict[str, dict[str, Any]] | None, str]:
+    evidence = audit.get("production_evidence")
+    index = evidence.get(requirement) if isinstance(evidence, dict) else None
+    if (
+        not isinstance(index, dict)
+        or set(index) != {"schema", "artifacts"}
+        or index.get("schema") != PRODUCTION_EVIDENCE_INDEX_SCHEMA
+    ):
+        return None, "production evidence index is missing or invalid"
+    references = index.get("artifacts")
+    if not isinstance(references, dict) or any(
+        not isinstance(asset_id, str)
+        or not asset_id
+        or not isinstance(record, dict)
+        or set(record) != {"artifact_path", "artifact_sha256"}
+        for asset_id, record in references.items()
+    ):
+        return None, "production evidence reference map is invalid"
+    return references, f"indexed_targets={len(references)}"
+
+
 def load_production_artifact(
     audit: dict[str, Any],
     requirement: str,
+    target_asset_id: str,
     evidence_root: Path | None,
 ) -> tuple[dict[str, Any] | None, str]:
-    evidence = audit.get("production_evidence") or {}
-    record = evidence.get(requirement) if isinstance(evidence, dict) else None
+    references, index_detail = production_evidence_references(audit, requirement)
+    if references is None:
+        return None, index_detail
+    record = references.get(target_asset_id)
     if not isinstance(record, dict):
-        return None, "production evidence reference missing"
+        return None, f"production evidence reference missing target={target_asset_id}"
     digest = str(record.get("artifact_sha256") or "")
     if SHA256_PATTERN.fullmatch(digest) is None:
         return None, "artifact_sha256 is missing or invalid"
@@ -586,7 +632,7 @@ def load_production_artifact(
         return None, "artifact is not valid UTF-8 JSON"
     if not isinstance(artifact, dict):
         return None, "artifact must be a JSON object"
-    return artifact, file_detail
+    return artifact, f"{index_detail}; target={target_asset_id}; {file_detail}"
 
 
 def load_evidence_bytes(
@@ -707,6 +753,7 @@ def production_artifact_state(
     manifest: dict[str, Any],
     assets: dict[str, dict[str, Any]],
     requirement: str,
+    target_asset_id: str,
     evidence_root: Path | None,
     verification_time: datetime,
 ) -> tuple[str, str]:
@@ -721,7 +768,7 @@ def production_artifact_state(
     if completed_at is None:
         return "FAIL", completed_detail
     artifact, reference_detail = load_production_artifact(
-        audit, requirement, evidence_root
+        audit, requirement, target_asset_id, evidence_root
     )
     if artifact is None:
         return "FAIL", reference_detail
@@ -767,6 +814,8 @@ def production_artifact_state(
             return "FAIL", f"credential_scope={scope or 'UNAVAILABLE'}"
         repository_asset_id = str(artifact.get("repository_asset_id") or "")
         deployment_asset_id = str(artifact.get("deployment_asset_id") or "")
+        if deployment_asset_id != target_asset_id:
+            return "FAIL", "deployment witness target does not match its evidence index"
         repository_asset = assets.get(repository_asset_id)
         deployment_asset = assets.get(deployment_asset_id)
         if not isinstance(repository_asset, dict):
@@ -774,6 +823,7 @@ def production_artifact_state(
         if (
             repository_asset.get("source") != "github"
             or repository_asset.get("asset_type") != "repo"
+            or repository_asset.get("operational_status") != "ACTIVE"
             or repository_asset.get("status_label") in {"ARCHIVED", "BROKEN"}
         ):
             return "FAIL", "repository_asset_id is not an active audited GitHub repository"
@@ -897,6 +947,8 @@ def production_artifact_state(
         if set(artifact) != required_artifact_keys:
             return "FAIL", "browser evidence shape is invalid"
         deployment_asset_id = str(artifact.get("deployment_asset_id") or "")
+        if deployment_asset_id != target_asset_id:
+            return "FAIL", "browser target does not match its evidence index"
         tested_url = str(artifact.get("tested_url") or "")
         target_state, target_detail = audited_live_target_state(
             assets, manifest, deployment_asset_id, tested_url
@@ -919,13 +971,17 @@ def production_artifact_state(
             manifest,
             assets,
             "credential_backed_deployment_witness",
+            target_asset_id,
             evidence_root,
             verification_time,
         )
         if witness_state != "PASS":
             return "FAIL", f"promoted deployment witness invalid: {witness_detail}"
         witness, witness_reference = load_production_artifact(
-            audit, "credential_backed_deployment_witness", evidence_root
+            audit,
+            "credential_backed_deployment_witness",
+            target_asset_id,
+            evidence_root,
         )
         if not isinstance(witness, dict):
             return "FAIL", f"promoted deployment witness unavailable: {witness_reference}"
@@ -1027,6 +1083,8 @@ def production_artifact_state(
         ) is None:
             return "FAIL", "backup identifier is missing or invalid"
         target_id = str(artifact.get("restored_target_asset_id") or "")
+        if target_id != target_asset_id:
+            return "FAIL", "restore target does not match its evidence index"
         target_state, target_detail = audited_live_target_state(
             assets,
             manifest,
@@ -1082,13 +1140,17 @@ def production_artifact_state(
             manifest,
             assets,
             "credential_backed_deployment_witness",
+            target_asset_id,
             evidence_root,
             verification_time,
         )
         if witness_state != "PASS":
             return "FAIL", f"promoted deployment witness invalid: {witness_detail}"
         witness, witness_reference = load_production_artifact(
-            audit, "credential_backed_deployment_witness", evidence_root
+            audit,
+            "credential_backed_deployment_witness",
+            target_asset_id,
+            evidence_root,
         )
         if not isinstance(witness, dict):
             return "FAIL", f"promoted deployment witness unavailable: {witness_reference}"
@@ -1146,6 +1208,45 @@ def production_artifact_state(
         if report_state != "PASS":
             return report_state, report_detail
     return "PASS", reference_detail
+
+
+def production_artifact_requirement_state(
+    audit: dict[str, Any],
+    manifest: dict[str, Any],
+    assets: dict[str, dict[str, Any]],
+    requirement: str,
+    evidence_root: Path | None,
+    verification_time: datetime,
+) -> tuple[str, str]:
+    required_targets = critical_deployment_asset_ids(manifest)
+    if not required_targets:
+        return "FAIL", "critical deployment contract is missing or empty"
+    references, reference_detail = production_evidence_references(audit, requirement)
+    if references is None:
+        return "FAIL", reference_detail
+    missing_targets = sorted(required_targets - set(references))
+    extra_targets = sorted(set(references) - required_targets)
+    if missing_targets or extra_targets:
+        return "FAIL", (
+            f"critical deployment coverage mismatch missing={missing_targets} "
+            f"extra={extra_targets}"
+        )
+    failures = []
+    for target_asset_id in sorted(required_targets):
+        state, detail = production_artifact_state(
+            audit,
+            manifest,
+            assets,
+            requirement,
+            target_asset_id,
+            evidence_root,
+            verification_time,
+        )
+        if state != "PASS":
+            failures.append(f"{target_asset_id}: {detail}")
+    if failures:
+        return "FAIL", "; ".join(failures)
+    return "PASS", f"verified critical deployment targets={len(required_targets)}"
 
 
 def verify(
@@ -1318,6 +1419,17 @@ def verify(
         if required_status:
             state = "PASS" if observed == required_status else "FAIL"
             detail = f"status={observed} required={required_status}"
+        elif asset_id.startswith("github:repo:"):
+            operational_status = str(
+                asset.get("operational_status") or "UNAVAILABLE"
+            )
+            state = (
+                "PASS"
+                if observed not in {"BROKEN", "ARCHIVED"}
+                and operational_status == "ACTIVE"
+                else "FAIL"
+            )
+            detail = f"status={observed} operational_status={operational_status}"
         else:
             state = "PASS" if observed not in {"BROKEN", "ARCHIVED"} else "FAIL"
             detail = f"status={observed}"
@@ -1530,7 +1642,7 @@ def verify(
                 "browser_e2e_and_accessibility",
                 "restore_and_failure_domain_drill",
             }:
-                artifact_state, artifact_detail = production_artifact_state(
+                artifact_state, artifact_detail = production_artifact_requirement_state(
                     audit,
                     manifest,
                     assets,
