@@ -1457,15 +1457,23 @@ def verify(
         observed = str(asset.get("status_label") or "UNAVAILABLE")
         required_status = contract.get("required_status")
         if asset_id.startswith("github:repo:"):
+            source = str(asset.get("source") or "UNAVAILABLE")
+            asset_type = str(asset.get("asset_type") or "UNAVAILABLE")
             operational_status = str(
                 asset.get("operational_status") or "UNAVAILABLE"
             )
             state = (
                 "PASS"
-                if observed == "OBSERVED" and operational_status == "ACTIVE"
+                if source == "github"
+                and asset_type == "repo"
+                and observed == "OBSERVED"
+                and operational_status == "ACTIVE"
                 else "FAIL"
             )
-            detail = f"status={observed} operational_status={operational_status}"
+            detail = (
+                f"source={source} asset_type={asset_type} status={observed} "
+                f"operational_status={operational_status}"
+            )
         elif required_status:
             state = "PASS" if observed == required_status else "FAIL"
             detail = f"status={observed} required={required_status}"

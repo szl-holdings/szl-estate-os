@@ -888,6 +888,26 @@ class ReadinessTests(unittest.TestCase):
         self.assertIn("status=ARCHIVED", repository_check["detail"])
         self.assertIn("operational_status=DISABLED", repository_check["detail"])
 
+    def test_critical_repository_requires_github_repo_record(self) -> None:
+        value = audit()
+        add_audited_deployment(value)
+        assets = value["assets"]
+        assert isinstance(assets, list)
+        repository = next(
+            asset
+            for asset in assets
+            if isinstance(asset, dict)
+            and asset.get("asset_id") == PRIMARY_REPOSITORY_ASSET_ID
+        )
+        repository["source"] = "domains"
+        repository["asset_type"] = "route"
+        report = verify(value, single_deployment_manifest(), "baseline")
+
+        repository_check = check(report, f"asset.{PRIMARY_REPOSITORY_ASSET_ID}")
+        self.assertEqual(repository_check["state"], "FAIL")
+        self.assertIn("source=domains", repository_check["detail"])
+        self.assertIn("asset_type=route", repository_check["detail"])
+
     def test_space_witness_must_match_verified_runtime_source(self) -> None:
         requirement = "credential_backed_deployment_witness"
         target_asset_id = "huggingface:space:szlholdings/a11oy"
