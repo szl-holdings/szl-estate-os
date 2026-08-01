@@ -1847,14 +1847,18 @@ def verify(
             operational_status = str(
                 asset.get("operational_status") or "UNAVAILABLE"
             )
-            state = (
-                "PASS"
-                if observed == "OBSERVED" and operational_status == "ACTIVE"
-                else "FAIL"
-            )
             detail = (
+                f"source={asset.get('source') or 'UNAVAILABLE'} "
+                f"asset_type={asset.get('asset_type') or 'UNAVAILABLE'} "
                 f"status={observed} required=OBSERVED "
                 f"operational_status={operational_status} required_operational=ACTIVE"
+            )
+            state = (
+                "PASS"
+                if observed == "OBSERVED"
+                and operational_status == "ACTIVE"
+                and schema_state == "PASS"
+                else "FAIL"
             )
         elif required_status:
             state = "PASS" if observed == required_status else "FAIL"
@@ -1862,6 +1866,8 @@ def verify(
         else:
             state = "PASS" if observed == "OBSERVED" else "FAIL"
             detail = f"status={observed} required=OBSERVED"
+        if schema_state != "PASS" and schema_detail not in detail:
+            detail = f"{schema_detail}; {detail}"
         checks.append(result(f"asset.{asset_id}", state, detail))
 
         if asset_id.startswith("domain:route:"):
