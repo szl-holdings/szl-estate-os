@@ -49,6 +49,13 @@ zero active P0/P1 gaps, credential-backed deployment proof, browser/accessibilit
 evidence, and recovery evidence. The production profile is expected to fail
 until those artifacts exist.
 
+The deployment witness is an exact graph edge, not a status assertion. Its
+repository and deployment asset IDs must exist in the signed audit; its source
+revision must equal the audited protected repository head; and its HTTPS URL,
+canonical owner, environment, deployed artifact digest, and nested verified
+deployment receipt must agree byte-for-byte. Missing, unrelated, malformed, or
+internally inconsistent references fail the production profile.
+
 ## Execution order
 
 1. Close DNS and exact source/runtime binding gaps without changing truth labels.

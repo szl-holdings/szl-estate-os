@@ -44,6 +44,7 @@ RSA_D = int(
 def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]:
     return {
         "baseline": {"source_minimums": {}},
+        "canonical_identities": {"github_organization": "szl-holdings"},
         "critical_assets": [],
         "known_gaps": [],
         "production_requirements": requirements or {},
@@ -68,27 +69,55 @@ def audit() -> dict[str, object]:
     }
 
 
-def deployment_binding() -> dict[str, str]:
+def deployment_witness() -> dict[str, object]:
+    repository_asset_id = "github:repo:szl-holdings/a11oy"
+    deployment_asset_id = "domain:route:a-11-oy.com/"
+    revision = "b" * 40
+    artifact_sha256 = "c" * 64
+    deployment_url = "https://a-11-oy.com/"
+    environment = "production"
+    owner = "szl-holdings"
+    bindings = {
+        "repository_asset_id": repository_asset_id,
+        "deployment_asset_id": deployment_asset_id,
+        "deployment_revision": revision,
+        "deployed_artifact_sha256": artifact_sha256,
+        "environment": environment,
+        "deployment_url": deployment_url,
+        "owner": owner,
+    }
     return {
-        "asset_id": "deployment:szl-estate-os:production",
-        "repository": "szl-holdings/szl-estate-os",
-        "environment": "production",
-        "url": "https://estate.example.test/",
-        "revision": "b" * 40,
-        "artifact_sha256": "c" * 64,
-        "receipt_id": "estate-deployment-receipt-1",
+        "schema": "szl.estate-deployment-witness/v1",
+        "status": "VERIFIED",
+        **bindings,
+        "credential_scope": "DEPLOYMENT_READ_ONLY",
+        "deployment_receipt": {
+            "schema": "szl.deployment-receipt/v1",
+            "status": "VERIFIED",
+            **bindings,
+        },
     }
 
 
-def audited_deployment_asset() -> dict[str, object]:
-    binding = deployment_binding()
-    asset_id = binding.pop("asset_id")
-    return {
-        "asset_id": asset_id,
-        "source": "github",
-        "status_label": "OBSERVED",
-        "metadata": {"deployment": binding},
-    }
+def add_audited_deployment(value: dict[str, object]) -> None:
+    value["assets"] = [
+        {
+            "asset_id": "github:repo:szl-holdings/a11oy",
+            "asset_type": "repo",
+            "source": "github",
+            "status_label": "OBSERVED",
+            "url": "https://github.com/szl-holdings/a11oy",
+            "metadata": {"default_branch_sha": "b" * 40},
+        },
+        {
+            "asset_id": "domain:route:a-11-oy.com/",
+            "asset_type": "route",
+            "source": "domains",
+            "status_label": "LIVE",
+            "url": "https://a-11-oy.com/",
+            "metadata": {"final_url": "https://a-11-oy.com/"},
+        },
+    ]
 
 
 def sign(value: dict[str, object], key_id: str = "test-key") -> None:
@@ -185,12 +214,7 @@ class ReadinessTests(unittest.TestCase):
             "restore_and_failure_domain_drill": True,
         }
         artifacts = {
-            "credential_backed_deployment_witness": {
-                "schema": "szl.estate-deployment-witness/v1",
-                "status": "VERIFIED",
-                "credential_scope": "DEPLOYMENT_READ_ONLY",
-                "deployment": deployment_binding(),
-            },
+            "credential_backed_deployment_witness": deployment_witness(),
             "browser_e2e_and_accessibility": {
                 "schema": "szl.estate-browser-evidence/v1",
                 "status": "VERIFIED",
@@ -211,7 +235,7 @@ class ReadinessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             value = audit()
-            value["assets"] = [audited_deployment_asset()]
+            add_audited_deployment(value)
             references = {}
             for requirement, artifact in artifacts.items():
                 path = root / f"{requirement}.json"
@@ -237,18 +261,10 @@ class ReadinessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             path = root / "deployment.json"
-            payload = json.dumps(
-                {
-                    "schema": "szl.estate-deployment-witness/v1",
-                    "status": "VERIFIED",
-                    "credential_scope": "DEPLOYMENT_READ_ONLY",
-                    "deployment": deployment_binding(),
-                },
-                sort_keys=True,
-            ).encode("utf-8")
+            payload = json.dumps(deployment_witness(), sort_keys=True).encode("utf-8")
             path.write_bytes(payload)
             value = audit()
-            value["assets"] = [audited_deployment_asset()]
+            add_audited_deployment(value)
             value["production_evidence"] = {
                 requirement: {
                     "artifact_path": path.name,
@@ -273,69 +289,53 @@ class ReadinessTests(unittest.TestCase):
             check(report, f"production.requirement.{requirement}")["detail"],
         )
 
-    def test_deployment_witness_requires_exact_audited_asset_binding(self) -> None:
+    def test_production_binds_deployment_witness_to_audited_assets(self) -> None:
         requirement = "credential_backed_deployment_witness"
-
-        def verify_binding(root: Path, binding: dict[str, str]) -> dict[str, str]:
-            artifact = {
-                "schema": "szl.estate-deployment-witness/v1",
-                "status": "VERIFIED",
-                "credential_scope": "DEPLOYMENT_READ_ONLY",
-                "deployment": binding,
-            }
-            payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
-            (root / "deployment.json").write_bytes(payload)
-            value = audit()
-            value["assets"] = [audited_deployment_asset()]
-            value["production_evidence"] = {
-                requirement: {
-                    "artifact_path": "deployment.json",
-                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+        contract = manifest({"independent_asymmetric_evidence": True, requirement: True})
+        contract["canonical_identities"] = {
+            "github_organization": "szl-holdings"
+        }
+        for mutation, expected in (
+            (
+                lambda witness: witness.__setitem__(
+                    "deployment_asset_id", "domain:route:unrelated.example/"
+                ),
+                "not present in the audited inventory",
+            ),
+            (
+                lambda witness: witness.__setitem__("deployment_revision", "d" * 40),
+                "does not match the audited repository head",
+            ),
+            (
+                lambda witness: witness["deployment_receipt"].__setitem__(
+                    "deployed_artifact_sha256", "d" * 64
+                ),
+                "receipt binding mismatch",
+            ),
+        ):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                witness = deployment_witness()
+                mutation(witness)
+                path = root / "deployment.json"
+                payload = json.dumps(witness, sort_keys=True).encode("utf-8")
+                path.write_bytes(payload)
+                value = audit()
+                add_audited_deployment(value)
+                value["production_evidence"] = {
+                    requirement: {
+                        "artifact_path": path.name,
+                        "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                    }
                 }
-            }
-            sign(value)
-            report = verify(
-                value,
-                manifest({requirement: True}),
-                "production",
-                evidence_root=root,
+                sign(value)
+                report = verify(
+                    value, contract, "production", evidence_root=root
+                )
+            self.assertIn(
+                expected,
+                check(report, f"production.requirement.{requirement}")["detail"],
             )
-            return check(report, f"production.requirement.{requirement}")
-
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            valid = verify_binding(root, deployment_binding())
-            self.assertEqual(valid["state"], "PASS")
-
-            nonexistent = deployment_binding()
-            nonexistent["asset_id"] = "deployment:unrelated:production"
-            missing = verify_binding(root, nonexistent)
-            self.assertEqual(missing["state"], "FAIL")
-            self.assertIn("not present in audit", missing["detail"])
-
-            unrelated = deployment_binding()
-            unrelated["repository"] = "unrelated/project"
-            mismatched = verify_binding(root, unrelated)
-            self.assertEqual(mismatched["state"], "FAIL")
-            self.assertIn("mismatch field=repository", mismatched["detail"])
-
-    def test_workflow_collects_independent_evidence_after_baseline_failure(self) -> None:
-        workflow = (
-            Path(__file__).resolve().parents[1]
-            / ".github"
-            / "workflows"
-            / "estate-readiness.yml"
-        ).read_text(encoding="utf-8")
-        self.assertRegex(
-            workflow,
-            r"- name: Verify receipt chain\s+if: always\(\)",
-        )
-        self.assertRegex(
-            workflow,
-            r"- name: Run bounded API stress profile\s+if: always\(\)",
-        )
-        self.assertNotIn("continue-on-error:", workflow)
-        self.assertNotIn("|| true", workflow)
 
     def test_source_minimum_uses_actual_asset_inventory(self) -> None:
         value = audit()
@@ -366,6 +366,19 @@ class ReadinessTests(unittest.TestCase):
             check(report, "production.requirement.future_requirement")["state"],
             "FAIL",
         )
+
+    def test_workflow_aggregates_independent_evidence_after_failures(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "estate-readiness.yml"
+        ).read_text(encoding="utf-8")
+        for step_id in ("baseline", "receipt_chain", "stress"):
+            self.assertIn(f"id: {step_id}", workflow)
+        self.assertGreaterEqual(workflow.count("if: always()"), 4)
+        self.assertGreaterEqual(workflow.count("continue-on-error: true"), 3)
+        self.assertIn("Aggregate evidence outcomes", workflow)
 
 
 if __name__ == "__main__":

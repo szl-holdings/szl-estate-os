@@ -52,6 +52,9 @@ jobs:
           --timeout 15
 
       - name: Verify public baseline contract
+        id: baseline
+        if: always()
+        continue-on-error: true
         run: >-
           python ci/verify_estate_readiness.py
           --audit outputs/latest_audit.json
@@ -61,11 +64,15 @@ jobs:
           --output-markdown outputs/readiness-baseline.md
 
       - name: Verify receipt chain
+        id: receipt_chain
         if: always()
+        continue-on-error: true
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py verify-receipts
 
       - name: Run bounded API stress profile
+        id: stress
         if: always()
+        continue-on-error: true
         run: >-
           python ci/stress_estate_os.py
           --database outputs/estate.db
@@ -75,6 +82,27 @@ jobs:
           --max-p95-ms 2500
           --min-rps 30
           --output outputs/stress-report.json
+
+      - name: Aggregate evidence outcomes
+        if: always()
+        env:
+          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
+          RECEIPT_OUTCOME: ${{ steps.receipt_chain.outcome }}
+          STRESS_OUTCOME: ${{ steps.stress.outcome }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+
+          outcomes = {
+              "baseline": os.environ["BASELINE_OUTCOME"],
+              "receipt_chain": os.environ["RECEIPT_OUTCOME"],
+              "stress": os.environ["STRESS_OUTCOME"],
+          }
+          failed = [name for name, outcome in outcomes.items() if outcome != "success"]
+          print("independent evidence outcomes:", outcomes)
+          sys.exit(1 if failed else 0)
+          PY
 
       - name: Upload evidence packet
         if: always()
