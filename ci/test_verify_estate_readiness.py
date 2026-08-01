@@ -43,12 +43,23 @@ RSA_D = int(
 
 
 def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]:
+    production_requirements: dict[str, object] = {
+        "authenticated_inventory": True,
+        "critical_huggingface_alignment": ["EXACT_RUNTIME_HEAD"],
+        "independent_asymmetric_evidence": True,
+        "credential_backed_deployment_witness": True,
+        "browser_e2e_and_accessibility": True,
+        "restore_and_failure_domain_drill": True,
+        "zero_active_critical_gaps": True,
+    }
+    if requirements is not None:
+        production_requirements.update(requirements)
     return {
         "baseline": {"source_minimums": {}},
         "canonical_identities": {"github_organization": "szl-holdings"},
         "critical_assets": [],
         "known_gaps": [],
-        "production_requirements": requirements or {},
+        "production_requirements": production_requirements,
         "production_policies": {
             "max_deployment_age_seconds": 86400,
             "max_browser_age_seconds": 7200,
@@ -863,6 +874,31 @@ class ReadinessTests(unittest.TestCase):
             check(report, "production.requirement.future_requirement")["state"],
             "FAIL",
         )
+
+    def test_production_requirements_contract_fails_closed(self) -> None:
+        valid = manifest()
+        passing = verify(audit(), valid, "production")
+        self.assertEqual(
+            check(passing, "production.requirements_contract")["state"], "PASS"
+        )
+        invalid_contracts = (
+            None,
+            [],
+            {"authenticated_inventory": True},
+            {
+                **valid["production_requirements"],
+                "restore_and_failure_domain_drill": False,
+            },
+        )
+        for configured in invalid_contracts:
+            with self.subTest(configured=configured):
+                contract = manifest()
+                contract["production_requirements"] = configured
+                report = verify(audit(), contract, "production")
+                self.assertEqual(
+                    check(report, "production.requirements_contract")["state"],
+                    "FAIL",
+                )
 
     def test_workflow_aggregates_independent_evidence_after_failures(self) -> None:
         workflow = (

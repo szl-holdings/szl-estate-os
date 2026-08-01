@@ -983,8 +983,48 @@ def verify(
     )
 
     if profile == "production":
-        production_requirements = manifest.get("production_requirements") or {}
-        if not isinstance(production_requirements, dict):
+        configured_requirements = manifest.get("production_requirements")
+        requirements_shape_valid = isinstance(configured_requirements, dict)
+        production_requirements = (
+            configured_requirements if isinstance(configured_requirements, dict) else {}
+        )
+        missing_requirements = sorted(
+            KNOWN_PRODUCTION_REQUIREMENTS - set(production_requirements)
+        )
+        extra_requirements = sorted(
+            set(production_requirements) - KNOWN_PRODUCTION_REQUIREMENTS
+        )
+        disabled_requirements = sorted(
+            requirement
+            for requirement in KNOWN_PRODUCTION_REQUIREMENTS & set(production_requirements)
+            if not (
+                production_requirements[requirement] is True
+                or (
+                    isinstance(production_requirements[requirement], list)
+                    and bool(production_requirements[requirement])
+                )
+            )
+        )
+        requirements_contract_valid = (
+            requirements_shape_valid
+            and not missing_requirements
+            and not extra_requirements
+            and not disabled_requirements
+        )
+        checks.append(
+            result(
+                "production.requirements_contract",
+                "PASS" if requirements_contract_valid else "FAIL",
+                "all production requirements are explicitly enabled"
+                if requirements_contract_valid
+                else (
+                    f"shape_valid={requirements_shape_valid} "
+                    f"missing={missing_requirements} extra={extra_requirements} "
+                    f"disabled={disabled_requirements}"
+                ),
+            )
+        )
+        if not requirements_shape_valid:
             production_requirements = {}
         for source in ("github", "huggingface"):
             scope = str((source_reports.get(source) or {}).get("scope") or "UNAVAILABLE")
