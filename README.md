@@ -308,10 +308,19 @@ bounded read-only API stress profile as independent steps. A final aggregate
 gate fails if any step fails, while the evidence packet is still uploaded for
 diagnosis. Production evidence additionally requires provider-authenticated
 deployment receipts, exact report-file digests, canonical source ownership,
-fresh timestamps, and restore results within manifest RTO/RPO ceilings. Signed
+an explicit `szl.estate-audit/v1` payload, exact `ASYMMETRIC_VERIFIED` signature
+state plus RSA verification, fresh source/critical-asset observations, and
+restore results within manifest RTO/RPO ceilings. Production also requires an
+exact `MEASURED` aggregate audit status and observations captured inside the
+recorded audit interval. Signed
 evidence indexes must cover every manifest-critical domain route and Space for
 the witness, browser, and restore gates; a single selected deployment cannot
-certify the estate. Its JSON, Markdown, and stress reports are retained as
+certify the estate. `production_deployment_sources` binds each target to its
+expected critical GitHub repository; `null` keeps an unresolved source
+explicitly unpromotable. Browser and recovery report bytes use typed schemas and
+must repeat the wrapper bindings exactly. Recovery RTO is measured from failure
+onset to service restoration, while RPO is measured from the durable recovery
+point to failure onset. Its JSON, Markdown, and stress reports are retained as
 workflow artifacts rather than committed as mutable snapshots.
 
 Run the same gates locally after an audit:

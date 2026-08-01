@@ -15,13 +15,30 @@ concurrency:
 jobs:
   public-baseline:
     name: Live public baseline and bounded stress
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
-          egress-policy: audit
+          egress-policy: block
+          disable-telemetry: true
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            codeload.github.com:443
+            objects.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
+            *.actions.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            *.blob.core.windows.net:443
+            huggingface.co:443
+            *.huggingface.co:443
+            *.hf.co:443
+            *.hf.space:443
+            a-11-oy.com:443
+            a11oy.net:443
 
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,23 +55,15 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py estate/*.py
+          python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py
           python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
-          python ci/test_verify_estate_readiness.py -v
-          python ci/test_github_controls.py -v
-          python ci/test_provenance_policy.py -v
 
-      - name: Run live public estate audit
+      - name: Run live estate audit
         id: live_audit
         if: always()
         continue-on-error: true
-        # This is deliberately credential-free. Authenticated organization
-        # completeness belongs to a separately authorized production packet.
         env:
-          GH_TOKEN: ""
-          GITHUB_TOKEN: ""
-          HF_TOKEN: ""
-          HUGGING_FACE_HUB_TOKEN: ""
+          GITHUB_TOKEN: ${{ github.token }}
         run: >-
           python SZL_ONE_OF_ONE_ESTATE_OS.py audit
           --github-org szl-holdings

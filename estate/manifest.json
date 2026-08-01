@@ -65,6 +65,12 @@
       "public": true
     },
     {
+      "asset_id": "github:repo:szl-holdings/anatomy",
+      "tier": 1,
+      "role": "estate anatomy Space source",
+      "public": true
+    },
+    {
       "asset_id": "github:repo:szl-holdings/szl-holdings.github.io",
       "tier": 1,
       "role": "GitHub Pages deployment source",
@@ -127,6 +133,19 @@
       "evidence_requirement": "AUTHENTICATED_INVENTORY"
     }
   ],
+  "production_recovery_contract": {
+    "required_scenarios": [
+      "primary-store-loss"
+    ]
+  },
+  "production_deployment_sources": {
+    "domain:route:a-11-oy.com/": "github:repo:szl-holdings/a11oy",
+    "domain:route:a11oy.net/": "github:repo:szl-holdings/a11oy-net",
+    "huggingface:space:szlholdings/a11oy": "github:repo:szl-holdings/a11oy",
+    "huggingface:space:szlholdings/killinchu": "github:repo:szl-holdings/killinchu",
+    "huggingface:space:szlholdings/anatomy": "github:repo:szl-holdings/anatomy",
+    "huggingface:space:szlholdings/cosmos": null
+  },
   "production_requirements": {
     "authenticated_inventory": true,
     "critical_huggingface_alignment": [
