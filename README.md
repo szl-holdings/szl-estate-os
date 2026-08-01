@@ -192,3 +192,35 @@ The current source contracts follow the official
 [GitHub organization repository API](https://docs.github.com/en/rest/repos/repos#list-organization-repositories),
 [GitHub branch API](https://docs.github.com/en/rest/branches/branches),
 and [Hugging Face Hub API](https://huggingface.co/docs/hub/en/api).
+
+## Continuous readiness
+
+The critical-surface contract lives in `estate/manifest.json`. It separates
+public baseline evidence from authenticated and production evidence so a public
+scan cannot silently become a production claim.
+
+The scheduled `Estate readiness evidence` workflow performs a live audit,
+checks the baseline contract, verifies the local receipt chain, and exercises
+the read-only API under bounded concurrent load. Its JSON, Markdown, and stress
+reports are retained as workflow artifacts rather than committed as mutable
+snapshots.
+
+Run the same gates locally after an audit:
+
+```powershell
+& $python .\ci\verify_estate_readiness.py `
+  --audit .\outputs\latest_audit.json `
+  --manifest .\estate\manifest.json `
+  --profile baseline
+
+& $python .\ci\stress_estate_os.py `
+  --database .\outputs\estate.db `
+  --requests 1000 `
+  --concurrency 32 `
+  --max-error-rate 0 `
+  --max-p95-ms 2500
+```
+
+`--profile production` intentionally fails closed until authenticated inventory,
+exact Hugging Face source/runtime binding, signed independent evidence, and all
+active critical gaps in the manifest are closed. See `PRODUCTION_READINESS.md`.
