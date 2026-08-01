@@ -1,0 +1,183 @@
+{
+  "schema": "szl.estate-critical-surface/v1",
+  "status": "CONTROL_CONTRACT",
+  "as_of": "2026-08-01",
+  "canonical_identities": {
+    "github_organization": "szl-holdings",
+    "huggingface_organization": "SZLHOLDINGS",
+    "domains": [
+      "a-11-oy.com",
+      "a11oy.net"
+    ]
+  },
+  "baseline": {
+    "source_minimums": {
+      "github": 59,
+      "huggingface": 81,
+      "domains": 26
+    },
+    "required_source_status": "MEASURED",
+    "prohibited_status_labels": [
+      "BROKEN"
+    ],
+    "required_security_headers": [
+      "content-security-policy",
+      "referrer-policy",
+      "strict-transport-security",
+      "x-content-type-options"
+    ]
+  },
+  "critical_assets": [
+    {
+      "asset_id": "github:repo:szl-holdings/.github",
+      "tier": 0,
+      "role": "organization governance and reusable workflows",
+      "public": true
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/platform",
+      "tier": 0,
+      "role": "canonical shared substrate and contracts",
+      "public": true
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/a11oy",
+      "tier": 0,
+      "role": "regulated governed-AI product spine",
+      "public": true
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/killinchu",
+      "tier": 0,
+      "role": "defense and maritime product surface",
+      "public": true
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/docs-site",
+      "tier": 1,
+      "role": "developer documentation surface",
+      "public": true
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/a11oy-net",
+      "tier": 1,
+      "role": "proof-registry source surface",
+      "public": true
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/szl-holdings.github.io",
+      "tier": 1,
+      "role": "GitHub Pages deployment source",
+      "public": true
+    },
+    {
+      "asset_id": "domain:route:a-11-oy.com/",
+      "tier": 0,
+      "role": "primary product and investor surface",
+      "public": true,
+      "required_status": "LIVE"
+    },
+    {
+      "asset_id": "domain:route:a11oy.net/",
+      "tier": 0,
+      "role": "public proof registry",
+      "public": true,
+      "required_status": "LIVE"
+    },
+    {
+      "asset_id": "huggingface:space:szlholdings/a11oy",
+      "tier": 0,
+      "role": "a11oy command center",
+      "public": true,
+      "required_status": "LIVE"
+    },
+    {
+      "asset_id": "huggingface:space:szlholdings/killinchu",
+      "tier": 0,
+      "role": "Killinchu application Space",
+      "public": true,
+      "required_status": "LIVE"
+    },
+    {
+      "asset_id": "huggingface:space:szlholdings/anatomy",
+      "tier": 1,
+      "role": "estate anatomy Space",
+      "public": true,
+      "required_status": "LIVE"
+    },
+    {
+      "asset_id": "huggingface:space:szlholdings/cosmos",
+      "tier": 1,
+      "role": "estate discovery Space",
+      "public": true,
+      "required_status": "LIVE"
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/szl-estate-os",
+      "tier": 0,
+      "role": "estate evidence control plane",
+      "public": false,
+      "evidence_requirement": "AUTHENTICATED_INVENTORY"
+    },
+    {
+      "asset_id": "github:repo:szl-holdings/gdw-frontier",
+      "tier": 0,
+      "role": "governed delta workspace control plane",
+      "public": false,
+      "evidence_requirement": "AUTHENTICATED_INVENTORY"
+    }
+  ],
+  "production_requirements": {
+    "authenticated_inventory": true,
+    "critical_huggingface_alignment": [
+      "EXACT_RUNTIME_HEAD"
+    ],
+    "independent_asymmetric_evidence": true,
+    "credential_backed_deployment_witness": true,
+    "browser_e2e_and_accessibility": true,
+    "restore_and_failure_domain_drill": true,
+    "zero_active_critical_gaps": true
+  },
+  "production_policies": {
+    "max_audit_age_seconds": 7200,
+    "max_deployment_age_seconds": 86400,
+    "max_browser_age_seconds": 7200,
+    "max_restore_age_seconds": 2592000,
+    "max_rto_seconds": 900,
+    "max_rpo_seconds": 300
+  },
+  "production_trusted_keys": {},
+  "deployment_provider_trusted_keys": {},
+  "known_gaps": [
+    {
+      "id": "privileged-inventory-completeness",
+      "severity": "P0",
+      "status": "ACTIVE",
+      "evidence": "Public inventory cannot establish private or protected completeness."
+    },
+    {
+      "id": "huggingface-source-runtime-binding",
+      "severity": "P0",
+      "status": "ACTIVE",
+      "evidence": "The 2026-08-01 audit observed no estate-wide exact source/runtime binding."
+    },
+    {
+      "id": "www-a-11-oy-dns",
+      "severity": "P1",
+      "status": "ACTIVE",
+      "evidence": "The 2026-08-01 bounded DNS probe could not resolve www.a-11-oy.com."
+    },
+    {
+      "id": "independent-signed-evidence",
+      "severity": "P1",
+      "status": "ACTIVE",
+      "evidence": "The 2026-08-01 local audit receipt chain was valid but unsigned."
+    },
+    {
+      "id": "interactive-browser-evidence",
+      "severity": "P1",
+      "status": "ACTIVE",
+      "evidence": "Visual, console, keyboard, mobile, and accessibility checks remain required."
+    }
+  ]
+}

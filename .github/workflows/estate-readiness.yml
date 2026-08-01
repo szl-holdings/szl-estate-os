@@ -1,0 +1,124 @@
+name: Estate readiness evidence
+
+on:
+  schedule:
+    - cron: "17 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: estate-readiness-evidence
+  cancel-in-progress: false
+
+jobs:
+  public-baseline:
+    name: Live public baseline and bounded stress
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Run deterministic checks
+        id: deterministic
+        if: always()
+        continue-on-error: true
+        run: |
+          python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py
+          python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
+
+      - name: Run live estate audit
+        id: live_audit
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HF_TOKEN: ${{ secrets.ESTATE_HF_TOKEN }}
+        run: >-
+          python SZL_ONE_OF_ONE_ESTATE_OS.py audit
+          --github-org szl-holdings
+          --hf-org SZLHOLDINGS
+          --domain a-11-oy.com
+          --domain a11oy.net
+          --deep
+          --timeout 15
+
+      - name: Verify public baseline contract
+        id: baseline
+        if: always()
+        continue-on-error: true
+        run: >-
+          python ci/verify_estate_readiness.py
+          --audit outputs/latest_audit.json
+          --manifest estate/manifest.json
+          --profile baseline
+          --output-json outputs/readiness-baseline.json
+          --output-markdown outputs/readiness-baseline.md
+
+      - name: Verify receipt chain
+        id: receipt_chain
+        if: always()
+        continue-on-error: true
+        run: python SZL_ONE_OF_ONE_ESTATE_OS.py verify-receipts
+
+      - name: Run bounded API stress profile
+        id: stress
+        if: always()
+        continue-on-error: true
+        run: >-
+          python ci/stress_estate_os.py
+          --database outputs/estate.db
+          --requests 1000
+          --concurrency 32
+          --max-error-rate 0
+          --max-p95-ms 2500
+          --min-rps 30
+          --output outputs/stress-report.json
+
+      - name: Aggregate evidence outcomes
+        if: always()
+        env:
+          DETERMINISTIC_OUTCOME: ${{ steps.deterministic.outcome }}
+          LIVE_AUDIT_OUTCOME: ${{ steps.live_audit.outcome }}
+          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
+          RECEIPT_OUTCOME: ${{ steps.receipt_chain.outcome }}
+          STRESS_OUTCOME: ${{ steps.stress.outcome }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+
+          outcomes = {
+              "deterministic": os.environ["DETERMINISTIC_OUTCOME"],
+              "live_audit": os.environ["LIVE_AUDIT_OUTCOME"],
+              "baseline": os.environ["BASELINE_OUTCOME"],
+              "receipt_chain": os.environ["RECEIPT_OUTCOME"],
+              "stress": os.environ["STRESS_OUTCOME"],
+          }
+          failed = [name for name, outcome in outcomes.items() if outcome != "success"]
+          print("independent evidence outcomes:", outcomes)
+          sys.exit(1 if failed else 0)
+          PY
+
+      - name: Upload evidence packet
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: estate-readiness-${{ github.run_id }}
+          path: outputs/
+          if-no-files-found: error
+          retention-days: 30
