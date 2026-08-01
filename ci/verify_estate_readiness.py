@@ -13,6 +13,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 
 ALIGNMENT_READY = {"EXACT_HEAD", "EXACT_RUNTIME_HEAD"}
@@ -25,6 +26,15 @@ PRODUCTION_SIGNATURE_ALGORITHM = "RSA_PKCS1_V1_5_SHA256"
 RSA_SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 REVISION_PATTERN = re.compile(r"[0-9a-f]{40,64}")
+REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
+DEPLOYMENT_BINDING_FIELDS = (
+    "repository",
+    "environment",
+    "url",
+    "revision",
+    "artifact_sha256",
+    "receipt_id",
+)
 KNOWN_PRODUCTION_REQUIREMENTS = {
     "authenticated_inventory",
     "critical_huggingface_alignment",
@@ -128,6 +138,59 @@ def verify_independent_signature(
     return "PASS", f"verified key_id={key_id} payload_sha256={payload_sha256}"
 
 
+def deployment_witness_state(
+    audit: dict[str, Any], artifact: dict[str, Any]
+) -> tuple[str, str]:
+    """Bind a deployment witness to an exact deployment in the signed audit."""
+    binding = artifact.get("deployment") or {}
+    if not isinstance(binding, dict):
+        return "FAIL", "deployment binding must be a JSON object"
+    asset_id = str(binding.get("asset_id") or "")
+    if not asset_id:
+        return "FAIL", "deployment asset_id is missing"
+    audited_asset = next(
+        (
+            item
+            for item in audit.get("assets") or []
+            if isinstance(item, dict) and str(item.get("asset_id") or "") == asset_id
+        ),
+        None,
+    )
+    if audited_asset is None:
+        return "FAIL", f"deployment asset is not present in audit asset_id={asset_id}"
+    if str(audited_asset.get("status_label") or "UNAVAILABLE") in {
+        "BROKEN",
+        "ARCHIVED",
+        "UNAVAILABLE",
+    }:
+        return "FAIL", f"deployment asset is not available asset_id={asset_id}"
+    metadata = audited_asset.get("metadata") or {}
+    audited_binding = metadata.get("deployment") if isinstance(metadata, dict) else None
+    if not isinstance(audited_binding, dict):
+        return "FAIL", f"audited deployment binding missing asset_id={asset_id}"
+    for field in DEPLOYMENT_BINDING_FIELDS:
+        observed = str(binding.get(field) or "")
+        expected = str(audited_binding.get(field) or "")
+        if not observed or not expected:
+            return "FAIL", f"deployment binding field missing field={field}"
+        if not hmac.compare_digest(observed, expected):
+            return "FAIL", f"deployment binding mismatch field={field}"
+    repository = str(binding["repository"])
+    url = str(binding["url"])
+    revision = str(binding["revision"])
+    artifact_sha256 = str(binding["artifact_sha256"])
+    parsed_url = urlsplit(url)
+    if REPOSITORY_PATTERN.fullmatch(repository) is None:
+        return "FAIL", "deployment repository is invalid"
+    if parsed_url.scheme != "https" or not parsed_url.netloc or parsed_url.fragment:
+        return "FAIL", "deployment URL must be an absolute HTTPS URL without a fragment"
+    if REVISION_PATTERN.fullmatch(revision) is None:
+        return "FAIL", "deployment revision is missing or invalid"
+    if SHA256_PATTERN.fullmatch(artifact_sha256) is None:
+        return "FAIL", "deployment artifact_sha256 is missing or invalid"
+    return "PASS", f"bound asset_id={asset_id} revision={revision}"
+
+
 def production_artifact_state(
     audit: dict[str, Any], requirement: str, evidence_root: Path | None
 ) -> tuple[str, str]:
@@ -167,12 +230,12 @@ def production_artifact_state(
     if artifact.get("schema") != expected_schema or artifact.get("status") != "VERIFIED":
         return "FAIL", f"artifact schema/status invalid expected={expected_schema}"
     if requirement == "credential_backed_deployment_witness":
-        revision = str(artifact.get("deployment_revision") or "")
         scope = str(artifact.get("credential_scope") or "")
-        if REVISION_PATTERN.fullmatch(revision) is None:
-            return "FAIL", "deployment revision is missing or invalid"
         if scope != "DEPLOYMENT_READ_ONLY":
             return "FAIL", f"credential_scope={scope or 'UNAVAILABLE'}"
+        witness_state, witness_detail = deployment_witness_state(audit, artifact)
+        if witness_state != "PASS":
+            return witness_state, witness_detail
     elif requirement == "browser_e2e_and_accessibility":
         checks = artifact.get("checks") or {}
         required = {"browser_e2e", "keyboard", "mobile", "accessibility"}
@@ -184,7 +247,10 @@ def production_artifact_state(
             return "FAIL", "restore drill did not pass"
         if artifact.get("failure_domain_status") != "PASS":
             return "FAIL", "failure-domain drill did not pass"
-    return "PASS", f"verified path={relative.as_posix()} artifact_sha256={digest}"
+    detail = f"verified path={relative.as_posix()} artifact_sha256={digest}"
+    if requirement == "credential_backed_deployment_witness":
+        detail += f"; {witness_detail}"
+    return "PASS", detail
 
 
 def verify(

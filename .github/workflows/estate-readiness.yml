@@ -61,9 +61,11 @@ jobs:
           --output-markdown outputs/readiness-baseline.md
 
       - name: Verify receipt chain
+        if: always()
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py verify-receipts
 
       - name: Run bounded API stress profile
+        if: always()
         run: >-
           python ci/stress_estate_os.py
           --database outputs/estate.db
