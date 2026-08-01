@@ -34,6 +34,12 @@ KNOWN_PRODUCTION_REQUIREMENTS = {
     "restore_and_failure_domain_drill",
     "zero_active_critical_gaps",
 }
+MAX_PRODUCTION_ARTIFACT_BYTES = 5_000_000
+PRODUCTION_ARTIFACT_SCHEMAS = {
+    "credential_backed_deployment_witness": "szl.estate-deployment-witness/v1",
+    "browser_e2e_and_accessibility": "szl.estate-browser-evidence/v1",
+    "restore_and_failure_domain_drill": "szl.estate-restore-drill/v1",
+}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -123,38 +129,70 @@ def verify_independent_signature(
 
 
 def production_artifact_state(
-    audit: dict[str, Any], requirement: str
+    audit: dict[str, Any], requirement: str, evidence_root: Path | None
 ) -> tuple[str, str]:
     evidence = audit.get("production_evidence") or {}
     record = evidence.get(requirement) if isinstance(evidence, dict) else None
-    if not isinstance(record, dict) or record.get("status") != "VERIFIED":
-        return "FAIL", "verified production evidence record missing"
+    if not isinstance(record, dict):
+        return "FAIL", "production evidence reference missing"
     digest = str(record.get("artifact_sha256") or "")
     if SHA256_PATTERN.fullmatch(digest) is None:
         return "FAIL", "artifact_sha256 is missing or invalid"
+    relative = Path(str(record.get("artifact_path") or ""))
+    if evidence_root is None or not relative.parts or relative.is_absolute():
+        return "FAIL", "artifact_path must be relative to the audit directory"
+    root = evidence_root.resolve()
+    artifact_path = (root / relative).resolve()
+    try:
+        artifact_path.relative_to(root)
+    except ValueError:
+        return "FAIL", "artifact_path escapes the audit directory"
+    try:
+        size = artifact_path.stat().st_size
+        if size > MAX_PRODUCTION_ARTIFACT_BYTES:
+            return "FAIL", f"artifact exceeds byte limit size={size}"
+        artifact_bytes = artifact_path.read_bytes()
+    except OSError as exc:
+        return "FAIL", f"artifact unavailable error={type(exc).__name__}"
+    observed_digest = hashlib.sha256(artifact_bytes).hexdigest()
+    if not hmac.compare_digest(observed_digest, digest):
+        return "FAIL", f"artifact digest mismatch observed={observed_digest}"
+    try:
+        artifact = json.loads(artifact_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return "FAIL", "artifact is not valid UTF-8 JSON"
+    if not isinstance(artifact, dict):
+        return "FAIL", "artifact must be a JSON object"
+    expected_schema = PRODUCTION_ARTIFACT_SCHEMAS[requirement]
+    if artifact.get("schema") != expected_schema or artifact.get("status") != "VERIFIED":
+        return "FAIL", f"artifact schema/status invalid expected={expected_schema}"
     if requirement == "credential_backed_deployment_witness":
-        revision = str(record.get("deployment_revision") or "")
-        scope = str(record.get("credential_scope") or "")
+        revision = str(artifact.get("deployment_revision") or "")
+        scope = str(artifact.get("credential_scope") or "")
         if REVISION_PATTERN.fullmatch(revision) is None:
             return "FAIL", "deployment revision is missing or invalid"
         if scope != "DEPLOYMENT_READ_ONLY":
             return "FAIL", f"credential_scope={scope or 'UNAVAILABLE'}"
     elif requirement == "browser_e2e_and_accessibility":
-        checks = record.get("checks") or {}
+        checks = artifact.get("checks") or {}
         required = {"browser_e2e", "keyboard", "mobile", "accessibility"}
         missing = sorted(name for name in required if checks.get(name) != "PASS")
         if missing:
             return "FAIL", f"required checks not passing={','.join(missing)}"
     elif requirement == "restore_and_failure_domain_drill":
-        if record.get("restore_status") != "PASS":
+        if artifact.get("restore_status") != "PASS":
             return "FAIL", "restore drill did not pass"
-        if record.get("failure_domain_status") != "PASS":
+        if artifact.get("failure_domain_status") != "PASS":
             return "FAIL", "failure-domain drill did not pass"
-    return "PASS", f"verified artifact_sha256={digest}"
+    return "PASS", f"verified path={relative.as_posix()} artifact_sha256={digest}"
 
 
 def verify(
-    audit: dict[str, Any], manifest: dict[str, Any], profile: str
+    audit: dict[str, Any],
+    manifest: dict[str, Any],
+    profile: str,
+    *,
+    evidence_root: Path | None = None,
 ) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
     assets = {
@@ -176,13 +214,23 @@ def verify(
             continue
         status = str(report.get("status") or "UNAVAILABLE")
         count = int(report.get("count") or 0)
+        observed_count = sum(
+            1 for item in assets.values() if str(item.get("source") or "") == source
+        )
         required = str(baseline.get("required_source_status") or "MEASURED")
-        state = "PASS" if status == required and count >= int(minimum) else "FAIL"
+        state = (
+            "PASS"
+            if status == required
+            and count == observed_count
+            and observed_count >= int(minimum)
+            else "FAIL"
+        )
         checks.append(
             result(
                 f"source.{source}",
                 state,
-                f"status={status} count={count} required_status={required} minimum={minimum}",
+                f"status={status} reported_count={count} observed_count={observed_count} "
+                f"required_status={required} minimum={minimum}",
             )
         )
 
@@ -361,7 +409,7 @@ def verify(
                 "restore_and_failure_domain_drill",
             }:
                 artifact_state, artifact_detail = production_artifact_state(
-                    audit, requirement
+                    audit, requirement, evidence_root
                 )
                 if signature_verification[0] != "PASS":
                     artifact_state = "FAIL"
@@ -419,7 +467,12 @@ def main() -> int:
     parser.add_argument("--output-markdown", type=Path)
     args = parser.parse_args()
 
-    report = verify(read_json(args.audit), read_json(args.manifest), args.profile)
+    report = verify(
+        read_json(args.audit),
+        read_json(args.manifest),
+        args.profile,
+        evidence_root=args.audit.resolve().parent,
+    )
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     print(rendered, end="")
     if args.output_json:

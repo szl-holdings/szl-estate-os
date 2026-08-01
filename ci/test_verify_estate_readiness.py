@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from verify_estate_readiness import (
     PRODUCTION_SIGNATURE_ALGORITHM,
@@ -158,17 +161,16 @@ class ReadinessTests(unittest.TestCase):
             "browser_e2e_and_accessibility": True,
             "restore_and_failure_domain_drill": True,
         }
-        value = audit()
-        value["production_evidence"] = {
+        artifacts = {
             "credential_backed_deployment_witness": {
+                "schema": "szl.estate-deployment-witness/v1",
                 "status": "VERIFIED",
-                "artifact_sha256": "a" * 64,
                 "deployment_revision": "b" * 40,
                 "credential_scope": "DEPLOYMENT_READ_ONLY",
             },
             "browser_e2e_and_accessibility": {
+                "schema": "szl.estate-browser-evidence/v1",
                 "status": "VERIFIED",
-                "artifact_sha256": "c" * 64,
                 "checks": {
                     "browser_e2e": "PASS",
                     "keyboard": "PASS",
@@ -177,19 +179,95 @@ class ReadinessTests(unittest.TestCase):
                 },
             },
             "restore_and_failure_domain_drill": {
+                "schema": "szl.estate-restore-drill/v1",
                 "status": "VERIFIED",
-                "artifact_sha256": "d" * 64,
                 "restore_status": "PASS",
                 "failure_domain_status": "PASS",
             },
         }
-        sign(value)
-        report = verify(value, manifest(requirements), "production")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            references = {}
+            for requirement, artifact in artifacts.items():
+                path = root / f"{requirement}.json"
+                payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+                path.write_bytes(payload)
+                references[requirement] = {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            value["production_evidence"] = references
+            sign(value)
+            report = verify(
+                value, manifest(requirements), "production", evidence_root=root
+            )
         for requirement in requirements:
             self.assertEqual(
                 check(report, f"production.requirement.{requirement}")["state"],
                 "PASS",
             )
+
+    def test_production_rejects_tampered_artifact(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "deployment.json"
+            payload = json.dumps(
+                {
+                    "schema": "szl.estate-deployment-witness/v1",
+                    "status": "VERIFIED",
+                    "deployment_revision": "b" * 40,
+                    "credential_scope": "DEPLOYMENT_READ_ONLY",
+                },
+                sort_keys=True,
+            ).encode("utf-8")
+            path.write_bytes(payload)
+            value = audit()
+            value["production_evidence"] = {
+                requirement: {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            }
+            sign(value)
+            path.write_text("{}", encoding="utf-8")
+            report = verify(
+                value,
+                manifest(
+                    {
+                        "independent_asymmetric_evidence": True,
+                        requirement: True,
+                    }
+                ),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "digest mismatch",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_source_minimum_uses_actual_asset_inventory(self) -> None:
+        value = audit()
+        value["source_reports"] = [
+            {"source": "github", "status": "MEASURED", "count": 2}
+        ]
+        value["assets"] = [
+            {"asset_id": "github:one", "source": "github", "status_label": "OBSERVED"}
+        ]
+        contract = manifest()
+        contract["baseline"] = {
+            "source_minimums": {"github": 2},
+            "required_source_status": "MEASURED",
+        }
+        failed = verify(value, contract, "baseline")
+        self.assertEqual(check(failed, "source.github")["state"], "FAIL")
+        value["assets"].append(
+            {"asset_id": "github:two", "source": "github", "status_label": "OBSERVED"}
+        )
+        passed = verify(value, contract, "baseline")
+        self.assertEqual(check(passed, "source.github")["state"], "PASS")
 
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
