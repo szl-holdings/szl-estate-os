@@ -229,6 +229,46 @@ def verify_independent_signature(
     return "PASS", f"verified key_id={key_id} payload_sha256={payload_sha256}"
 
 
+def load_production_artifact(
+    audit: dict[str, Any],
+    requirement: str,
+    evidence_root: Path | None,
+) -> tuple[dict[str, Any] | None, str]:
+    evidence = audit.get("production_evidence") or {}
+    record = evidence.get(requirement) if isinstance(evidence, dict) else None
+    if not isinstance(record, dict):
+        return None, "production evidence reference missing"
+    digest = str(record.get("artifact_sha256") or "")
+    if SHA256_PATTERN.fullmatch(digest) is None:
+        return None, "artifact_sha256 is missing or invalid"
+    relative = Path(str(record.get("artifact_path") or ""))
+    if evidence_root is None or not relative.parts or relative.is_absolute():
+        return None, "artifact_path must be relative to the audit directory"
+    root = evidence_root.resolve()
+    artifact_path = (root / relative).resolve()
+    try:
+        artifact_path.relative_to(root)
+    except ValueError:
+        return None, "artifact_path escapes the audit directory"
+    try:
+        size = artifact_path.stat().st_size
+        if size > MAX_PRODUCTION_ARTIFACT_BYTES:
+            return None, f"artifact exceeds byte limit size={size}"
+        artifact_bytes = artifact_path.read_bytes()
+    except OSError as exc:
+        return None, f"artifact unavailable error={type(exc).__name__}"
+    observed_digest = hashlib.sha256(artifact_bytes).hexdigest()
+    if not hmac.compare_digest(observed_digest, digest):
+        return None, f"artifact digest mismatch observed={observed_digest}"
+    try:
+        artifact = json.loads(artifact_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, "artifact is not valid UTF-8 JSON"
+    if not isinstance(artifact, dict):
+        return None, "artifact must be a JSON object"
+    return artifact, f"verified path={relative.as_posix()} artifact_sha256={digest}"
+
+
 def production_artifact_state(
     audit: dict[str, Any],
     manifest: dict[str, Any],
@@ -236,38 +276,11 @@ def production_artifact_state(
     requirement: str,
     evidence_root: Path | None,
 ) -> tuple[str, str]:
-    evidence = audit.get("production_evidence") or {}
-    record = evidence.get(requirement) if isinstance(evidence, dict) else None
-    if not isinstance(record, dict):
-        return "FAIL", "production evidence reference missing"
-    digest = str(record.get("artifact_sha256") or "")
-    if SHA256_PATTERN.fullmatch(digest) is None:
-        return "FAIL", "artifact_sha256 is missing or invalid"
-    relative = Path(str(record.get("artifact_path") or ""))
-    if evidence_root is None or not relative.parts or relative.is_absolute():
-        return "FAIL", "artifact_path must be relative to the audit directory"
-    root = evidence_root.resolve()
-    artifact_path = (root / relative).resolve()
-    try:
-        artifact_path.relative_to(root)
-    except ValueError:
-        return "FAIL", "artifact_path escapes the audit directory"
-    try:
-        size = artifact_path.stat().st_size
-        if size > MAX_PRODUCTION_ARTIFACT_BYTES:
-            return "FAIL", f"artifact exceeds byte limit size={size}"
-        artifact_bytes = artifact_path.read_bytes()
-    except OSError as exc:
-        return "FAIL", f"artifact unavailable error={type(exc).__name__}"
-    observed_digest = hashlib.sha256(artifact_bytes).hexdigest()
-    if not hmac.compare_digest(observed_digest, digest):
-        return "FAIL", f"artifact digest mismatch observed={observed_digest}"
-    try:
-        artifact = json.loads(artifact_bytes)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return "FAIL", "artifact is not valid UTF-8 JSON"
-    if not isinstance(artifact, dict):
-        return "FAIL", "artifact must be a JSON object"
+    artifact, reference_detail = load_production_artifact(
+        audit, requirement, evidence_root
+    )
+    if artifact is None:
+        return "FAIL", reference_detail
     expected_schema = PRODUCTION_ARTIFACT_SCHEMAS[requirement]
     if artifact.get("schema") != expected_schema or artifact.get("status") != "VERIFIED":
         return "FAIL", f"artifact schema/status invalid expected={expected_schema}"
@@ -426,36 +439,43 @@ def production_artifact_state(
         tested_at = parsed_timestamp(artifact.get("tested_at"))
         if tested_at is None:
             return "FAIL", "browser evidence timestamp is missing or invalid"
-        deployment_asset = assets.get(deployment_asset_id)
-        deployment_metadata = (
-            deployment_asset.get("metadata")
-            if isinstance(deployment_asset, dict)
-            else None
+        witness_state, witness_detail = production_artifact_state(
+            audit,
+            manifest,
+            assets,
+            "credential_backed_deployment_witness",
+            evidence_root,
         )
-        edge = (
-            deployment_metadata.get("deployment")
-            if isinstance(deployment_metadata, dict)
-            else None
+        if witness_state != "PASS":
+            return "FAIL", f"promoted deployment witness invalid: {witness_detail}"
+        witness, witness_reference = load_production_artifact(
+            audit, "credential_backed_deployment_witness", evidence_root
         )
-        if not isinstance(edge, dict) or edge.get("schema") != "szl.audit-deployment-edge/v1":
-            return "FAIL", "audited deployment edge is missing for browser evidence"
-        expected_browser_binding = {
+        if not isinstance(witness, dict):
+            return "FAIL", f"promoted deployment witness unavailable: {witness_reference}"
+        witness_receipt = witness.get("deployment_receipt")
+        if not isinstance(witness_receipt, dict):
+            return "FAIL", "promoted deployment receipt is missing"
+        browser_bindings = {
             "deployment_asset_id": deployment_asset_id,
+            "deployment_url": tested_url,
             "deployment_revision": str(artifact.get("deployment_revision") or ""),
-            "deployed_artifact_sha256": str(
-                artifact.get("deployed_artifact_sha256") or ""
-            ),
+            "deployed_artifact_sha256": str(artifact.get("deployed_artifact_sha256") or ""),
             "receipt_id": str(artifact.get("deployment_receipt_id") or ""),
         }
         mismatches = sorted(
             field
-            for field, expected in expected_browser_binding.items()
-            if not expected or edge.get(field) != expected
+            for field, observed in browser_bindings.items()
+            if not observed
+            or (
+                witness_receipt.get(field) if field == "receipt_id" else witness.get(field)
+            )
+            != observed
         )
-        deployed_at = parsed_timestamp(edge.get("deployed_at"))
+        deployed_at = parsed_timestamp(witness.get("deployed_at"))
         if mismatches or deployed_at is None or tested_at < deployed_at:
             return "FAIL", (
-                f"browser evidence does not bind the audited deployment mismatch={','.join(mismatches)}"
+                f"browser evidence does not bind the promoted deployment witness mismatch={','.join(mismatches)}"
             )
         browsers = artifact.get("browsers")
         if not isinstance(browsers, list) or len(browsers) < 2:
@@ -566,7 +586,7 @@ def production_artifact_state(
                 return "FAIL", "corrective action is malformed or not closed"
         if SHA256_PATTERN.fullmatch(str(artifact.get("report_sha256") or "")) is None:
             return "FAIL", "restore report digest is missing or invalid"
-    return "PASS", f"verified path={relative.as_posix()} artifact_sha256={digest}"
+    return "PASS", reference_detail
 
 
 def verify(

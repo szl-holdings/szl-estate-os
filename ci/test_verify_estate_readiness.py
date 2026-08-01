@@ -531,11 +531,20 @@ class ReadinessTests(unittest.TestCase):
             path = root / "browser.json"
             payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
             path.write_bytes(payload)
+            witness_path = root / "deployment.json"
+            witness_payload = json.dumps(
+                deployment_witness(), sort_keys=True
+            ).encode("utf-8")
+            witness_path.write_bytes(witness_payload)
             value["production_evidence"] = {
                 requirement: {
                     "artifact_path": path.name,
                     "artifact_sha256": hashlib.sha256(payload).hexdigest(),
-                }
+                },
+                "credential_backed_deployment_witness": {
+                    "artifact_path": witness_path.name,
+                    "artifact_sha256": hashlib.sha256(witness_payload).hexdigest(),
+                },
             }
             sign(value)
             report = verify(
@@ -545,7 +554,7 @@ class ReadinessTests(unittest.TestCase):
                 evidence_root=root,
             )
         self.assertIn(
-            "does not bind the audited deployment",
+            "does not bind the promoted deployment witness",
             check(report, f"production.requirement.{requirement}")["detail"],
         )
 
