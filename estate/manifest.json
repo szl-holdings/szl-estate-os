@@ -139,6 +139,7 @@
     "restore_and_failure_domain_drill": true,
     "zero_active_critical_gaps": true
   },
+  "production_trusted_keys": {},
   "known_gaps": [
     {
       "id": "privileged-inventory-completeness",

@@ -1,11 +1,102 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import unittest
 
-from verify_estate_readiness import signature_state, verify
+from verify_estate_readiness import (
+    PRODUCTION_SIGNATURE_ALGORITHM,
+    RSA_SHA256_DIGEST_INFO_PREFIX,
+    canonical_audit_payload,
+    signature_state,
+    verify,
+)
 
 
-class SignatureStateTests(unittest.TestCase):
+RSA_N = int(
+    "c85428138c4e6e830e0e5bce6e2d9b17fa0ff20fb0868102a0937629dbb97afd"
+    "6ce48f1ee0ae903063bb6a59636e3004745f838f9006f7e0b0dce67b9ba244ef"
+    "49677db0f6d9606b740833e2d57cc85cdb9cf895ae70e458c63f3c36a0d7ee05"
+    "e865824d98dcce9a485cf8d30fcb1df61a5a81a3231de377d5d919bb4d726041"
+    "4446ba3775c471b6f701236e6b0a5c28e7660e75d0ce78c13200d165c9ad4c95"
+    "bbbc6b6725f3ae26b310c1a749e19493cd60718fbf7bd2f271bb259921638c19a"
+    "df242d10315beea9dd0197a9e4bbb4ed1c69ae71ec2bb2ceebb30396952f54af8"
+    "e1fc63e95212849b1d91b220c0033f521489f2dda4d7d8f626fb47a4b52b3b",
+    16,
+)
+RSA_E = 65537
+RSA_D = int(
+    "13c38a95b3f988f0fca2dd2bd9d13022af1eedb6ec06083e6e526ee52175d53e"
+    "ff9f42e48749892972e3565fbb456f7ab02fa7f5398576792f658e50ea55a730"
+    "aa44dab7925f9fd115083a23b6114db9e904fa44ca2bf0ac290b4d52f4b73082"
+    "c66258554c22db0296e7cb24a93cc0cddccf1b2d9d1bd775397d1bd534aed5bf"
+    "37f795c99745e3aa66e100b40a522f9f7873b55be6ec3dbea79dc594a90fe00c"
+    "b79fe9034a2462a7d8c71d7d564669de93659a1c62516eab6598bb6d8b48594a"
+    "0dac3df4d9c4442f7848549a4d366bf6ae51e33e09eaff8822928fd1e9dabdad"
+    "71d49d2cbf41410d89d0c965121a7b7be91d789f608e6e41de7c76d938745f1",
+    16,
+)
+
+
+def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]:
+    return {
+        "baseline": {"source_minimums": {}},
+        "critical_assets": [],
+        "known_gaps": [],
+        "production_requirements": requirements or {},
+        "production_trusted_keys": {
+            "test-key": {
+                "algorithm": PRODUCTION_SIGNATURE_ALGORITHM,
+                "modulus_hex": format(RSA_N, "x"),
+                "exponent": RSA_E,
+            }
+        },
+    }
+
+
+def audit() -> dict[str, object]:
+    return {
+        "assets": [],
+        "source_reports": [
+            {"source": "github", "scope": "AUTHENTICATED_COMPLETE"},
+            {"source": "huggingface", "scope": "AUTHENTICATED_COMPLETE"},
+        ],
+        "receipt": {"signature_status": "ASYMMETRIC_VERIFIED"},
+    }
+
+
+def sign(value: dict[str, object], key_id: str = "test-key") -> None:
+    receipt = value["receipt"]
+    assert isinstance(receipt, dict)
+    receipt["asymmetric_signature"] = {
+        "algorithm": PRODUCTION_SIGNATURE_ALGORITHM,
+        "key_id": key_id,
+        "signature_base64": "",
+    }
+    payload = canonical_audit_payload(value)
+    width = (RSA_N.bit_length() + 7) // 8
+    digest_info = RSA_SHA256_DIGEST_INFO_PREFIX + hashlib.sha256(payload).digest()
+    encoded = (
+        b"\x00\x01"
+        + (b"\xff" * (width - len(digest_info) - 3))
+        + b"\x00"
+        + digest_info
+    )
+    signature = pow(int.from_bytes(encoded, "big"), RSA_D, RSA_N).to_bytes(
+        width, "big"
+    )
+    receipt["asymmetric_signature"]["signature_base64"] = base64.b64encode(
+        signature
+    ).decode("ascii")
+
+
+def check(report: dict[str, object], check_id: str) -> dict[str, str]:
+    checks = report["checks"]
+    assert isinstance(checks, list)
+    return next(item for item in checks if item["id"] == check_id)
+
+
+class ReadinessTests(unittest.TestCase):
     def test_baseline_accepts_only_known_local_evidence(self) -> None:
         self.assertEqual(signature_state("HMAC_SHA256", "baseline"), "PASS")
         self.assertEqual(signature_state("UNSIGNED", "baseline"), "WARN")
@@ -15,32 +106,99 @@ class SignatureStateTests(unittest.TestCase):
             with self.subTest(status=status):
                 self.assertEqual(signature_state(status, "baseline"), "FAIL")
 
-    def test_production_requires_explicit_asymmetric_verification(self) -> None:
-        self.assertEqual(
-            signature_state("ASYMMETRIC_VERIFIED", "production"), "PASS"
+    def test_production_rejects_asymmetric_label_without_signature(self) -> None:
+        report = verify(
+            audit(),
+            manifest({"independent_asymmetric_evidence": True}),
+            "production",
         )
-        for status in ("HMAC_SHA256", "UNSIGNED", "UNAVAILABLE", "SIGNED"):
-            with self.subTest(status=status):
-                self.assertEqual(signature_state(status, "production"), "FAIL")
+        self.assertEqual(check(report, "evidence.independent_signature")["state"], "FAIL")
 
-    def test_report_uses_the_contract_classification(self) -> None:
-        audit = {
-            "assets": [],
-            "source_reports": [],
-            "receipt": {"signature_status": "ASYMMETRIC_VERIFIED"},
-        }
-        manifest = {
-            "baseline": {"source_minimums": {}},
-            "critical_assets": [],
-            "known_gaps": [],
-        }
-        report = verify(audit, manifest, "production")
-        evidence = next(
-            item
-            for item in report["checks"]
-            if item["id"] == "evidence.independent_signature"
+    def test_production_verifies_real_signature_and_rejects_tampering(self) -> None:
+        value = audit()
+        sign(value)
+        contract = manifest({"independent_asymmetric_evidence": True})
+        report = verify(value, contract, "production")
+        self.assertEqual(check(report, "evidence.independent_signature")["state"], "PASS")
+        value["assets"] = [{"asset_id": "tampered"}]
+        tampered = verify(value, contract, "production")
+        self.assertEqual(
+            check(tampered, "evidence.independent_signature")["state"], "FAIL"
         )
-        self.assertEqual(evidence["state"], "PASS")
+
+    def test_production_rejects_unknown_signing_key(self) -> None:
+        value = audit()
+        sign(value, key_id="unknown-key")
+        report = verify(
+            value,
+            manifest({"independent_asymmetric_evidence": True}),
+            "production",
+        )
+        self.assertIn(
+            "trusted key unavailable",
+            check(report, "evidence.independent_signature")["detail"],
+        )
+
+    def test_production_requires_completeness_proven_scopes(self) -> None:
+        value = audit()
+        contract = manifest({"authenticated_inventory": True})
+        report = verify(value, contract, "production")
+        self.assertEqual(
+            check(report, "production.requirement.authenticated_inventory")["state"],
+            "PASS",
+        )
+        value["source_reports"][0]["scope"] = "AUTHENTICATED_VISIBILITY_UNKNOWN"
+        failed = verify(value, contract, "production")
+        self.assertEqual(check(failed, "scope.github")["state"], "FAIL")
+
+    def test_production_enforces_signed_artifact_requirements(self) -> None:
+        requirements = {
+            "independent_asymmetric_evidence": True,
+            "credential_backed_deployment_witness": True,
+            "browser_e2e_and_accessibility": True,
+            "restore_and_failure_domain_drill": True,
+        }
+        value = audit()
+        value["production_evidence"] = {
+            "credential_backed_deployment_witness": {
+                "status": "VERIFIED",
+                "artifact_sha256": "a" * 64,
+                "deployment_revision": "b" * 40,
+                "credential_scope": "DEPLOYMENT_READ_ONLY",
+            },
+            "browser_e2e_and_accessibility": {
+                "status": "VERIFIED",
+                "artifact_sha256": "c" * 64,
+                "checks": {
+                    "browser_e2e": "PASS",
+                    "keyboard": "PASS",
+                    "mobile": "PASS",
+                    "accessibility": "PASS",
+                },
+            },
+            "restore_and_failure_domain_drill": {
+                "status": "VERIFIED",
+                "artifact_sha256": "d" * 64,
+                "restore_status": "PASS",
+                "failure_domain_status": "PASS",
+            },
+        }
+        sign(value)
+        report = verify(value, manifest(requirements), "production")
+        for requirement in requirements:
+            self.assertEqual(
+                check(report, f"production.requirement.{requirement}")["state"],
+                "PASS",
+            )
+
+    def test_unknown_enabled_requirement_fails_closed(self) -> None:
+        report = verify(
+            audit(), manifest({"future_requirement": True}), "production"
+        )
+        self.assertEqual(
+            check(report, "production.requirement.future_requirement")["state"],
+            "FAIL",
+        )
 
 
 if __name__ == "__main__":

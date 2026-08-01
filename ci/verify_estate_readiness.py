@@ -4,7 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
+import hashlib
+import hmac
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,7 +20,20 @@ BASELINE_SIGNATURE_STATES = {
     "HMAC_SHA256": "PASS",
     "UNSIGNED": "WARN",
 }
-PRODUCTION_SIGNATURE_STATES = {"ASYMMETRIC_VERIFIED"}
+PRODUCTION_COMPLETE_SCOPES = {"AUTHENTICATED_COMPLETE"}
+PRODUCTION_SIGNATURE_ALGORITHM = "RSA_PKCS1_V1_5_SHA256"
+RSA_SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+REVISION_PATTERN = re.compile(r"[0-9a-f]{40,64}")
+KNOWN_PRODUCTION_REQUIREMENTS = {
+    "authenticated_inventory",
+    "critical_huggingface_alignment",
+    "independent_asymmetric_evidence",
+    "credential_backed_deployment_witness",
+    "browser_e2e_and_accessibility",
+    "restore_and_failure_domain_drill",
+    "zero_active_critical_gaps",
+}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -41,7 +59,98 @@ def signature_state(signature_status: str, profile: str) -> str:
     """Classify only signature states defined by the readiness contract."""
     if profile == "baseline":
         return BASELINE_SIGNATURE_STATES.get(signature_status, "FAIL")
-    return "PASS" if signature_status in PRODUCTION_SIGNATURE_STATES else "FAIL"
+    # Production never trusts a status label. verify_independent_signature validates
+    # the signature bytes against a protected manifest-pinned public key.
+    return "FAIL"
+
+
+def canonical_audit_payload(audit: dict[str, Any]) -> bytes:
+    """Return the exact JSON payload covered by the detached signature."""
+    payload = json.loads(json.dumps(audit))
+    receipt = payload.get("receipt")
+    if isinstance(receipt, dict):
+        receipt.pop("asymmetric_signature", None)
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def verify_independent_signature(
+    audit: dict[str, Any], manifest: dict[str, Any]
+) -> tuple[str, str]:
+    receipt = audit.get("receipt") or {}
+    signature = receipt.get("asymmetric_signature") or {}
+    if not isinstance(signature, dict):
+        return "FAIL", "detached asymmetric signature missing"
+    key_id = str(signature.get("key_id") or "")
+    algorithm = str(signature.get("algorithm") or "")
+    encoded = str(signature.get("signature_base64") or "")
+    keys = manifest.get("production_trusted_keys") or {}
+    key = keys.get(key_id) if isinstance(keys, dict) else None
+    if not isinstance(key, dict):
+        return "FAIL", f"trusted key unavailable key_id={key_id or 'UNAVAILABLE'}"
+    if algorithm != PRODUCTION_SIGNATURE_ALGORITHM:
+        return "FAIL", f"unsupported signature algorithm={algorithm or 'UNAVAILABLE'}"
+    if str(key.get("algorithm") or "") != algorithm:
+        return "FAIL", "signature and trusted-key algorithms differ"
+    try:
+        modulus = int(str(key["modulus_hex"]), 16)
+        exponent = int(key["exponent"])
+        signature_bytes = base64.b64decode(encoded, validate=True)
+    except (KeyError, ValueError, TypeError, binascii.Error):
+        return "FAIL", "trusted key or signature encoding is invalid"
+    if modulus.bit_length() < 2048 or exponent < 3 or exponent % 2 == 0:
+        return "FAIL", "trusted RSA key does not meet the production floor"
+    width = (modulus.bit_length() + 7) // 8
+    if len(signature_bytes) != width:
+        return "FAIL", "signature width does not match trusted RSA modulus"
+    payload = canonical_audit_payload(audit)
+    digest_info = RSA_SHA256_DIGEST_INFO_PREFIX + hashlib.sha256(payload).digest()
+    padding_length = width - len(digest_info) - 3
+    if padding_length < 8:
+        return "FAIL", "trusted RSA key is too short for SHA-256"
+    expected = b"\x00\x01" + (b"\xff" * padding_length) + b"\x00" + digest_info
+    observed = pow(int.from_bytes(signature_bytes, "big"), exponent, modulus).to_bytes(
+        width, "big"
+    )
+    if not hmac.compare_digest(observed, expected):
+        return "FAIL", f"signature verification failed key_id={key_id}"
+    payload_sha256 = hashlib.sha256(payload).hexdigest()
+    return "PASS", f"verified key_id={key_id} payload_sha256={payload_sha256}"
+
+
+def production_artifact_state(
+    audit: dict[str, Any], requirement: str
+) -> tuple[str, str]:
+    evidence = audit.get("production_evidence") or {}
+    record = evidence.get(requirement) if isinstance(evidence, dict) else None
+    if not isinstance(record, dict) or record.get("status") != "VERIFIED":
+        return "FAIL", "verified production evidence record missing"
+    digest = str(record.get("artifact_sha256") or "")
+    if SHA256_PATTERN.fullmatch(digest) is None:
+        return "FAIL", "artifact_sha256 is missing or invalid"
+    if requirement == "credential_backed_deployment_witness":
+        revision = str(record.get("deployment_revision") or "")
+        scope = str(record.get("credential_scope") or "")
+        if REVISION_PATTERN.fullmatch(revision) is None:
+            return "FAIL", "deployment revision is missing or invalid"
+        if scope != "DEPLOYMENT_READ_ONLY":
+            return "FAIL", f"credential_scope={scope or 'UNAVAILABLE'}"
+    elif requirement == "browser_e2e_and_accessibility":
+        checks = record.get("checks") or {}
+        required = {"browser_e2e", "keyboard", "mobile", "accessibility"}
+        missing = sorted(name for name in required if checks.get(name) != "PASS")
+        if missing:
+            return "FAIL", f"required checks not passing={','.join(missing)}"
+    elif requirement == "restore_and_failure_domain_drill":
+        if record.get("restore_status") != "PASS":
+            return "FAIL", "restore drill did not pass"
+        if record.get("failure_domain_status") != "PASS":
+            return "FAIL", "failure-domain drill did not pass"
+    return "PASS", f"verified artifact_sha256={digest}"
 
 
 def verify(
@@ -151,22 +260,33 @@ def verify(
 
     receipt = audit.get("receipt") or {}
     signature_status = str(receipt.get("signature_status") or "UNAVAILABLE")
+    signature_verification = (
+        verify_independent_signature(audit, manifest)
+        if profile == "production"
+        else (
+            signature_state(signature_status, profile),
+            f"receipt_signature={signature_status}",
+        )
+    )
     checks.append(
         result(
             "evidence.independent_signature",
-            signature_state(signature_status, profile),
-            f"receipt_signature={signature_status}; asymmetric independent evidence is required for production",
+            signature_verification[0],
+            signature_verification[1],
         )
     )
 
     if profile == "production":
+        production_requirements = manifest.get("production_requirements") or {}
+        if not isinstance(production_requirements, dict):
+            production_requirements = {}
         for source in ("github", "huggingface"):
             scope = str((source_reports.get(source) or {}).get("scope") or "UNAVAILABLE")
             checks.append(
                 result(
                     f"scope.{source}",
-                    "FAIL" if scope == "PUBLIC_ONLY" or scope == "UNAVAILABLE" else "PASS",
-                    f"scope={scope}",
+                    "PASS" if scope in PRODUCTION_COMPLETE_SCOPES else "FAIL",
+                    f"scope={scope} required={','.join(sorted(PRODUCTION_COMPLETE_SCOPES))}",
                 )
             )
         active_gaps = [
@@ -185,6 +305,78 @@ def verify(
                 else ", ".join(str(gap.get("id")) for gap in active_gaps),
             )
         )
+
+        for requirement, configured in production_requirements.items():
+            enabled = configured is True or (
+                isinstance(configured, list) and bool(configured)
+            )
+            if not enabled:
+                continue
+            check_id = f"production.requirement.{requirement}"
+            if requirement not in KNOWN_PRODUCTION_REQUIREMENTS:
+                checks.append(result(check_id, "FAIL", "unknown enabled requirement"))
+                continue
+            if requirement == "authenticated_inventory":
+                incomplete = [
+                    source
+                    for source in ("github", "huggingface")
+                    if str((source_reports.get(source) or {}).get("scope") or "")
+                    not in PRODUCTION_COMPLETE_SCOPES
+                ]
+                checks.append(
+                    result(
+                        check_id,
+                        "PASS" if not incomplete else "FAIL",
+                        "complete authenticated inventory"
+                        if not incomplete
+                        else f"incomplete={','.join(incomplete)}",
+                    )
+                )
+            elif requirement == "critical_huggingface_alignment":
+                allowed = {str(value) for value in configured}
+                failed = []
+                for contract in critical_assets:
+                    if not isinstance(contract, dict):
+                        continue
+                    asset_id = str(contract.get("asset_id") or "")
+                    if not asset_id.startswith("huggingface:space:"):
+                        continue
+                    asset = assets.get(asset_id)
+                    if asset is None or alignment_state(asset) not in allowed:
+                        failed.append(asset_id)
+                checks.append(
+                    result(
+                        check_id,
+                        "PASS" if not failed else "FAIL",
+                        "all critical Hugging Face alignments verified"
+                        if not failed
+                        else f"failed={','.join(failed)}",
+                    )
+                )
+            elif requirement == "independent_asymmetric_evidence":
+                checks.append(result(check_id, *signature_verification))
+            elif requirement in {
+                "credential_backed_deployment_witness",
+                "browser_e2e_and_accessibility",
+                "restore_and_failure_domain_drill",
+            }:
+                artifact_state, artifact_detail = production_artifact_state(
+                    audit, requirement
+                )
+                if signature_verification[0] != "PASS":
+                    artifact_state = "FAIL"
+                    artifact_detail += "; audit signature is not verified"
+                checks.append(result(check_id, artifact_state, artifact_detail))
+            elif requirement == "zero_active_critical_gaps":
+                checks.append(
+                    result(
+                        check_id,
+                        "PASS" if not active_gaps else "FAIL",
+                        "none active"
+                        if not active_gaps
+                        else ", ".join(str(gap.get("id")) for gap in active_gaps),
+                    )
+                )
 
     failure_count = sum(item["state"] == "FAIL" for item in checks)
     warning_count = sum(item["state"] in {"WARN", "UNAVAILABLE"} for item in checks)
