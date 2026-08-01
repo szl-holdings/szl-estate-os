@@ -43,6 +43,25 @@ PRODUCTION_ARTIFACT_SCHEMAS = {
     "browser_e2e_and_accessibility": "szl.estate-browser-evidence/v1",
     "restore_and_failure_domain_drill": "szl.estate-restore-drill/v1",
 }
+BASELINE_SOURCES = {"github", "huggingface", "domains"}
+BASELINE_PROHIBITED_STATUS_LABELS = {"BROKEN"}
+BASELINE_REQUIRED_SECURITY_HEADERS = {
+    "content-security-policy",
+    "referrer-policy",
+    "strict-transport-security",
+    "x-content-type-options",
+}
+BASELINE_CONTRACT_KEYS = {
+    "source_minimums",
+    "required_source_status",
+    "prohibited_status_labels",
+    "required_security_headers",
+}
+CRITICAL_ASSET_REQUIRED_KEYS = {"asset_id", "tier", "role", "public"}
+CRITICAL_ASSET_ALLOWED_KEYS = CRITICAL_ASSET_REQUIRED_KEYS | {
+    "required_status",
+    "evidence_requirement",
+}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -83,18 +102,265 @@ def parsed_timestamp(value: Any) -> datetime | None:
     return observed if observed.tzinfo is not None else None
 
 
+def domain_route_identity(asset_id: str) -> tuple[str, str] | None:
+    prefix = "domain:route:"
+    if not asset_id.startswith(prefix):
+        return None
+    identity = asset_id[len(prefix) :]
+    parsed = urllib.parse.urlparse(f"https://{identity}")
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+    if (
+        not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.params
+    ):
+        return None
+    return parsed.hostname.lower(), parsed.path or "/"
+
+
+def huggingface_space_identity(asset_id: str) -> tuple[str, str] | None:
+    prefix = "huggingface:space:"
+    if not asset_id.startswith(prefix):
+        return None
+    parts = asset_id[len(prefix) :].split("/")
+    if len(parts) != 2 or any(
+        re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}", part) is None
+        for part in parts
+    ):
+        return None
+    return parts[0], parts[1]
+
+
+def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str]:
+    if (
+        manifest.get("schema") != "szl.estate-critical-surface/v1"
+        or manifest.get("status") != "CONTROL_CONTRACT"
+    ):
+        return "FAIL", "manifest schema/status is missing or invalid"
+
+    canonical = manifest.get("canonical_identities")
+    if not isinstance(canonical, dict) or set(canonical) != {
+        "github_organization",
+        "huggingface_organization",
+        "domains",
+    }:
+        return "FAIL", "canonical identity contract is missing or invalid"
+    github_organization = canonical.get("github_organization")
+    huggingface_organization = canonical.get("huggingface_organization")
+    domains = canonical.get("domains")
+    identity_pattern = r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}"
+    if (
+        not isinstance(github_organization, str)
+        or re.fullmatch(identity_pattern, github_organization) is None
+        or not isinstance(huggingface_organization, str)
+        or re.fullmatch(identity_pattern, huggingface_organization) is None
+        or not isinstance(domains, list)
+        or not domains
+        or any(
+            not isinstance(domain, str)
+            or re.fullmatch(
+                r"[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?", domain
+            )
+            is None
+            for domain in domains
+        )
+        or len(set(domains)) != len(domains)
+    ):
+        return "FAIL", "canonical identity values are missing or invalid"
+
+    baseline = manifest.get("baseline")
+    if not isinstance(baseline, dict) or set(baseline) != BASELINE_CONTRACT_KEYS:
+        return "FAIL", "baseline contract shape is missing or invalid"
+    source_minimums = baseline.get("source_minimums")
+    if (
+        not isinstance(source_minimums, dict)
+        or set(source_minimums) != BASELINE_SOURCES
+        or any(
+            isinstance(minimum, bool)
+            or not isinstance(minimum, int)
+            or minimum <= 0
+            for minimum in source_minimums.values()
+        )
+    ):
+        return "FAIL", "baseline source minimum contract is incomplete or invalid"
+    if baseline.get("required_source_status") != "MEASURED":
+        return "FAIL", "baseline required source status is invalid"
+    prohibited = baseline.get("prohibited_status_labels")
+    if (
+        not isinstance(prohibited, list)
+        or any(not isinstance(value, str) or not value for value in prohibited)
+        or len(prohibited) != len(set(prohibited))
+        or set(prohibited) != BASELINE_PROHIBITED_STATUS_LABELS
+    ):
+        return "FAIL", "baseline prohibited status contract is incomplete or invalid"
+    headers = baseline.get("required_security_headers")
+    if (
+        not isinstance(headers, list)
+        or any(not isinstance(value, str) or not value for value in headers)
+        or len(headers) != len(set(headers))
+        or set(headers) != BASELINE_REQUIRED_SECURITY_HEADERS
+    ):
+        return "FAIL", "baseline security-header contract is incomplete or invalid"
+
+    critical_assets = manifest.get("critical_assets")
+    if not isinstance(critical_assets, list) or not critical_assets:
+        return "FAIL", "critical asset contract is missing or empty"
+    critical_asset_ids: set[str] = set()
+    observed_kinds: set[str] = set()
+    canonical_domains = set(domains)
+    for contract in critical_assets:
+        if (
+            not isinstance(contract, dict)
+            or not CRITICAL_ASSET_REQUIRED_KEYS.issubset(contract)
+            or not set(contract).issubset(CRITICAL_ASSET_ALLOWED_KEYS)
+        ):
+            return "FAIL", "critical asset entry shape is invalid"
+        asset_id = contract.get("asset_id")
+        tier = contract.get("tier")
+        role = contract.get("role")
+        public = contract.get("public")
+        if (
+            not isinstance(asset_id, str)
+            or not asset_id
+            or asset_id in critical_asset_ids
+            or isinstance(tier, bool)
+            or not isinstance(tier, int)
+            or tier < 0
+            or not isinstance(role, str)
+            or not role.strip()
+            or not isinstance(public, bool)
+        ):
+            return "FAIL", "critical asset entry values are invalid"
+        critical_asset_ids.add(asset_id)
+        domain_identity = domain_route_identity(asset_id)
+        space_identity = huggingface_space_identity(asset_id)
+        if asset_id.startswith("github:repo:"):
+            repository = asset_id.removeprefix("github:repo:").split("/", 1)
+            if (
+                len(repository) != 2
+                or repository[0].lower() != github_organization.lower()
+                or not repository[1]
+            ):
+                return "FAIL", "critical GitHub asset identity is invalid"
+            observed_kinds.add("github")
+        elif domain_identity is not None:
+            if (
+                domain_identity[0] not in canonical_domains
+                or contract.get("required_status") != "LIVE"
+                or public is not True
+            ):
+                return "FAIL", "critical domain asset contract is invalid"
+            observed_kinds.add("domains")
+        elif space_identity is not None:
+            if (
+                space_identity[0].lower() != huggingface_organization.lower()
+                or contract.get("required_status") != "LIVE"
+                or public is not True
+            ):
+                return "FAIL", "critical Hugging Face asset contract is invalid"
+            observed_kinds.add("huggingface")
+        else:
+            return "FAIL", "critical asset identity is unsupported"
+    if observed_kinds != BASELINE_SOURCES:
+        return "FAIL", "critical asset contract does not cover every estate source"
+    return "PASS", "baseline and critical-surface manifest contract verified"
+
+
+def deployment_url_identity_state(
+    manifest: dict[str, Any], asset_id: str, url: str
+) -> tuple[str, str]:
+    parsed = urllib.parse.urlparse(url)
+    try:
+        port = parsed.port
+    except ValueError:
+        return "FAIL", "deployment URL identity is invalid"
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.params
+    ):
+        return "FAIL", "deployment URL identity is invalid"
+
+    canonical = manifest.get("canonical_identities")
+    if not isinstance(canonical, dict):
+        return "FAIL", "canonical identity contract is missing or invalid"
+    domain_identity = domain_route_identity(asset_id)
+    if domain_identity is not None:
+        expected_host, expected_path = domain_identity
+        canonical_domains = canonical.get("domains")
+        if (
+            not isinstance(canonical_domains, list)
+            or expected_host not in canonical_domains
+        ):
+            return "FAIL", "deployment domain is outside the canonical manifest"
+        if (
+            parsed.hostname.lower() != expected_host
+            or (parsed.path or "/") != expected_path
+        ):
+            return "FAIL", "deployment URL does not match the domain route identity"
+        return "PASS", f"canonical domain route={expected_host}{expected_path}"
+
+    space_identity = huggingface_space_identity(asset_id)
+    if space_identity is None:
+        return "FAIL", "deployment asset identity is unsupported"
+    owner, space = space_identity
+    canonical_owner = canonical.get("huggingface_organization")
+    if not isinstance(canonical_owner, str) or owner.lower() != canonical_owner.lower():
+        return "FAIL", "deployment Space is outside the canonical manifest"
+    normalized_path = (parsed.path or "/").rstrip("/").lower()
+    hub_path = f"/spaces/{owner}/{space}".lower()
+    runtime_host = f"{owner}-{space}.hf.space".lower()
+    hub_match = parsed.hostname.lower() == "huggingface.co" and normalized_path == hub_path
+    runtime_match = (
+        parsed.hostname.lower() == runtime_host and normalized_path == ""
+    )
+    if not hub_match and not runtime_match:
+        return "FAIL", "deployment URL does not match the Hugging Face Space identity"
+    return "PASS", f"canonical_huggingface_space={owner}/{space}"
+
+
 def audited_live_target_state(
-    assets: dict[str, dict[str, Any]], asset_id: str, url: str
+    assets: dict[str, dict[str, Any]],
+    manifest: dict[str, Any],
+    asset_id: str,
+    url: str,
 ) -> tuple[str, str]:
     asset = assets.get(asset_id)
     if not isinstance(asset, dict):
         return "FAIL", "deployment asset is not present in the audited inventory"
+    domain_identity = domain_route_identity(asset_id)
+    space_identity = huggingface_space_identity(asset_id)
+    expected_source_type = (
+        ("domains", "route")
+        if domain_identity is not None
+        else (("huggingface", "space") if space_identity is not None else None)
+    )
     if (
         asset.get("status_label") != "LIVE"
-        or asset.get("source") not in {"domains", "huggingface"}
-        or asset.get("asset_type") not in {"route", "space"}
+        or expected_source_type is None
+        or (asset.get("source"), asset.get("asset_type")) != expected_source_type
     ):
         return "FAIL", "deployment asset is not an audited LIVE deployment"
+    critical_assets = manifest.get("critical_assets")
+    critical_asset_ids = {
+        str(contract.get("asset_id"))
+        for contract in critical_assets
+        if isinstance(contract, dict) and contract.get("asset_id")
+    } if isinstance(critical_assets, list) else set()
+    if asset_id not in critical_asset_ids:
+        return "FAIL", "deployment asset is not a manifest critical asset"
     metadata = asset.get("metadata")
     if not isinstance(metadata, dict):
         return "FAIL", "audited deployment metadata is missing or invalid"
@@ -110,6 +376,11 @@ def audited_live_target_state(
         or url not in audited_urls
     ):
         return "FAIL", "deployment URL does not match the audited HTTPS deployment"
+    identity_state, identity_detail = deployment_url_identity_state(
+        manifest, asset_id, url
+    )
+    if identity_state != "PASS":
+        return identity_state, identity_detail
     return "PASS", f"bound deployment_asset_id={asset_id}"
 
 
@@ -496,7 +767,7 @@ def production_artifact_state(
             return "FAIL", "deployment owner is not bound to the canonical repository owner"
         deployment_url = str(artifact.get("deployment_url") or "")
         target_state, target_detail = audited_live_target_state(
-            assets, deployment_asset_id, deployment_url
+            assets, manifest, deployment_asset_id, deployment_url
         )
         if target_state != "PASS":
             return target_state, target_detail
@@ -596,7 +867,7 @@ def production_artifact_state(
         deployment_asset_id = str(artifact.get("deployment_asset_id") or "")
         tested_url = str(artifact.get("tested_url") or "")
         target_state, target_detail = audited_live_target_state(
-            assets, deployment_asset_id, tested_url
+            assets, manifest, deployment_asset_id, tested_url
         )
         if target_state != "PASS":
             return target_state, target_detail
@@ -724,14 +995,14 @@ def production_artifact_state(
         ) is None:
             return "FAIL", "backup identifier is missing or invalid"
         target_id = str(artifact.get("restored_target_asset_id") or "")
-        target = assets.get(target_id)
-        if (
-            not isinstance(target, dict)
-            or target.get("status_label") != "LIVE"
-            or target.get("source") not in {"domains", "huggingface"}
-            or target.get("asset_type") not in {"route", "space"}
-        ):
-            return "FAIL", "restored target is not an audited LIVE asset"
+        target_state, target_detail = audited_live_target_state(
+            assets,
+            manifest,
+            target_id,
+            str(artifact.get("deployment_url") or ""),
+        )
+        if target_state != "PASS":
+            return "FAIL", f"restored target is invalid: {target_detail}"
         recovery_point = parsed_timestamp(artifact.get("recovery_point_at"))
         started = parsed_timestamp(artifact.get("started_at"))
         completed = parsed_timestamp(artifact.get("completed_at"))
@@ -855,6 +1126,10 @@ def verify(
 ) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
     observed_verification_time = verification_time or datetime.now(timezone.utc)
+    manifest_contract, manifest_detail = manifest_baseline_contract_state(manifest)
+    checks.append(
+        result("manifest.baseline_contract", manifest_contract, manifest_detail)
+    )
     asset_records = audit.get("assets") or []
     if not isinstance(asset_records, list):
         asset_records = []
@@ -885,7 +1160,8 @@ def verify(
         for item in audit.get("source_reports") or []
         if isinstance(item, dict) and item.get("source")
     }
-    baseline = manifest.get("baseline") or {}
+    configured_baseline = manifest.get("baseline")
+    baseline = configured_baseline if isinstance(configured_baseline, dict) else {}
     canonical_identities = manifest.get("canonical_identities") or {}
     github_organization = (
         str(canonical_identities.get("github_organization") or "")
@@ -908,13 +1184,24 @@ def verify(
         )
     )
 
-    for source, minimum in (baseline.get("source_minimums") or {}).items():
+    configured_source_minimums = baseline.get("source_minimums")
+    source_minimums = (
+        configured_source_minimums
+        if isinstance(configured_source_minimums, dict)
+        else {}
+    )
+    for source, minimum in source_minimums.items():
         report = source_reports.get(source)
         if report is None:
             checks.append(result(f"source.{source}", "FAIL", "Source report missing"))
             continue
         status = str(report.get("status") or "UNAVAILABLE")
-        count = int(report.get("count") or 0)
+        reported_count = report.get("count")
+        count = (
+            reported_count
+            if isinstance(reported_count, int) and not isinstance(reported_count, bool)
+            else -1
+        )
         observed_count = sum(
             1 for item in assets.values() if str(item.get("source") or "") == source
         )
@@ -923,7 +1210,9 @@ def verify(
             "PASS"
             if status == required
             and count == observed_count
-            and observed_count >= int(minimum)
+            and isinstance(minimum, int)
+            and not isinstance(minimum, bool)
+            and observed_count >= minimum
             else "FAIL"
         )
         checks.append(
@@ -935,7 +1224,10 @@ def verify(
             )
         )
 
-    prohibited = set(baseline.get("prohibited_status_labels") or [])
+    configured_prohibited = baseline.get("prohibited_status_labels")
+    prohibited = (
+        set(configured_prohibited) if isinstance(configured_prohibited, list) else set()
+    )
     prohibited_assets = [
         item
         for item in assets.values()
@@ -951,7 +1243,10 @@ def verify(
         )
     )
 
-    critical_assets = manifest.get("critical_assets") or []
+    configured_critical_assets = manifest.get("critical_assets")
+    critical_assets = (
+        configured_critical_assets if isinstance(configured_critical_assets, list) else []
+    )
     for contract in critical_assets:
         if not isinstance(contract, dict) or not contract.get("asset_id"):
             continue

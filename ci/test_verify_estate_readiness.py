@@ -13,6 +13,7 @@ from verify_estate_readiness import (
     RSA_SHA256_DIGEST_INFO_PREFIX,
     canonical_audit_payload,
     canonical_deployment_receipt_payload,
+    deployment_url_identity_state,
     signature_state,
     verify as verify_readiness,
 )
@@ -74,9 +75,50 @@ def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]
     if requirements is not None:
         production_requirements.update(requirements)
     return {
-        "baseline": {"source_minimums": {}},
-        "canonical_identities": {"github_organization": "szl-holdings"},
-        "critical_assets": [],
+        "schema": "szl.estate-critical-surface/v1",
+        "status": "CONTROL_CONTRACT",
+        "baseline": {
+            "source_minimums": {
+                "github": 1,
+                "huggingface": 1,
+                "domains": 1,
+            },
+            "required_source_status": "MEASURED",
+            "prohibited_status_labels": ["BROKEN"],
+            "required_security_headers": [
+                "content-security-policy",
+                "referrer-policy",
+                "strict-transport-security",
+                "x-content-type-options",
+            ],
+        },
+        "canonical_identities": {
+            "github_organization": "szl-holdings",
+            "huggingface_organization": "SZLHOLDINGS",
+            "domains": ["a-11-oy.com", "a11oy.net"],
+        },
+        "critical_assets": [
+            {
+                "asset_id": "github:repo:szl-holdings/a11oy",
+                "tier": 0,
+                "role": "test source repository",
+                "public": True,
+            },
+            {
+                "asset_id": "domain:route:a-11-oy.com/",
+                "tier": 0,
+                "role": "test deployment route",
+                "public": True,
+                "required_status": "LIVE",
+            },
+            {
+                "asset_id": "huggingface:space:szlholdings/a11oy",
+                "tier": 0,
+                "role": "test deployment Space",
+                "public": True,
+                "required_status": "LIVE",
+            },
+        ],
         "known_gaps": [],
         "production_requirements": production_requirements,
         "production_policies": {
@@ -336,6 +378,81 @@ class ReadinessTests(unittest.TestCase):
             with self.subTest(status=status):
                 self.assertEqual(signature_state(status, "baseline"), "FAIL")
 
+    def test_manifest_requires_baseline_and_critical_surface_contract(self) -> None:
+        valid = verify(audit(), manifest(), "baseline")
+        self.assertEqual(
+            check(valid, "manifest.baseline_contract")["state"], "PASS"
+        )
+
+        missing_baseline = manifest()
+        missing_baseline.pop("baseline")
+        empty_baseline = manifest()
+        empty_baseline["baseline"] = {}
+        missing_critical_assets = manifest()
+        missing_critical_assets.pop("critical_assets")
+        empty_critical_assets = manifest()
+        empty_critical_assets["critical_assets"] = []
+        incomplete_sources = manifest()
+        incomplete_sources["baseline"]["source_minimums"].pop("domains")
+        incomplete_headers = manifest()
+        incomplete_headers["baseline"]["required_security_headers"] = []
+
+        for contract in (
+            missing_baseline,
+            empty_baseline,
+            missing_critical_assets,
+            empty_critical_assets,
+            incomplete_sources,
+            incomplete_headers,
+        ):
+            with self.subTest(contract=contract):
+                report = verify(audit(), contract, "baseline")
+                self.assertEqual(
+                    check(report, "manifest.baseline_contract")["state"], "FAIL"
+                )
+
+    def test_deployment_url_identity_is_derived_from_asset_id(self) -> None:
+        contract = manifest()
+        passing_urls = (
+            (
+                "domain:route:a-11-oy.com/",
+                "https://a-11-oy.com/",
+            ),
+            (
+                "huggingface:space:szlholdings/a11oy",
+                "https://huggingface.co/spaces/SZLHOLDINGS/a11oy",
+            ),
+            (
+                "huggingface:space:szlholdings/a11oy",
+                "https://szlholdings-a11oy.hf.space/",
+            ),
+        )
+        for asset_id, url in passing_urls:
+            with self.subTest(asset_id=asset_id, url=url):
+                self.assertEqual(
+                    deployment_url_identity_state(contract, asset_id, url)[0],
+                    "PASS",
+                )
+
+        failing_urls = (
+            ("domain:route:a-11-oy.com/", "https://evil.example/"),
+            ("domain:route:a-11-oy.com/", "https://a-11-oy.com/unbound"),
+            (
+                "huggingface:space:szlholdings/a11oy",
+                "https://huggingface.co/spaces/SZLHOLDINGS/other",
+            ),
+            (
+                "huggingface:space:szlholdings/a11oy",
+                "https://evil.example/",
+            ),
+        )
+        for asset_id, url in failing_urls:
+            with self.subTest(asset_id=asset_id, url=url):
+                self.assertEqual(
+                    deployment_url_identity_state(contract, asset_id, url)[0],
+                    "FAIL",
+                )
+
     def test_production_rejects_asymmetric_label_without_signature(self) -> None:
         report = verify(
             audit(),
@@ -455,9 +572,6 @@ class ReadinessTests(unittest.TestCase):
     def test_production_binds_deployment_witness_to_audited_assets(self) -> None:
         requirement = "credential_backed_deployment_witness"
         contract = manifest({"independent_asymmetric_evidence": True, requirement: True})
-        contract["canonical_identities"] = {
-            "github_organization": "szl-holdings"
-        }
         for mutation, expected in (
             (
                 lambda witness: witness.__setitem__(
@@ -501,6 +615,80 @@ class ReadinessTests(unittest.TestCase):
                 )
             self.assertIn(
                 expected,
+                check(report, f"production.requirement.{requirement}")["detail"],
+            )
+
+    def test_production_witness_must_target_manifest_critical_asset(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        contract = manifest({"independent_asymmetric_evidence": True, requirement: True})
+        critical_assets = contract["critical_assets"]
+        assert isinstance(critical_assets, list)
+        domain_contract = critical_assets[1]
+        assert isinstance(domain_contract, dict)
+        domain_contract["asset_id"] = "domain:route:a11oy.net/"
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            add_audited_deployment(value)
+            value["production_evidence"] = {
+                requirement: write_artifact(
+                    root, "deployment.json", deployment_witness()
+                )
+            }
+            sign(value)
+            report = verify(value, contract, "production", evidence_root=root)
+
+        self.assertIn(
+            "not a manifest critical asset",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
+    def test_production_witness_rejects_audited_url_identity_mismatch(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        for deployment_url in (
+            "https://evil.example/",
+            "https://a-11-oy.com/unbound",
+        ):
+            with self.subTest(deployment_url=deployment_url), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                witness = deployment_witness()
+                witness["deployment_url"] = deployment_url
+                receipt = witness["deployment_receipt"]
+                assert isinstance(receipt, dict)
+                receipt["deployment_url"] = deployment_url
+                sign_deployment_receipt(receipt)
+
+                value = audit()
+                add_audited_deployment(value)
+                assets = value["assets"]
+                assert isinstance(assets, list)
+                deployment_asset = assets[1]
+                assert isinstance(deployment_asset, dict)
+                deployment_asset["url"] = deployment_url
+                metadata = deployment_asset["metadata"]
+                assert isinstance(metadata, dict)
+                metadata["final_url"] = deployment_url
+                edge = metadata["deployment"]
+                assert isinstance(edge, dict)
+                edge["deployment_url"] = deployment_url
+                value["production_evidence"] = {
+                    requirement: write_artifact(
+                        root, "deployment.json", witness
+                    )
+                }
+                sign(value)
+                report = verify(
+                    value,
+                    manifest(
+                        {"independent_asymmetric_evidence": True, requirement: True}
+                    ),
+                    "production",
+                    evidence_root=root,
+                )
+
+            self.assertIn(
+                "does not match the domain route identity",
                 check(report, f"production.requirement.{requirement}")["detail"],
             )
 
