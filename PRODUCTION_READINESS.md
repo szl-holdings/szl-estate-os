@@ -53,12 +53,15 @@ The deployment witness is an exact graph edge, not a status assertion. Its
 repository and deployment asset IDs must exist in the signed audit; its source
 revision must equal the audited protected repository head; and its HTTPS URL,
 canonical owner, environment, deployed artifact digest, and nested verified
-deployment receipt must agree byte-for-byte. Missing, unrelated, malformed, or
-internally inconsistent references fail the production profile.
+deployment receipt must agree byte-for-byte with an independently observed
+repository-to-deployment edge in the audit inventory. Missing, unrelated,
+malformed, or internally inconsistent references fail the production profile.
 
 Critical Hugging Face Spaces require `EXACT_RUNTIME_HEAD`; source-head equality
-without a matching running revision is not promotable. Browser evidence binds
-an audited live HTTPS target to named desktop and mobile runs, console/network,
+without a matching running revision is not promotable, and the declared source
+repository plus source, default-branch, and runtime revisions must all agree.
+Browser evidence binds the exact audited deployment revision, artifact digest,
+receipt identity, and deployment time to named desktop and mobile runs, console/network,
 keyboard, screen-reader, zoom, contrast, and WCAG 2.2 AA results plus a report
 digest. Recovery evidence binds a backup and audited restore target to witnessed
 dependency-loss scenarios, timestamped RTO/RPO measurements, closed corrective

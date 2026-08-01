@@ -75,13 +75,16 @@ def deployment_witness() -> dict[str, object]:
     revision = "b" * 40
     artifact_sha256 = "c" * 64
     deployment_url = "https://a-11-oy.com/"
+    deployed_at = "2026-08-01T17:55:00Z"
     environment = "production"
     owner = "szl-holdings"
+    receipt_id = "deployment-receipt-20260801-1"
     bindings = {
         "repository_asset_id": repository_asset_id,
         "deployment_asset_id": deployment_asset_id,
         "deployment_revision": revision,
         "deployed_artifact_sha256": artifact_sha256,
+        "deployed_at": deployed_at,
         "environment": environment,
         "deployment_url": deployment_url,
         "owner": owner,
@@ -95,11 +98,32 @@ def deployment_witness() -> dict[str, object]:
             "schema": "szl.deployment-receipt/v1",
             "status": "VERIFIED",
             **bindings,
+            "receipt_id": receipt_id,
         },
     }
 
 
 def add_audited_deployment(value: dict[str, object]) -> None:
+    witness = deployment_witness()
+    receipt = witness["deployment_receipt"]
+    assert isinstance(receipt, dict)
+    edge = {
+        "schema": "szl.audit-deployment-edge/v1",
+        **{
+            field: receipt[field]
+            for field in (
+                "repository_asset_id",
+                "deployment_asset_id",
+                "deployment_revision",
+                "deployed_artifact_sha256",
+                "deployed_at",
+                "environment",
+                "deployment_url",
+                "owner",
+                "receipt_id",
+            )
+        },
+    }
     value["assets"] = [
         {
             "asset_id": "github:repo:szl-holdings/a11oy",
@@ -115,7 +139,10 @@ def add_audited_deployment(value: dict[str, object]) -> None:
             "source": "domains",
             "status_label": "LIVE",
             "url": "https://a-11-oy.com/",
-            "metadata": {"final_url": "https://a-11-oy.com/"},
+            "metadata": {
+                "final_url": "https://a-11-oy.com/",
+                "deployment": edge,
+            },
         },
     ]
 
@@ -221,6 +248,9 @@ class ReadinessTests(unittest.TestCase):
                 "deployment_asset_id": "domain:route:a-11-oy.com/",
                 "tested_url": "https://a-11-oy.com/",
                 "tested_at": "2026-08-01T18:00:00Z",
+                "deployment_revision": "b" * 40,
+                "deployed_artifact_sha256": "c" * 64,
+                "deployment_receipt_id": "deployment-receipt-20260801-1",
                 "browsers": [
                     {"name": "chromium", "form_factor": "desktop", "status": "PASS"},
                     {"name": "webkit", "form_factor": "mobile", "status": "PASS"},
@@ -339,6 +369,10 @@ class ReadinessTests(unittest.TestCase):
                 ),
                 "receipt binding mismatch",
             ),
+            (
+                lambda witness: witness.__setitem__("deployment_revision", ""),
+                "deployment revision is missing or invalid",
+            ),
         ):
             with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -364,16 +398,72 @@ class ReadinessTests(unittest.TestCase):
                 check(report, f"production.requirement.{requirement}")["detail"],
             )
 
+    def test_production_requires_audited_repository_deployment_edge(self) -> None:
+        requirement = "credential_backed_deployment_witness"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            witness = deployment_witness()
+            path = root / "deployment.json"
+            payload = json.dumps(witness, sort_keys=True).encode("utf-8")
+            path.write_bytes(payload)
+            value = audit()
+            add_audited_deployment(value)
+            value["assets"][1]["metadata"].pop("deployment")
+            value["production_evidence"] = {
+                requirement: {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            }
+            sign(value)
+            report = verify(
+                value,
+                manifest({"independent_asymmetric_evidence": True, requirement: True}),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "repository-to-deployment edge",
+            check(report, f"production.requirement.{requirement}")["detail"],
+        )
+
     def test_production_requires_runtime_head_for_critical_spaces(self) -> None:
         asset_id = "huggingface:space:szlholdings/a11oy"
         value = audit()
         value["assets"] = [
             {
+                "asset_id": "github:repo:szl-holdings/a11oy",
+                "asset_type": "repo",
+                "source": "github",
+                "status_label": "OBSERVED",
+                "metadata": {"default_branch_sha": "b" * 40},
+            },
+            {
                 "asset_id": asset_id,
                 "asset_type": "space",
                 "source": "huggingface",
                 "status_label": "LIVE",
-                "metadata": {"github_alignment": {"status": "EXACT_HEAD"}},
+                "metadata": {
+                    "github_alignment": {
+                        "status": "EXACT_HEAD",
+                        "source_repository": "szl-holdings/a11oy",
+                        "source_revision": "b" * 40,
+                        "github_default_revision": "b" * 40,
+                    },
+                    "runtime_build": {
+                        "status": "OBSERVED",
+                        "state": "OBSERVED",
+                        "revision": "b" * 40,
+                    },
+                    "provenance_docs": [
+                        {
+                            "status": "OBSERVED",
+                            "binding_kind": "ARTIFACT_SOURCE",
+                            "source_repository": "szl-holdings/a11oy",
+                            "source_revision": "b" * 40,
+                        }
+                    ],
+                },
             }
         ]
         contract = manifest(
@@ -384,7 +474,7 @@ class ReadinessTests(unittest.TestCase):
         ]
         failed = verify(value, contract, "production")
         self.assertEqual(check(failed, f"alignment.{asset_id}")["state"], "FAIL")
-        value["assets"][0]["metadata"]["github_alignment"][
+        value["assets"][1]["metadata"]["github_alignment"][
             "status"
         ] = "EXACT_RUNTIME_HEAD"
         passed = verify(value, contract, "production")
@@ -393,6 +483,70 @@ class ReadinessTests(unittest.TestCase):
                 passed, "production.requirement.critical_huggingface_alignment"
             )["state"],
             "PASS",
+        )
+        value["assets"][1]["metadata"]["provenance_docs"][0][
+            "source_repository"
+        ] = "szl-holdings/unrelated"
+        wrong_source = verify(value, contract, "production")
+        self.assertEqual(
+            check(wrong_source, f"alignment.{asset_id}")["state"], "FAIL"
+        )
+
+    def test_browser_evidence_rejects_stale_deployment_binding(self) -> None:
+        requirement = "browser_e2e_and_accessibility"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = audit()
+            add_audited_deployment(value)
+            artifact = {
+                "schema": "szl.estate-browser-evidence/v1",
+                "status": "VERIFIED",
+                "deployment_asset_id": "domain:route:a-11-oy.com/",
+                "tested_url": "https://a-11-oy.com/",
+                "tested_at": "2026-08-01T18:00:00Z",
+                "deployment_revision": "f" * 40,
+                "deployed_artifact_sha256": "c" * 64,
+                "deployment_receipt_id": "deployment-receipt-20260801-1",
+                "browsers": [
+                    {"name": "chromium", "form_factor": "desktop", "status": "PASS"},
+                    {"name": "webkit", "form_factor": "mobile", "status": "PASS"},
+                ],
+                "checks": {
+                    name: "PASS"
+                    for name in (
+                        "browser_e2e",
+                        "keyboard",
+                        "mobile",
+                        "accessibility",
+                        "console_errors",
+                        "network_errors",
+                        "screen_reader",
+                        "zoom_200",
+                        "contrast",
+                        "wcag_2_2_aa",
+                    )
+                },
+                "report_sha256": "d" * 64,
+            }
+            path = root / "browser.json"
+            payload = json.dumps(artifact, sort_keys=True).encode("utf-8")
+            path.write_bytes(payload)
+            value["production_evidence"] = {
+                requirement: {
+                    "artifact_path": path.name,
+                    "artifact_sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            }
+            sign(value)
+            report = verify(
+                value,
+                manifest({"independent_asymmetric_evidence": True, requirement: True}),
+                "production",
+                evidence_root=root,
+            )
+        self.assertIn(
+            "does not bind the audited deployment",
+            check(report, f"production.requirement.{requirement}")["detail"],
         )
 
     def test_production_rejects_shallow_browser_and_restore_assertions(self) -> None:

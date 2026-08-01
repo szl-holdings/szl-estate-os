@@ -113,6 +113,64 @@ def audited_live_target_state(
     return "PASS", f"bound deployment_asset_id={asset_id}"
 
 
+def critical_runtime_alignment_state(
+    asset: dict[str, Any], assets: dict[str, dict[str, Any]]
+) -> tuple[str, str]:
+    metadata = asset.get("metadata")
+    if not isinstance(metadata, dict):
+        return "FAIL", "critical Space metadata is missing or invalid"
+    alignment = metadata.get("github_alignment")
+    runtime_build = metadata.get("runtime_build")
+    documents = metadata.get("provenance_docs")
+    if not isinstance(alignment, dict) or alignment.get("status") != "EXACT_RUNTIME_HEAD":
+        return "FAIL", f"alignment={alignment_state(asset)}"
+    repository = str(alignment.get("source_repository") or "").lower()
+    source_revision = str(alignment.get("source_revision") or "").lower()
+    github_revision = str(alignment.get("github_default_revision") or "").lower()
+    runtime_revision = (
+        str(runtime_build.get("revision") or "").lower()
+        if isinstance(runtime_build, dict)
+        and runtime_build.get("status") == "OBSERVED"
+        and runtime_build.get("state") == "OBSERVED"
+        else ""
+    )
+    revisions = {source_revision, github_revision, runtime_revision}
+    if any(REVISION_PATTERN.fullmatch(value) is None for value in revisions) or len(
+        revisions
+    ) != 1:
+        return "FAIL", "source, GitHub, and runtime revisions are not exact and equal"
+    repository_asset = assets.get(f"github:repo:{repository}")
+    repository_metadata = (
+        repository_asset.get("metadata") if isinstance(repository_asset, dict) else None
+    )
+    if (
+        not isinstance(repository_asset, dict)
+        or repository_asset.get("source") != "github"
+        or repository_asset.get("asset_type") != "repo"
+        or not isinstance(repository_metadata, dict)
+        or str(repository_metadata.get("default_branch_sha") or "").lower()
+        != source_revision
+    ):
+        return "FAIL", "declared source repository does not bind the exact revision"
+    if not isinstance(documents, list):
+        return "FAIL", "artifact source declaration is missing"
+    claims = {
+        (
+            str(document.get("source_repository") or "").lower(),
+            str(document.get("source_revision") or "").lower(),
+        )
+        for document in documents
+        if isinstance(document, dict)
+        and document.get("status") == "OBSERVED"
+        and document.get("binding_kind") != "MANAGEMENT_ONLY"
+        and document.get("source_repository")
+        and document.get("source_revision")
+    }
+    if claims != {(repository, source_revision)}:
+        return "FAIL", "declared artifact source does not match the runtime repository"
+    return "PASS", f"repository={repository} revision={source_revision}"
+
+
 def canonical_audit_payload(audit: dict[str, Any]) -> bytes:
     """Return the exact JSON payload covered by the detached signature."""
     payload = json.loads(json.dumps(audit))
@@ -221,6 +279,7 @@ def production_artifact_state(
             "deployment_asset_id",
             "deployment_revision",
             "deployed_artifact_sha256",
+            "deployed_at",
             "environment",
             "deployment_url",
             "owner",
@@ -232,7 +291,12 @@ def production_artifact_state(
             extra = sorted(set(artifact) - required_witness_keys)
             return "FAIL", f"deployment witness shape invalid missing={missing} extra={extra}"
         revision = str(artifact.get("deployment_revision") or "")
+        deployed_at = str(artifact.get("deployed_at") or "")
         scope = str(artifact.get("credential_scope") or "")
+        if REVISION_PATTERN.fullmatch(revision) is None:
+            return "FAIL", "deployment revision is missing or invalid"
+        if parsed_timestamp(deployed_at) is None:
+            return "FAIL", "deployment timestamp is missing or invalid"
         if scope != "DEPLOYMENT_READ_ONLY":
             return "FAIL", f"credential_scope={scope or 'UNAVAILABLE'}"
         repository_asset_id = str(artifact.get("repository_asset_id") or "")
@@ -289,9 +353,11 @@ def production_artifact_state(
             "deployment_asset_id",
             "deployment_revision",
             "deployed_artifact_sha256",
+            "deployed_at",
             "environment",
             "deployment_url",
             "owner",
+            "receipt_id",
         }
         if not isinstance(receipt, dict) or set(receipt) != required_receipt_keys:
             return "FAIL", "deployment receipt shape is invalid"
@@ -299,20 +365,41 @@ def production_artifact_state(
             return "FAIL", "deployment receipt schema is invalid"
         if receipt.get("status") != "VERIFIED":
             return "FAIL", "deployment receipt status is not VERIFIED"
+        receipt_id = str(receipt.get("receipt_id") or "")
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", receipt_id) is None:
+            return "FAIL", "deployment receipt identity is missing or invalid"
         bindings = {
             "repository_asset_id": repository_asset_id,
             "deployment_asset_id": deployment_asset_id,
             "deployment_revision": revision,
             "deployed_artifact_sha256": deployed_artifact_sha256,
+            "deployed_at": deployed_at,
             "environment": environment,
             "deployment_url": deployment_url,
             "owner": owner,
+            "receipt_id": receipt_id,
         }
         mismatches = sorted(
             field for field, expected in bindings.items() if receipt.get(field) != expected
         )
         if mismatches:
             return "FAIL", f"deployment receipt binding mismatch={','.join(mismatches)}"
+        deployment_metadata = deployment_asset.get("metadata")
+        edge = (
+            deployment_metadata.get("deployment")
+            if isinstance(deployment_metadata, dict)
+            else None
+        )
+        required_edge_keys = {"schema", *bindings}
+        if not isinstance(edge, dict) or set(edge) != required_edge_keys:
+            return "FAIL", "audited repository-to-deployment edge is missing or invalid"
+        if edge.get("schema") != "szl.audit-deployment-edge/v1":
+            return "FAIL", "audited deployment edge schema is invalid"
+        edge_mismatches = sorted(
+            field for field, expected in bindings.items() if edge.get(field) != expected
+        )
+        if edge_mismatches:
+            return "FAIL", f"audited deployment edge mismatch={','.join(edge_mismatches)}"
     elif requirement == "browser_e2e_and_accessibility":
         required_artifact_keys = {
             "schema",
@@ -320,6 +407,9 @@ def production_artifact_state(
             "deployment_asset_id",
             "tested_url",
             "tested_at",
+            "deployment_revision",
+            "deployed_artifact_sha256",
+            "deployment_receipt_id",
             "browsers",
             "checks",
             "report_sha256",
@@ -333,8 +423,40 @@ def production_artifact_state(
         )
         if target_state != "PASS":
             return target_state, target_detail
-        if parsed_timestamp(artifact.get("tested_at")) is None:
+        tested_at = parsed_timestamp(artifact.get("tested_at"))
+        if tested_at is None:
             return "FAIL", "browser evidence timestamp is missing or invalid"
+        deployment_asset = assets.get(deployment_asset_id)
+        deployment_metadata = (
+            deployment_asset.get("metadata")
+            if isinstance(deployment_asset, dict)
+            else None
+        )
+        edge = (
+            deployment_metadata.get("deployment")
+            if isinstance(deployment_metadata, dict)
+            else None
+        )
+        if not isinstance(edge, dict) or edge.get("schema") != "szl.audit-deployment-edge/v1":
+            return "FAIL", "audited deployment edge is missing for browser evidence"
+        expected_browser_binding = {
+            "deployment_asset_id": deployment_asset_id,
+            "deployment_revision": str(artifact.get("deployment_revision") or ""),
+            "deployed_artifact_sha256": str(
+                artifact.get("deployed_artifact_sha256") or ""
+            ),
+            "receipt_id": str(artifact.get("deployment_receipt_id") or ""),
+        }
+        mismatches = sorted(
+            field
+            for field, expected in expected_browser_binding.items()
+            if not expected or edge.get(field) != expected
+        )
+        deployed_at = parsed_timestamp(edge.get("deployed_at"))
+        if mismatches or deployed_at is None or tested_at < deployed_at:
+            return "FAIL", (
+                f"browser evidence does not bind the audited deployment mismatch={','.join(mismatches)}"
+            )
         browsers = artifact.get("browsers")
         if not isinstance(browsers, list) or len(browsers) < 2:
             return "FAIL", "browser evidence must include desktop and mobile runs"
@@ -557,12 +679,12 @@ def verify(
             )
 
         if profile == "production" and asset_id.startswith("huggingface:space:"):
-            alignment = alignment_state(asset)
+            alignment, alignment_detail = critical_runtime_alignment_state(asset, assets)
             checks.append(
                 result(
                     f"alignment.{asset_id}",
-                    "PASS" if alignment in ALIGNMENT_READY else "FAIL",
-                    f"alignment={alignment}",
+                    alignment,
+                    alignment_detail,
                 )
             )
 
@@ -646,7 +768,6 @@ def verify(
                     if isinstance(configured, list)
                     else set()
                 )
-                allowed = ALIGNMENT_READY
                 failed = []
                 for contract in critical_assets:
                     if not isinstance(contract, dict):
@@ -655,7 +776,9 @@ def verify(
                     if not asset_id.startswith("huggingface:space:"):
                         continue
                     asset = assets.get(asset_id)
-                    if asset is None or alignment_state(asset) not in allowed:
+                    if asset is None or critical_runtime_alignment_state(
+                        asset, assets
+                    )[0] != "PASS":
                         failed.append(asset_id)
                 configuration_valid = configured_states == ALIGNMENT_READY
                 checks.append(
