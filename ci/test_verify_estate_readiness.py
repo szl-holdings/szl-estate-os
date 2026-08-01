@@ -5,6 +5,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from verify_estate_readiness import (
@@ -13,7 +14,7 @@ from verify_estate_readiness import (
     canonical_audit_payload,
     canonical_deployment_receipt_payload,
     signature_state,
-    verify,
+    verify as verify_readiness,
 )
 
 
@@ -41,6 +42,24 @@ RSA_D = int(
     16,
 )
 
+VERIFICATION_TIME = datetime(2026, 8, 1, 20, 0, tzinfo=timezone.utc)
+
+
+def verify(
+    value: dict[str, object],
+    contract: dict[str, object],
+    profile: str,
+    *,
+    evidence_root: Path | None = None,
+) -> dict[str, object]:
+    return verify_readiness(
+        value,
+        contract,
+        profile,
+        evidence_root=evidence_root,
+        verification_time=VERIFICATION_TIME,
+    )
+
 
 def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]:
     production_requirements: dict[str, object] = {
@@ -61,6 +80,7 @@ def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]
         "known_gaps": [],
         "production_requirements": production_requirements,
         "production_policies": {
+            "max_audit_age_seconds": 7200,
             "max_deployment_age_seconds": 86400,
             "max_browser_age_seconds": 7200,
             "max_restore_age_seconds": 2592000,
@@ -889,6 +909,14 @@ class ReadinessTests(unittest.TestCase):
                 **valid["production_requirements"],
                 "restore_and_failure_domain_drill": False,
             },
+            {
+                **valid["production_requirements"],
+                "authenticated_inventory": [False],
+            },
+            {
+                **valid["production_requirements"],
+                "critical_huggingface_alignment": True,
+            },
         )
         for configured in invalid_contracts:
             with self.subTest(configured=configured):
@@ -899,6 +927,19 @@ class ReadinessTests(unittest.TestCase):
                     check(report, "production.requirements_contract")["state"],
                     "FAIL",
                 )
+
+    def test_production_audit_freshness_uses_verification_time(self) -> None:
+        for completed_at, expected in (
+            ("2020-08-01T19:00:00Z", "audit evidence is stale"),
+            ("2026-08-01T20:00:01Z", "later than verification time"),
+        ):
+            with self.subTest(completed_at=completed_at):
+                value = audit()
+                value["meta"]["completed_at"] = completed_at
+                report = verify(value, manifest(), "production")
+                freshness = check(report, "production.audit_freshness")
+                self.assertEqual(freshness["state"], "FAIL")
+                self.assertIn(expected, freshness["detail"])
 
     def test_workflow_aggregates_independent_evidence_after_failures(self) -> None:
         workflow = (

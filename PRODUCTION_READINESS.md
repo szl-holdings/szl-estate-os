@@ -73,7 +73,10 @@ and environment selected by the provider-authenticated witness. Its measured
 RTO/RPO must stay below the manifest policy ceilings; its loaded report bytes,
 witnessed dependency-loss scenarios, timestamps, and closed corrective actions
 must also verify. Future or stale evidence, duplicate asset IDs, and minimal
-status-only JSON fail closed.
+status-only JSON fail closed. Audit completion is bounded against the verifier's
+current time, so an internally consistent but expired signed packet cannot be
+replayed. The production requirements object must contain every known gate with
+literal Boolean `true`, except the alignment gate's exact nonempty state list.
 
 ## Execution order
 

@@ -13,7 +13,7 @@ import math
 import re
 import sys
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -338,6 +338,7 @@ def production_policies(manifest: dict[str, Any]) -> tuple[dict[str, Any] | None
     if not isinstance(policies, dict):
         return None, "production policies are missing or invalid"
     required = {
+        "max_audit_age_seconds",
         "max_deployment_age_seconds",
         "max_browser_age_seconds",
         "max_restore_age_seconds",
@@ -358,12 +359,29 @@ def production_policies(manifest: dict[str, Any]) -> tuple[dict[str, Any] | None
     return policies, "production policies verified"
 
 
-def audit_completed_at(audit: dict[str, Any]) -> tuple[datetime | None, str]:
+def audit_completed_at(
+    audit: dict[str, Any],
+    verification_time: datetime,
+    max_audit_age_seconds: float,
+) -> tuple[datetime | None, str]:
     meta = audit.get("meta")
     completed = parsed_timestamp(meta.get("completed_at")) if isinstance(meta, dict) else None
     if completed is None:
         return None, "audit completion timestamp is missing or invalid"
-    return completed, "audit completion timestamp verified"
+    if verification_time.tzinfo is None:
+        return None, "verification timestamp is missing timezone information"
+    if completed > verification_time:
+        return None, "audit completion timestamp is later than verification time"
+    age_seconds = (verification_time - completed).total_seconds()
+    if age_seconds > max_audit_age_seconds:
+        return None, f"audit evidence is stale age_seconds={age_seconds:g}"
+    return completed, f"audit age_seconds={age_seconds:g}"
+
+
+def production_requirement_enabled(requirement: str, configured: Any) -> bool:
+    if requirement == "critical_huggingface_alignment":
+        return isinstance(configured, list) and bool(configured)
+    return configured is True
 
 
 def timestamp_freshness_state(
@@ -387,11 +405,16 @@ def production_artifact_state(
     assets: dict[str, dict[str, Any]],
     requirement: str,
     evidence_root: Path | None,
+    verification_time: datetime,
 ) -> tuple[str, str]:
     policies, policy_detail = production_policies(manifest)
     if policies is None:
         return "FAIL", policy_detail
-    completed_at, completed_detail = audit_completed_at(audit)
+    completed_at, completed_detail = audit_completed_at(
+        audit,
+        verification_time,
+        float(policies["max_audit_age_seconds"]),
+    )
     if completed_at is None:
         return "FAIL", completed_detail
     artifact, reference_detail = load_production_artifact(
@@ -594,6 +617,7 @@ def production_artifact_state(
             assets,
             "credential_backed_deployment_witness",
             evidence_root,
+            verification_time,
         )
         if witness_state != "PASS":
             return "FAIL", f"promoted deployment witness invalid: {witness_detail}"
@@ -738,6 +762,7 @@ def production_artifact_state(
             assets,
             "credential_backed_deployment_witness",
             evidence_root,
+            verification_time,
         )
         if witness_state != "PASS":
             return "FAIL", f"promoted deployment witness invalid: {witness_detail}"
@@ -808,8 +833,10 @@ def verify(
     profile: str,
     *,
     evidence_root: Path | None = None,
+    verification_time: datetime | None = None,
 ) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
+    observed_verification_time = verification_time or datetime.now(timezone.utc)
     asset_records = audit.get("assets") or []
     if not isinstance(asset_records, list):
         asset_records = []
@@ -994,22 +1021,18 @@ def verify(
         extra_requirements = sorted(
             set(production_requirements) - KNOWN_PRODUCTION_REQUIREMENTS
         )
-        disabled_requirements = sorted(
+        invalid_requirement_values = sorted(
             requirement
             for requirement in KNOWN_PRODUCTION_REQUIREMENTS & set(production_requirements)
-            if not (
-                production_requirements[requirement] is True
-                or (
-                    isinstance(production_requirements[requirement], list)
-                    and bool(production_requirements[requirement])
-                )
+            if not production_requirement_enabled(
+                requirement, production_requirements[requirement]
             )
         )
         requirements_contract_valid = (
             requirements_shape_valid
             and not missing_requirements
             and not extra_requirements
-            and not disabled_requirements
+            and not invalid_requirement_values
         )
         checks.append(
             result(
@@ -1020,12 +1043,28 @@ def verify(
                 else (
                     f"shape_valid={requirements_shape_valid} "
                     f"missing={missing_requirements} extra={extra_requirements} "
-                    f"disabled={disabled_requirements}"
+                    f"invalid_values={invalid_requirement_values}"
                 ),
             )
         )
         if not requirements_shape_valid:
             production_requirements = {}
+        policies, policy_detail = production_policies(manifest)
+        completed_at = None
+        completed_detail = policy_detail
+        if policies is not None:
+            completed_at, completed_detail = audit_completed_at(
+                audit,
+                observed_verification_time,
+                float(policies["max_audit_age_seconds"]),
+            )
+        checks.append(
+            result(
+                "production.audit_freshness",
+                "PASS" if completed_at is not None else "FAIL",
+                completed_detail,
+            )
+        )
         for source in ("github", "huggingface"):
             scope = str((source_reports.get(source) or {}).get("scope") or "UNAVAILABLE")
             checks.append(
@@ -1053,9 +1092,7 @@ def verify(
         )
 
         for requirement, configured in production_requirements.items():
-            enabled = configured is True or (
-                isinstance(configured, list) and bool(configured)
-            )
+            enabled = production_requirement_enabled(requirement, configured)
             if not enabled:
                 continue
             check_id = f"production.requirement.{requirement}"
@@ -1118,7 +1155,12 @@ def verify(
                 "restore_and_failure_domain_drill",
             }:
                 artifact_state, artifact_detail = production_artifact_state(
-                    audit, manifest, assets, requirement, evidence_root
+                    audit,
+                    manifest,
+                    assets,
+                    requirement,
+                    evidence_root,
+                    observed_verification_time,
                 )
                 if signature_verification[0] != "PASS":
                     artifact_state = "FAIL"

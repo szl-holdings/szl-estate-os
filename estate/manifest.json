@@ -139,6 +139,7 @@
     "zero_active_critical_gaps": true
   },
   "production_policies": {
+    "max_audit_age_seconds": 7200,
     "max_deployment_age_seconds": 86400,
     "max_browser_age_seconds": 7200,
     "max_restore_age_seconds": 2592000,
