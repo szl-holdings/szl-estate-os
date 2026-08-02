@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -32,6 +33,36 @@ EXTERNAL_CONTROL_IDS = {
     "people.incident_ownership",
 }
 STATE_SCORE = {"PASS": 100.0, "PARTIAL": 50.0, "FAIL": 0.0}
+GITHUB_COMPLETE_SCOPES = {"AUTHENTICATED_COMPLETE", "ORGANIZATION_COMPLETE"}
+WEB_SECURITY_HEADERS = (
+    "content-security-policy",
+    "referrer-policy",
+    "strict-transport-security",
+    "x-content-type-options",
+)
+HSTS_MIN_MAX_AGE_SECONDS = 31_536_000
+APPROVED_REFERRER_POLICIES = {
+    "no-referrer",
+    "same-origin",
+    "strict-origin",
+    "strict-origin-when-cross-origin",
+}
+CSP_REQUIRED_DIRECTIVES = {
+    "base-uri",
+    "default-src",
+    "form-action",
+    "frame-ancestors",
+    "object-src",
+}
+CSP_UNSAFE_SOURCE_TOKENS = {
+    "'unsafe-eval'",
+    "'unsafe-inline'",
+    "'wasm-unsafe-eval'",
+    "blob:",
+    "data:",
+    "http:",
+    "https:",
+}
 
 
 def _value(item: Any, key: str, default: Any = None) -> Any:
@@ -43,6 +74,165 @@ def _value(item: Any, key: str, default: Any = None) -> Any:
 def _metadata(item: Any) -> dict[str, Any]:
     value = _value(item, "metadata", {})
     return value if isinstance(value, dict) else {}
+
+
+def _asset_id(item: Any) -> str:
+    return str(_value(item, "asset_id", "") or "")
+
+
+def _content_security_policy_state(value: Any) -> tuple[bool, str]:
+    if not isinstance(value, str) or not value.strip() or "\n" in value or "\r" in value:
+        return False, "content-security-policy is missing or invalid"
+    directives: dict[str, list[str]] = {}
+    for segment in value.split(";"):
+        parts = segment.strip().split()
+        if not parts:
+            continue
+        name = parts[0].lower()
+        if name in directives or re.fullmatch(r"[a-z][a-z0-9-]*", name) is None:
+            return False, "content-security-policy contains duplicate or invalid directives"
+        directives[name] = [token.lower() for token in parts[1:]]
+
+    missing = sorted(CSP_REQUIRED_DIRECTIVES - set(directives))
+    if missing:
+        return False, f"content-security-policy missing directives={','.join(missing)}"
+    default_sources = directives["default-src"]
+    if not default_sources or any(
+        "*" in token or token in CSP_UNSAFE_SOURCE_TOKENS
+        for token in default_sources
+    ):
+        return False, "content-security-policy default-src is not fail-closed"
+    for directive in ("object-src", "frame-ancestors", "base-uri", "form-action"):
+        sources = directives[directive]
+        allowed = {"'none'"} if directive == "object-src" else {"'none'", "'self'"}
+        if len(sources) != 1 or sources[0] not in allowed:
+            return False, f"content-security-policy {directive} is not restrictive"
+    for directive in ("script-src", "script-src-elem", "script-src-attr"):
+        if directive not in directives:
+            continue
+        sources = directives[directive]
+        if not sources or any(
+            "*" in token or token in CSP_UNSAFE_SOURCE_TOKENS for token in sources
+        ):
+            return False, f"content-security-policy {directive} permits unsafe sources"
+    if "script-src" not in directives and any(
+        "*" in token or token in CSP_UNSAFE_SOURCE_TOKENS
+        for token in default_sources
+    ):
+        return False, "content-security-policy permits unsafe script sources"
+    return True, "content-security-policy is fail-closed"
+
+
+def _strict_transport_security_state(value: Any) -> tuple[bool, str]:
+    if not isinstance(value, str) or "\n" in value or "\r" in value:
+        return False, "strict-transport-security is missing or invalid"
+    directives = [part.strip().lower() for part in value.split(";") if part.strip()]
+    max_age_values = [
+        part.split("=", 1)[1]
+        for part in directives
+        if part.startswith("max-age=")
+    ]
+    if (
+        len(max_age_values) != 1
+        or re.fullmatch(r"[0-9]+", max_age_values[0]) is None
+        or int(max_age_values[0]) < HSTS_MIN_MAX_AGE_SECONDS
+    ):
+        return False, "strict-transport-security max-age policy is insufficient"
+    return True, "strict-transport-security max-age policy is satisfied"
+
+
+def _content_type_options_state(value: Any) -> tuple[bool, str]:
+    passed = isinstance(value, str) and value.strip().lower() == "nosniff"
+    return passed, (
+        "x-content-type-options is nosniff"
+        if passed
+        else "x-content-type-options must be exactly nosniff"
+    )
+
+
+def _referrer_policy_state(value: Any) -> tuple[bool, str]:
+    if not isinstance(value, str) or "\n" in value or "\r" in value:
+        return False, "referrer-policy is missing or invalid"
+    policies = [part.strip().lower() for part in value.split(",") if part.strip()]
+    passed = bool(policies) and all(
+        policy in APPROVED_REFERRER_POLICIES for policy in policies
+    )
+    return passed, (
+        "referrer-policy is in the non-leaking allowlist"
+        if passed
+        else "referrer-policy is not in the non-leaking allowlist"
+    )
+
+
+def assess_web_security_headers(values: Any) -> dict[str, dict[str, Any]] | None:
+    """Semantically assess normalized raw header values; booleans never count."""
+
+    if not isinstance(values, dict):
+        return None
+    validators = {
+        "content-security-policy": _content_security_policy_state,
+        "referrer-policy": _referrer_policy_state,
+        "strict-transport-security": _strict_transport_security_state,
+        "x-content-type-options": _content_type_options_state,
+    }
+    assessment: dict[str, dict[str, Any]] = {}
+    for name, validator in validators.items():
+        passed, detail = validator(values.get(name))
+        assessment[name] = {"passed": passed, "detail": detail}
+    return assessment
+
+
+def _measured_branch_rules(item: Any) -> dict[str, Any] | None:
+    rules = _metadata(item).get("default_branch_rules")
+    if not isinstance(rules, dict) or rules.get("status") != "MEASURED":
+        return None
+    values = rules.get("types")
+    if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+        return None
+    pull_request = rules.get("pull_request")
+    if pull_request is not None and not isinstance(pull_request, dict):
+        return None
+    required_status_checks = rules.get("required_status_checks")
+    if not isinstance(required_status_checks, list) or any(
+        not isinstance(value, str) for value in required_status_checks
+    ):
+        return None
+    return rules
+
+
+def _measured_branch_rule_types(item: Any) -> set[str] | None:
+    rules = _measured_branch_rules(item)
+    if rules is None:
+        return None
+    return {value for value in rules["types"] if value}
+
+
+def _branch_minimum_failures(item: Any) -> list[str] | None:
+    rules = _measured_branch_rules(item)
+    if rules is None:
+        return None
+    rule_types = {value for value in rules["types"] if value}
+    pull_request = rules.get("pull_request")
+    pull_request = pull_request if isinstance(pull_request, dict) else {}
+    approvals = pull_request.get("required_approving_review_count")
+    required_status_checks = [
+        value for value in rules["required_status_checks"] if value.strip()
+    ]
+    requirements = {
+        "non_fast_forward_rule": "non_fast_forward" in rule_types,
+        "pull_request_rule": "pull_request" in rule_types,
+        "required_status_checks_rule": "required_status_checks" in rule_types,
+        "at_least_one_approval": (
+            isinstance(approvals, int)
+            and not isinstance(approvals, bool)
+            and approvals >= 1
+        ),
+        "review_thread_resolution": (
+            pull_request.get("required_review_thread_resolution") is True
+        ),
+        "nonempty_required_status_checks": bool(required_status_checks),
+    }
+    return sorted(name for name, passed in requirements.items() if not passed)
 
 
 def _parse_time(value: Any) -> dt.datetime | None:
@@ -208,7 +398,14 @@ def _coverage_control(
     observed_at: str,
     unit: str,
     playbook: str,
+    failed_asset_ids: Iterable[str] = (),
+    unassessed_asset_ids: Iterable[str] = (),
+    metric_extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    failed_ids = sorted({str(asset_id) for asset_id in failed_asset_ids if asset_id})
+    unassessed_ids = sorted(
+        {str(asset_id) for asset_id in unassessed_asset_ids if asset_id}
+    )
     if total == 0 or measured == 0:
         state = "UNAVAILABLE"
         truth_label = "UNAVAILABLE"
@@ -221,6 +418,16 @@ def _coverage_control(
     else:
         state = "PARTIAL"
         truth_label = "PARTIAL"
+    metric = {
+        "passed": passed,
+        "assessed": measured,
+        "total": total,
+        "scope_partial": scope_partial,
+        "failed_asset_ids": failed_ids,
+        "unassessed_asset_ids": unassessed_ids,
+    }
+    if metric_extra:
+        metric.update(metric_extra)
     return _control(
         control_id,
         lane,
@@ -234,7 +441,7 @@ def _coverage_control(
         evidence=[
             f"{passed}/{total} {unit} passed; {measured}/{total} were assessable"
         ],
-        metric={"passed": passed, "assessed": measured, "total": total},
+        metric=metric,
         playbook=playbook,
     )
 
@@ -313,7 +520,7 @@ def evaluate_operating_fabric(
     )
     github_repo_scope_partial = (
         github_source_partial
-        or _value(github_report, "scope") != "ORGANIZATION_COMPLETE"
+        or _value(github_report, "scope") not in GITHUB_COMPLETE_SCOPES
     )
     domain_report = reports.get("domains")
     hf_report = reports.get("huggingface")
@@ -363,15 +570,22 @@ def evaluate_operating_fabric(
 
     secret_measured = 0
     secret_passed = 0
+    secret_failed_ids: list[str] = []
+    secret_unassessed_ids: list[str] = []
     for repo in repos:
+        asset_id = _asset_id(repo)
         security = _metadata(repo).get("security_and_analysis")
         security = security if isinstance(security, dict) else {}
         scanning = security.get("secret_scanning")
         protection = security.get("secret_scanning_push_protection")
-        if scanning is not None or protection is not None:
+        if scanning == "enabled" and protection == "enabled":
             secret_measured += 1
-            if scanning == "enabled" and protection == "enabled":
-                secret_passed += 1
+            secret_passed += 1
+        elif scanning == "disabled" or protection == "disabled":
+            secret_measured += 1
+            secret_failed_ids.append(asset_id)
+        else:
+            secret_unassessed_ids.append(asset_id)
     controls.append(
         _coverage_control(
             "cybersecurity.secret_protection",
@@ -387,24 +601,35 @@ def evaluate_operating_fabric(
             observed_at=observed_at,
             unit="active repositories",
             playbook="Propose enabling secret scanning and push protection on uncovered repositories.",
+            failed_asset_ids=secret_failed_ids,
+            unassessed_asset_ids=secret_unassessed_ids,
         )
     )
 
     header_passed = 0
     header_measured = 0
+    header_failed_ids: list[str] = []
+    header_unassessed_ids: list[str] = []
+    header_failures_by_asset_id: dict[str, dict[str, str]] = {}
     for route in routes:
-        headers = _metadata(route).get("security_headers")
-        if isinstance(headers, dict):
+        asset_id = _asset_id(route)
+        assessment = assess_web_security_headers(
+            _metadata(route).get("security_header_values")
+        )
+        if assessment is not None:
             header_measured += 1
-            if all(
-                headers.get(name) is True
-                for name in (
-                    "strict-transport-security",
-                    "content-security-policy",
-                    "x-content-type-options",
-                )
-            ):
+            failures = {
+                name: str(result["detail"])
+                for name, result in assessment.items()
+                if result.get("passed") is not True
+            }
+            if not failures:
                 header_passed += 1
+            else:
+                header_failed_ids.append(asset_id)
+                header_failures_by_asset_id[asset_id] = failures
+        else:
+            header_unassessed_ids.append(asset_id)
     controls.append(
         _coverage_control(
             "cybersecurity.web_hardening",
@@ -420,7 +645,16 @@ def evaluate_operating_fabric(
             owner_role="platform-engineering",
             observed_at=observed_at,
             unit="observed routes",
-            playbook="Propose HSTS, CSP, and nosniff header remediation for uncovered routes.",
+            playbook="Propose HSTS, CSP, referrer-policy, and nosniff remediation for uncovered routes.",
+            failed_asset_ids=header_failed_ids,
+            unassessed_asset_ids=header_unassessed_ids,
+            metric_extra={
+                "required_headers": list(WEB_SECURITY_HEADERS),
+                "hsts_min_max_age_seconds": HSTS_MIN_MAX_AGE_SECONDS,
+                "failed_header_requirements_by_asset_id": (
+                    header_failures_by_asset_id
+                ),
+            },
         )
     )
 
@@ -478,16 +712,35 @@ def evaluate_operating_fabric(
         )
     )
 
-    protected_values = [
-        _metadata(repo).get("branch_protection_enabled") for repo in repos
-    ]
+    branch_measured = 0
+    branch_passed = 0
+    branch_failed_ids: list[str] = []
+    branch_unassessed_ids: list[str] = []
+    branch_failures_by_asset_id: dict[str, list[str]] = {}
+    for repo in repos:
+        asset_id = _asset_id(repo)
+        protected = _metadata(repo).get("branch_protection_enabled")
+        minimum_failures = _branch_minimum_failures(repo)
+        if protected is False:
+            branch_measured += 1
+            branch_failed_ids.append(asset_id)
+            branch_failures_by_asset_id[asset_id] = ["branch_not_protected"]
+        elif protected is True and minimum_failures is not None:
+            branch_measured += 1
+            if not minimum_failures:
+                branch_passed += 1
+            else:
+                branch_failed_ids.append(asset_id)
+                branch_failures_by_asset_id[asset_id] = minimum_failures
+        else:
+            branch_unassessed_ids.append(asset_id)
     controls.append(
         _coverage_control(
             "engineering.branch_protection",
             "engineering",
-            "Default branch protection",
-            passed=sum(value is True for value in protected_values),
-            measured=sum(isinstance(value, bool) for value in protected_values),
+            "Applicable default-branch protection rules",
+            passed=branch_passed,
+            measured=branch_measured,
             total=len(repos),
             scope_partial=github_repo_scope_partial,
             critical=True,
@@ -496,18 +749,50 @@ def evaluate_operating_fabric(
             observed_at=observed_at,
             unit="active repositories",
             playbook="Propose protected-branch rules through normal repository governance.",
+            failed_asset_ids=branch_failed_ids,
+            unassessed_asset_ids=branch_unassessed_ids,
+            metric_extra={
+                "required_rule_types": [
+                    "non_fast_forward",
+                    "pull_request",
+                    "required_status_checks",
+                ],
+                "minimum_required_approving_review_count": 1,
+                "required_review_thread_resolution": True,
+                "required_status_check_count_minimum": 1,
+                "failed_requirements_by_asset_id": branch_failures_by_asset_id,
+            },
         )
     )
-    signoff_values = [
-        _metadata(repo).get("web_commit_signoff_required") for repo in repos
-    ]
+    signoff_measured = 0
+    signoff_passed = 0
+    signoff_failed_ids: list[str] = []
+    signoff_unassessed_ids: list[str] = []
+    web_only_signoff_ids: list[str] = []
+    for repo in repos:
+        asset_id = _asset_id(repo)
+        web_signoff = _metadata(repo).get("web_commit_signoff_required")
+        rule_types = _measured_branch_rule_types(repo)
+        signatures_required = (
+            "required_signatures" in rule_types if rule_types is not None else None
+        )
+        if web_signoff is False or signatures_required is False:
+            signoff_measured += 1
+            signoff_failed_ids.append(asset_id)
+            if web_signoff is True and signatures_required is False:
+                web_only_signoff_ids.append(asset_id)
+        elif web_signoff is True and signatures_required is True:
+            signoff_measured += 1
+            signoff_passed += 1
+        else:
+            signoff_unassessed_ids.append(asset_id)
     controls.append(
         _coverage_control(
             "engineering.change_signoff",
             "engineering",
-            "Web commit signoff requirement",
-            passed=sum(value is True for value in signoff_values),
-            measured=sum(isinstance(value, bool) for value in signoff_values),
+            "Web signoff plus signed-commit enforcement",
+            passed=signoff_passed,
+            measured=signoff_measured,
             total=len(repos),
             scope_partial=github_repo_scope_partial,
             critical=False,
@@ -515,26 +800,53 @@ def evaluate_operating_fabric(
             owner_role="engineering-lead",
             observed_at=observed_at,
             unit="active repositories",
-            playbook="Propose signoff enforcement without weakening existing protected flows.",
+            playbook="Propose signed-commit rules while retaining web signoff; verify DCO separately where policy requires it.",
+            failed_asset_ids=signoff_failed_ids,
+            unassessed_asset_ids=signoff_unassessed_ids,
+            metric_extra={
+                "web_signoff_only_asset_ids": sorted(web_only_signoff_ids),
+                "required_rule_type": "required_signatures",
+            },
         )
     )
 
-    alignment_states = [
-        str((_metadata(asset).get("github_alignment") or {}).get("status") or "")
-        for asset in hf_assets
-    ]
-    exact_states = {"EXACT_HEAD", "EXACT_RUNTIME_HEAD"}
+    provenance_passed = 0
+    provenance_measured = 0
+    provenance_failed_ids: list[str] = []
+    provenance_unassessed_ids: list[str] = []
+    artifact_provenance_state_counts: dict[str, int] = {}
+    for asset in hf_assets:
+        decision = _metadata(asset).get("provenance_policy")
+        artifact_provenance = (
+            decision.get("artifact_provenance")
+            if isinstance(decision, dict)
+            else None
+        )
+        state = (
+            str(artifact_provenance.get("state") or "")
+            if isinstance(artifact_provenance, dict)
+            else ""
+        )
+        state = state if state in {"PASS", "FAIL", "UNAVAILABLE"} else "UNAVAILABLE"
+        artifact_provenance_state_counts[state] = (
+            artifact_provenance_state_counts.get(state, 0) + 1
+        )
+        asset_id = _asset_id(asset)
+        if state == "PASS":
+            provenance_passed += 1
+            provenance_measured += 1
+        elif state == "FAIL":
+            provenance_measured += 1
+            provenance_failed_ids.append(asset_id)
+        else:
+            provenance_unassessed_ids.append(asset_id)
     controls.append(
         _coverage_control(
             "data_ai.source_provenance",
             "data_ai",
-            "Exact source provenance",
-            passed=sum(state in exact_states for state in alignment_states),
-            measured=sum(
-                bool(state)
-                and state not in {"EVIDENCE_UNAVAILABLE", "SOURCE_HEAD_UNAVAILABLE"}
-                for state in alignment_states
-            ),
+            "Verified artifact source provenance",
+            passed=provenance_passed,
+            measured=provenance_measured,
             total=len(hf_assets),
             scope_partial=(
                 hf_report is None
@@ -546,8 +858,18 @@ def evaluate_operating_fabric(
             severity="HIGH",
             owner_role="data-ai-lead",
             observed_at=observed_at,
-            unit="Hub runtime/artifact assets",
-            playbook="Propose exact immutable source bindings and verify runtime revision equality.",
+            unit="Hub artifact assets",
+            playbook=(
+                "Propose exact immutable source bindings and independently verify "
+                "the declared Git commit evidence."
+            ),
+            failed_asset_ids=provenance_failed_ids,
+            unassessed_asset_ids=provenance_unassessed_ids,
+            metric_extra={
+                "artifact_provenance_state_counts": dict(
+                    sorted(artifact_provenance_state_counts.items())
+                )
+            },
         )
     )
     card_assets = [

@@ -18,6 +18,18 @@ from pathlib import Path
 from typing import Any
 
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from estate.evidence_contract import (  # noqa: E402
+    PRODUCTION_EVIDENCE_INDEX_SCHEMA,
+    load_evidence_bytes as contract_load_evidence_bytes,
+    validate_restore_measurement,
+)
+from estate.provenance_policy import classify_provenance  # noqa: E402
+
+
 ALIGNMENT_READY = {"EXACT_RUNTIME_HEAD"}
 BASELINE_SIGNATURE_STATES = {
     "HMAC_SHA256": "PASS",
@@ -37,13 +49,11 @@ KNOWN_PRODUCTION_REQUIREMENTS = {
     "restore_and_failure_domain_drill",
     "zero_active_critical_gaps",
 }
-MAX_PRODUCTION_ARTIFACT_BYTES = 5_000_000
 PRODUCTION_ARTIFACT_SCHEMAS = {
     "credential_backed_deployment_witness": "szl.estate-deployment-witness/v1",
     "browser_e2e_and_accessibility": "szl.estate-browser-evidence/v1",
-    "restore_and_failure_domain_drill": "szl.estate-restore-drill/v1",
+    "restore_and_failure_domain_drill": "szl.estate-restore-drill/v2",
 }
-PRODUCTION_EVIDENCE_INDEX_SCHEMA = "szl.estate-production-evidence-index/v1"
 BASELINE_SOURCES = {"github", "huggingface", "domains"}
 BASELINE_PROHIBITED_STATUS_LABELS = {"BROKEN"}
 BASELINE_REQUIRED_SECURITY_HEADERS = {
@@ -52,6 +62,13 @@ BASELINE_REQUIRED_SECURITY_HEADERS = {
     "strict-transport-security",
     "x-content-type-options",
 }
+APPROVED_REFERRER_POLICIES = {
+    "no-referrer",
+    "same-origin",
+    "strict-origin",
+    "strict-origin-when-cross-origin",
+}
+HSTS_MIN_MAX_AGE_SECONDS = 31_536_000
 BASELINE_CONTRACT_KEYS = {
     "source_minimums",
     "required_source_status",
@@ -101,6 +118,118 @@ def parsed_timestamp(value: Any) -> datetime | None:
     except ValueError:
         return None
     return observed if observed.tzinfo is not None else None
+
+
+def content_security_policy_state(value: Any) -> tuple[str, str]:
+    if not isinstance(value, str) or not value.strip() or "\n" in value or "\r" in value:
+        return "FAIL", "content-security-policy is missing or invalid"
+    directives: dict[str, list[str]] = {}
+    for segment in value.split(";"):
+        parts = segment.strip().split()
+        if not parts:
+            continue
+        name = parts[0].lower()
+        if name in directives or re.fullmatch(r"[a-z][a-z0-9-]*", name) is None:
+            return "FAIL", "content-security-policy contains duplicate or invalid directives"
+        directives[name] = [token.lower() for token in parts[1:]]
+
+    required = {"default-src", "object-src", "frame-ancestors", "base-uri", "form-action"}
+    missing = sorted(required - set(directives))
+    if missing:
+        return "FAIL", f"content-security-policy missing directives={','.join(missing)}"
+    default_sources = directives["default-src"]
+    if not default_sources or any(
+        "*" in token
+        or token in {"'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'"}
+        or token in {"data:", "blob:", "http:", "https:"}
+        for token in default_sources
+    ):
+        return "FAIL", "content-security-policy default-src is not fail-closed"
+    for directive in ("object-src", "frame-ancestors", "base-uri", "form-action"):
+        sources = directives[directive]
+        allowed = {"'none'"} if directive == "object-src" else {"'none'", "'self'"}
+        if len(sources) != 1 or sources[0] not in allowed:
+            return "FAIL", f"content-security-policy {directive} is not restrictive"
+    for directive in ("script-src", "script-src-elem", "script-src-attr"):
+        if directive not in directives:
+            continue
+        sources = directives[directive]
+        if not sources or any(
+            "*" in token
+            or token
+            in {
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                "'wasm-unsafe-eval'",
+                "data:",
+                "blob:",
+                "http:",
+                "https:",
+            }
+            for token in sources
+        ):
+            return "FAIL", f"content-security-policy {directive} permits unsafe sources"
+    if "script-src" not in directives and any(
+        "*" in token
+        or token
+        in {
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "'wasm-unsafe-eval'",
+            "data:",
+            "blob:",
+            "http:",
+            "https:",
+        }
+        for token in default_sources
+    ):
+        return "FAIL", "content-security-policy permits unsafe script sources"
+    return "PASS", "content-security-policy is fail-closed"
+
+
+def security_header_values_state(value: Any) -> tuple[str, str]:
+    if not isinstance(value, dict):
+        return "FAIL", "raw security header values are missing"
+    normalized: dict[str, str] = {}
+    for key, observed in value.items():
+        if (
+            not isinstance(key, str)
+            or not isinstance(observed, str)
+            or "\n" in observed
+            or "\r" in observed
+        ):
+            return "FAIL", "raw security header values are malformed"
+        normalized_key = key.strip().lower()
+        if not normalized_key or normalized_key in normalized:
+            return "FAIL", "raw security header values are ambiguous"
+        normalized[normalized_key] = observed.strip()
+    missing = sorted(BASELINE_REQUIRED_SECURITY_HEADERS - set(normalized))
+    if missing:
+        return "FAIL", f"raw security header values missing={','.join(missing)}"
+
+    csp_state, csp_detail = content_security_policy_state(
+        normalized["content-security-policy"]
+    )
+    if csp_state != "PASS":
+        return csp_state, csp_detail
+
+    hsts_parts = [
+        part.strip().lower()
+        for part in normalized["strict-transport-security"].split(";")
+        if part.strip()
+    ]
+    max_age_values = [part.split("=", 1)[1] for part in hsts_parts if part.startswith("max-age=")]
+    if (
+        len(max_age_values) != 1
+        or re.fullmatch(r"[0-9]+", max_age_values[0]) is None
+        or int(max_age_values[0]) < HSTS_MIN_MAX_AGE_SECONDS
+    ):
+        return "FAIL", "strict-transport-security max-age policy is insufficient"
+    if normalized["x-content-type-options"].lower() != "nosniff":
+        return "FAIL", "x-content-type-options must be nosniff"
+    if normalized["referrer-policy"].lower() not in APPROVED_REFERRER_POLICIES:
+        return "FAIL", "referrer-policy is not in the non-leaking allowlist"
+    return "PASS", "required security header values are semantically safe"
 
 
 def domain_route_identity(asset_id: str) -> tuple[str, str] | None:
@@ -389,12 +518,18 @@ def audited_live_target_state(
         if domain_identity is not None
         else (("huggingface", "space") if space_identity is not None else None)
     )
+    expected_operational_status = (
+        "REAL"
+        if domain_identity is not None
+        else ("RUNNING" if space_identity is not None else None)
+    )
     if (
         asset.get("status_label") != "LIVE"
         or expected_source_type is None
         or (asset.get("source"), asset.get("asset_type")) != expected_source_type
+        or asset.get("operational_status") != expected_operational_status
     ):
-        return "FAIL", "deployment asset is not an audited LIVE deployment"
+        return "FAIL", "deployment asset is not an audited operational LIVE deployment"
     critical_assets = manifest.get("critical_assets")
     critical_asset_ids = {
         str(contract.get("asset_id"))
@@ -489,22 +624,102 @@ def critical_runtime_alignment_state(
         != source_revision
     ):
         return "FAIL", "declared source repository does not bind the exact revision"
+    commit_fact = repository_metadata.get("default_branch_commit_fact")
+    if (
+        not isinstance(commit_fact, dict)
+        or commit_fact.get("state") != "VERIFIED_REACHABLE"
+        or str(commit_fact.get("source_repository") or "").lower() != repository
+        or str(commit_fact.get("source_revision") or "").lower() != source_revision
+    ):
+        return (
+            "FAIL",
+            "source repository commit is not independently verified and reachable",
+        )
     if not isinstance(documents, list):
         return "FAIL", "artifact source declaration is missing"
-    claims = {
-        (
-            str(document.get("source_repository") or "").lower(),
-            str(document.get("source_revision") or "").lower(),
-        )
-        for document in documents
-        if isinstance(document, dict)
-        and document.get("status") == "OBSERVED"
-        and document.get("binding_kind") != "MANAGEMENT_ONLY"
-        and document.get("source_repository")
-        and document.get("source_revision")
-    }
-    if claims != {(repository, source_revision)}:
-        return "FAIL", "declared artifact source does not match the runtime repository"
+
+    provenance_policy = metadata.get("provenance_policy")
+    artifact_provenance = (
+        provenance_policy.get("artifact_provenance")
+        if isinstance(provenance_policy, dict)
+        else None
+    )
+    runtime_currency = (
+        provenance_policy.get("runtime_currency")
+        if isinstance(provenance_policy, dict)
+        else None
+    )
+    policy_target = (
+        provenance_policy.get("target")
+        if isinstance(provenance_policy, dict)
+        else None
+    )
+    policy_scope = (
+        provenance_policy.get("scope")
+        if isinstance(provenance_policy, dict)
+        else None
+    )
+    asset_id = str(asset.get("asset_id") or "")
+    if (
+        not isinstance(provenance_policy, dict)
+        or provenance_policy.get("schema")
+        != "szl.provenance-policy-decision/v1"
+        or not isinstance(policy_target, dict)
+        or policy_target.get("asset_id") != asset_id
+        or policy_target.get("evidence_state") != "OBSERVED"
+        or not isinstance(policy_scope, dict)
+        or policy_scope.get("state") != "AUTHENTICATED_COMPLETE"
+        or policy_scope.get("completeness") != "COMPLETE"
+    ):
+        return "FAIL", "Space provenance policy is missing or not bound to the asset"
+
+    expected_policy = classify_provenance(
+        target_id=asset_id,
+        source_scope="AUTHENTICATED_COMPLETE",
+        artifact_documents=documents,
+        commit_facts=[commit_fact],
+        source_head={
+            "status": "OBSERVED",
+            "source_repository": repository,
+            "source_revision": source_revision,
+        },
+        runtime_evidence={
+            "status": "OBSERVED",
+            "source_repository": repository,
+            "source_revision": runtime_revision,
+        },
+        target_evidence_state="OBSERVED",
+    )
+    if provenance_policy != expected_policy:
+        return "FAIL", "stored Space provenance policy does not match raw evidence"
+    if (
+        not isinstance(artifact_provenance, dict)
+        or artifact_provenance.get("state") != "PASS"
+        or artifact_provenance.get("evidence_state") != "VERIFIED_REACHABLE"
+        or artifact_provenance.get("alignment_state") != "EXACT_HEAD"
+        or artifact_provenance.get("current") is not True
+        or str(artifact_provenance.get("source_repository") or "").lower()
+        != repository
+        or str(artifact_provenance.get("source_revision") or "").lower()
+        != source_revision
+        or str(artifact_provenance.get("head_revision") or "").lower()
+        != source_revision
+    ):
+        return "FAIL", "artifact provenance does not verify the exact runtime source"
+    if (
+        not isinstance(runtime_currency, dict)
+        or runtime_currency.get("state") != "PASS"
+        or runtime_currency.get("evidence_state") != "OBSERVED_RUNTIME_REVISION"
+        or runtime_currency.get("currency_state") != "CURRENT"
+        or runtime_currency.get("current") is not True
+        or str(runtime_currency.get("source_repository") or "").lower()
+        != repository
+        or str(runtime_currency.get("source_revision") or "").lower()
+        != source_revision
+        or str(runtime_currency.get("head_revision") or "").lower()
+        != source_revision
+    ):
+        return "FAIL", "runtime currency does not verify the current exact head"
     return "PASS", f"repository={repository} revision={source_revision}"
 
 
@@ -525,6 +740,19 @@ def canonical_audit_payload(audit: dict[str, Any]) -> bytes:
 def canonical_deployment_receipt_payload(receipt: dict[str, Any]) -> bytes:
     """Return the provider-signed deployment-receipt payload."""
     payload = json.loads(json.dumps(receipt))
+    payload.pop("provider_signature", None)
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def canonical_restore_artifact_payload(artifact: dict[str, Any]) -> bytes:
+    """Return the provider-signed isolated-restore wrapper payload."""
+
+    payload = json.loads(json.dumps(artifact))
     payload.pop("provider_signature", None)
     return json.dumps(
         payload,
@@ -652,27 +880,11 @@ def load_evidence_bytes(
     *,
     label: str,
 ) -> tuple[bytes | None, str]:
-    relative = Path(str(relative_value or ""))
-    if evidence_root is None or not relative.parts or relative.is_absolute():
-        return None, f"{label}_path must be relative to the audit directory"
-    root = evidence_root.resolve()
-    evidence_path = (root / relative).resolve()
-    try:
-        evidence_path.relative_to(root)
-    except ValueError:
-        return None, f"{label}_path escapes the audit directory"
-    try:
-        size = evidence_path.stat().st_size
-        if size > MAX_PRODUCTION_ARTIFACT_BYTES:
-            return None, f"{label} exceeds byte limit size={size}"
-        evidence_bytes = evidence_path.read_bytes()
-    except OSError as exc:
-        return None, f"{label} unavailable error={type(exc).__name__}"
-    observed_digest = hashlib.sha256(evidence_bytes).hexdigest()
-    if not hmac.compare_digest(observed_digest, expected_sha256):
-        return None, f"{label} digest mismatch observed={observed_digest}"
-    return evidence_bytes, (
-        f"verified {label}_path={relative.as_posix()} {label}_sha256={expected_sha256}"
+    return contract_load_evidence_bytes(
+        relative_value,
+        expected_sha256,
+        evidence_root,
+        label=label,
     )
 
 
@@ -746,13 +958,16 @@ def production_requirement_enabled(requirement: str, configured: Any) -> bool:
 def timestamp_freshness_state(
     observed: datetime,
     completed: datetime,
+    verification_time: datetime,
     max_age_seconds: float,
     *,
     label: str,
 ) -> tuple[str, str]:
     if observed > completed:
         return "FAIL", f"{label} timestamp is later than audit completion"
-    age_seconds = (completed - observed).total_seconds()
+    if observed > verification_time:
+        return "FAIL", f"{label} timestamp is later than verification time"
+    age_seconds = (verification_time - observed).total_seconds()
     if age_seconds > max_age_seconds:
         return "FAIL", f"{label} evidence is stale age_seconds={age_seconds:g}"
     return "PASS", f"{label} age_seconds={age_seconds:g}"
@@ -815,6 +1030,7 @@ def production_artifact_state(
         freshness_state, freshness_detail = timestamp_freshness_state(
             deployed_timestamp,
             completed_at,
+            verification_time,
             float(policies["max_deployment_age_seconds"]),
             label="deployment",
         )
@@ -1001,6 +1217,7 @@ def production_artifact_state(
         freshness_state, freshness_detail = timestamp_freshness_state(
             tested_at,
             completed_at,
+            verification_time,
             float(policies["max_browser_age_seconds"]),
             label="browser",
         )
@@ -1092,39 +1309,25 @@ def production_artifact_state(
         required_artifact_keys = {
             "schema",
             "status",
-            "backup_id",
-            "restored_target_asset_id",
+            "source_deployment_asset_id",
             "deployment_url",
             "deployment_revision",
             "deployed_artifact_sha256",
             "deployment_receipt_id",
             "environment",
-            "recovery_point_at",
-            "started_at",
-            "completed_at",
-            "rto_seconds",
-            "rpo_seconds",
+            "measurement_path",
+            "measurement_sha256",
             "dependency_loss_scenarios",
             "corrective_actions",
-            "restore_status",
             "failure_domain_status",
-            "report_path",
-            "report_sha256",
+            "provider",
+            "provider_signature",
         }
         if set(artifact) != required_artifact_keys:
             return "FAIL", "restore evidence shape is invalid"
-        if artifact.get("restore_status") != "PASS":
-            return "FAIL", "restore drill did not pass"
-        if artifact.get("failure_domain_status") != "PASS":
-            return "FAIL", "failure-domain drill did not pass"
-        if re.fullmatch(
-            r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}",
-            str(artifact.get("backup_id") or ""),
-        ) is None:
-            return "FAIL", "backup identifier is missing or invalid"
-        target_id = str(artifact.get("restored_target_asset_id") or "")
+        target_id = str(artifact.get("source_deployment_asset_id") or "")
         if target_id != target_asset_id:
-            return "FAIL", "restore target does not match its evidence index"
+            return "FAIL", "restore source does not match its evidence index"
         target_state, target_detail = audited_live_target_state(
             assets,
             manifest,
@@ -1132,49 +1335,58 @@ def production_artifact_state(
             str(artifact.get("deployment_url") or ""),
         )
         if target_state != "PASS":
-            return "FAIL", f"restored target is invalid: {target_detail}"
-        recovery_point = parsed_timestamp(artifact.get("recovery_point_at"))
-        started = parsed_timestamp(artifact.get("started_at"))
-        completed = parsed_timestamp(artifact.get("completed_at"))
-        if (
-            recovery_point is None
-            or started is None
-            or completed is None
-            or started < recovery_point
-            or completed < started
-        ):
-            return "FAIL", "restore drill timestamps are missing or invalid"
+            return "FAIL", f"source deployment is invalid: {target_detail}"
+
+        measurement_sha256 = str(artifact.get("measurement_sha256") or "")
+        measurement_bytes, measurement_detail = load_evidence_bytes(
+            artifact.get("measurement_path"),
+            measurement_sha256,
+            evidence_root,
+            label="restore_measurement",
+        )
+        if measurement_bytes is None:
+            return "FAIL", measurement_detail
+        try:
+            measurement = json.loads(measurement_bytes)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return "FAIL", "restore measurement is not valid UTF-8 JSON"
+        measurement_state, measurement_validation = validate_restore_measurement(
+            measurement
+        )
+        if measurement_state != "PASS":
+            return "FAIL", measurement_validation
+        assert isinstance(measurement, dict)
+        started = parsed_timestamp(measurement.get("started_at"))
+        completed = parsed_timestamp(measurement.get("completed_at"))
+        assert started is not None and completed is not None
         freshness_state, freshness_detail = timestamp_freshness_state(
             completed,
             completed_at,
+            verification_time,
             float(policies["max_restore_age_seconds"]),
             label="restore",
         )
         if freshness_state != "PASS":
             return freshness_state, freshness_detail
-        for field in ("rto_seconds", "rpo_seconds"):
-            value = artifact.get(field)
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-                or value < 0
-            ):
-                return "FAIL", f"{field} is missing or invalid"
-        observed_rto_seconds = (completed - started).total_seconds()
-        observed_rpo_seconds = (started - recovery_point).total_seconds()
-        if not math.isclose(
-            float(artifact["rto_seconds"]), observed_rto_seconds, abs_tol=1e-9
-        ):
-            return "FAIL", "rto_seconds does not match the recorded restore interval"
-        if not math.isclose(
-            float(artifact["rpo_seconds"]), observed_rpo_seconds, abs_tol=1e-9
-        ):
-            return "FAIL", "rpo_seconds does not match the recorded recovery point"
+        observed_rto_seconds = float(measurement["rto_seconds"])
+        observed_rpo_seconds = float(measurement["rpo_seconds"])
         if observed_rto_seconds > float(policies["max_rto_seconds"]):
             return "FAIL", "rto_seconds exceeds the production policy ceiling"
         if observed_rpo_seconds > float(policies["max_rpo_seconds"]):
             return "FAIL", "rpo_seconds exceeds the production policy ceiling"
+
+        provider = str(artifact.get("provider") or "")
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", provider) is None:
+            return "FAIL", "restore evidence provider identity is missing or invalid"
+        provider_state, provider_detail = verify_rsa_signature(
+            canonical_restore_artifact_payload(artifact),
+            artifact.get("provider_signature"),
+            manifest.get("restore_provider_trusted_keys") or {},
+            expected_provider=provider,
+        )
+        if provider_state != "PASS":
+            return "FAIL", f"restore provider authentication failed: {provider_detail}"
+
         witness_state, witness_detail = production_artifact_state(
             audit,
             manifest,
@@ -1220,6 +1432,9 @@ def production_artifact_state(
                 "restore evidence does not bind the promoted deployment witness "
                 f"mismatch={','.join(restore_mismatches)}"
             )
+
+        if artifact.get("failure_domain_status") != "PASS":
+            return "FAIL", "failure-domain drill did not pass"
         scenarios = artifact.get("dependency_loss_scenarios")
         if not isinstance(scenarios, list) or not scenarios:
             return "FAIL", "witnessed dependency-loss scenarios are missing"
@@ -1242,11 +1457,10 @@ def production_artifact_state(
                 or action.get("status") != "CLOSED"
             ):
                 return "FAIL", "corrective action is malformed or not closed"
-        report_state, report_detail = report_file_state(
-            artifact, evidence_root, label="restore"
+        return "PASS", (
+            f"{reference_detail}; {measurement_detail}; {measurement_validation}; "
+            f"{provider_detail}"
         )
-        if report_state != "PASS":
-            return report_state, report_detail
     return "PASS", reference_detail
 
 
@@ -1491,15 +1705,27 @@ def verify(
             missing = [
                 header
                 for header in required_security_headers
-                if not headers.get(header)
+                if headers.get(header) is not True
             ]
+            header_values = (
+                metadata.get("security_header_values")
+                if isinstance(metadata, dict)
+                else None
+            )
+            semantic_state, semantic_detail = security_header_values_state(
+                header_values
+            )
+            header_state = "PASS" if not missing and semantic_state == "PASS" else "FAIL"
+            header_detail = (
+                semantic_detail
+                if not missing
+                else f"missing={','.join(missing)}"
+            )
             checks.append(
                 result(
                     f"headers.{asset_id}",
-                    "PASS" if not missing else "FAIL",
-                    "all required headers observed"
-                    if not missing
-                    else f"missing={','.join(missing)}",
+                    header_state,
+                    header_detail,
                 )
             )
 

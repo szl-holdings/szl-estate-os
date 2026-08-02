@@ -27,8 +27,12 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile control-plane and verification tools
-        run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py
+        run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py estate/*.py
       - name: Run deterministic Estate OS checks
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
       - name: Test readiness signature-state contract
         run: python ci/test_verify_estate_readiness.py -v
+      - name: Test GitHub evidence completeness controls
+        run: python ci/test_github_controls.py -v
+      - name: Test immutable provenance policy
+        run: python ci/test_provenance_policy.py -v
