@@ -3131,6 +3131,7 @@ def run_audit(
         operating_fabric=operating_fabric,
     )
     payload = {
+        "schema": "szl.estate-audit/v1",
         "meta": {
             "name": APP_NAME,
             "version": APP_VERSION,
