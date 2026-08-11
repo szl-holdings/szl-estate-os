@@ -1,8 +1,8 @@
 """Durable, fail-closed Action Assurance persistence for Estate OS.
 
 This module stores validated Counterfactual Action Passports in the existing
-Estate OS SQLite database.  It never mutates external systems and never
-promotes an unsigned or unverified signature to a verified state.
+Estate OS SQLite database. It never mutates external systems and never promotes
+an unsigned or unverified signature to a verified state.
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ from estate.action_assurance import (
     canonical_json_bytes,
     compute_trust_factors,
     evaluate_citation_ledger,
-    parse_timestamp,
     sha256_bytes,
     validate_passport,
 )
@@ -81,7 +80,10 @@ def _utc_now() -> datetime:
 
 
 def _iso(value: datetime) -> str:
-    return value.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+    # Preserve subsecond precision for diagnostics. Latest-record selection also
+    # uses SQLite rowid as the monotonic insertion-order tiebreaker so callers
+    # that deliberately pass the same timestamp still observe the newest ingest.
+    return value.astimezone(timezone.utc).isoformat(timespec="microseconds")
 
 
 def _json_text(value: Any) -> str:
@@ -303,7 +305,7 @@ def store_status(db_path: Path) -> dict[str, Any]:
             """
         ).fetchone()
         latest = connection.execute(
-            "SELECT * FROM action_assurance_ingests ORDER BY completed_at DESC, ingest_id DESC LIMIT 1"
+            "SELECT * FROM action_assurance_ingests ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
     finally:
         connection.close()
@@ -384,7 +386,7 @@ def latest_citation_report(db_path: Path) -> dict[str, Any] | None:
     try:
         row = connection.execute(
             "SELECT citation_report_json FROM action_assurance_ingests "
-            "ORDER BY completed_at DESC, ingest_id DESC LIMIT 1"
+            "ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
     finally:
         connection.close()
