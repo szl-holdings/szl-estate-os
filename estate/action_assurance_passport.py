@@ -293,6 +293,8 @@ def validate_passport(value: Any) -> list[str]:
         errors.append("a refused action must have outcome.state=REFUSED")
     if action_state == "WITHHELD" and outcome_state != "WITHHELD":
         errors.append("a withheld action must have outcome.state=WITHHELD")
+    if action_state == "PROPOSED" and outcome_state != "NOT_MEASURED":
+        errors.append("a proposed action must have outcome.state=NOT_MEASURED")
     if action_state == "EXECUTED" and outcome_state not in {
         "NOT_MEASURED",
         "SUCCEEDED",

@@ -28,6 +28,9 @@ from estate.action_assurance import (  # noqa: E402
     project_unsigned_interop,
     validate_passport,
 )
+from estate.action_assurance_contract import (  # noqa: E402
+    reject_non_finite_json_constant,
+)
 
 REPORT_SCHEMA = "szl.action-assurance-verification/v1"
 
@@ -43,10 +46,13 @@ def _write_json(path: Path, value: Any) -> None:
 
 def _read_json_object(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=reject_non_finite_json_constant,
+        )
     except FileNotFoundError:
         return None, f"file does not exist: {path}"
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         return None, f"unreadable JSON path={path} error={type(exc).__name__}"
     if not isinstance(value, dict):
         return None, f"JSON root must be an object: {path}"
@@ -78,10 +84,19 @@ def verify(
     passports, load_errors = load_json_documents(passport_dir)
     passport_results: list[dict[str, Any]] = []
     valid_passports: list[dict[str, Any]] = []
+    seen_passport_ids: set[str] = set()
 
     for index, passport in enumerate(passports):
         errors = validate_passport(passport)
         passport_id = passport.get("passport_id")
+        if not errors:
+            assert isinstance(passport_id, str)
+            if passport_id in seen_passport_ids:
+                errors.append(
+                    f"passport.passport_id is duplicated across inputs: {passport_id}"
+                )
+            else:
+                seen_passport_ids.add(passport_id)
         result = {
             "index": index,
             "passport_id": passport_id,

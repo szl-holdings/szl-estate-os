@@ -98,6 +98,30 @@ class ActionAssuranceContractTests(unittest.TestCase):
         errors = validate_passport(passport)
         self.assertIn("BLOCK decisions must produce action.state=REFUSED", errors)
 
+    def test_proposed_action_cannot_claim_a_measured_outcome(self) -> None:
+        passport = copy.deepcopy(self.execute)
+        passport["action"]["state"] = "PROPOSED"
+        passport["action"]["executed_at"] = None
+        rebind(passport)
+        errors = validate_passport(passport)
+        self.assertIn(
+            "a proposed action must have outcome.state=NOT_MEASURED",
+            errors,
+        )
+
+    def test_signature_digest_binds_trust_factor_delta(self) -> None:
+        passport = copy.deepcopy(self.execute)
+        original_digest = passport["signature"]["payload_sha3_256"]
+        passport["trust_factor_delta"] = -99
+        self.assertNotEqual(
+            expected_signature_payload_digest(passport),
+            original_digest,
+        )
+        self.assertIn(
+            "signature.payload_sha3_256 does not bind the passport payload",
+            validate_passport(passport),
+        )
+
     def test_unsigned_interop_never_claims_a_signature(self) -> None:
         projection = project_unsigned_interop(self.execute)
         self.assertEqual(projection["state"], "UNSIGNED_PROJECTION")
@@ -125,6 +149,18 @@ class ActionAssuranceContractTests(unittest.TestCase):
         self.assertEqual(report["status"], "FAIL")
         self.assertTrue(
             any("does not match derived state CURRENT" in error for error in report["errors"]),
+            report,
+        )
+
+    def test_citation_verification_timestamps_cannot_be_in_the_future(self) -> None:
+        ledger = copy.deepcopy(self.ledger)
+        ledger["entries"][0]["retrieved_at"] = "2027-08-01T00:00:00Z"
+        ledger["entries"][0]["last_verified_at"] = "2027-08-01T00:01:00Z"
+        ledger["entries"][0]["next_review_at"] = "2027-08-02T00:00:00Z"
+        report = evaluate_citation_ledger(ledger, now=FIXED_NOW)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertTrue(
+            any("cannot be in the future" in error for error in report["errors"]),
             report,
         )
 
@@ -166,6 +202,58 @@ class ActionAssuranceContractTests(unittest.TestCase):
             self.assertTrue((output_dir / "trust-factor-report.json").is_file())
             interop_files = sorted((output_dir / "interop").glob("*.json"))
             self.assertEqual(len(interop_files), 2)
+
+    def test_verifier_rejects_duplicate_passport_ids_before_artifact_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            passport_dir = root / "passports"
+            passport_dir.mkdir()
+            encoded = json.dumps(self.execute)
+            (passport_dir / "one.json").write_text(encoded, encoding="utf-8")
+            (passport_dir / "two.json").write_text(encoded, encoding="utf-8")
+            output_dir = root / "evidence"
+            report, exit_code = verify(
+                passport_dir=passport_dir,
+                citation_ledger_path=FIXTURE_ROOT / "citations.current.json",
+                output_dir=output_dir,
+                now=FIXED_NOW,
+            )
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(report["status"], "FAIL")
+            self.assertEqual(report["summary"]["valid_passport_count"], 1)
+            self.assertTrue(
+                any(
+                    "duplicated across inputs" in error
+                    for error in report["passport_results"][1]["errors"]
+                ),
+                report,
+            )
+            self.assertEqual(len(list((output_dir / "interop").glob("*.json"))), 1)
+
+    def test_verifier_reports_non_finite_json_as_a_load_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            passport_dir = root / "passports"
+            passport_dir.mkdir()
+            (passport_dir / "valid.json").write_text(
+                json.dumps(self.execute),
+                encoding="utf-8",
+            )
+            (passport_dir / "non-finite.json").write_text(
+                '{"passport_id":"passport.invalid","metrics":{"score":NaN}}',
+                encoding="utf-8",
+            )
+            output_dir = root / "evidence"
+            report, exit_code = verify(
+                passport_dir=passport_dir,
+                citation_ledger_path=FIXTURE_ROOT / "citations.current.json",
+                output_dir=output_dir,
+                now=FIXED_NOW,
+            )
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(report["status"], "FAIL")
+            self.assertEqual(report["summary"]["load_error_count"], 1)
+            self.assertTrue((output_dir / "verification-report.json").is_file())
 
 
 if __name__ == "__main__":

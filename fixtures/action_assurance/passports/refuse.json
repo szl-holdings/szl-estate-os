@@ -89,7 +89,7 @@
     "digest_algorithm": "SHA3-256",
     "dsse_envelope_sha256": null,
     "key_id": null,
-    "payload_sha3_256": "80ea7fd12d94ebcc4d987c4a09131dcb72890c71bb39890c3777e41f3a2afcf5",
+    "payload_sha3_256": "b06373dd67ebbe1f27c4ef389efa11c7028fa2f84503b61bed26eadeeee10cd6",
     "signature_b64": null,
     "state": "UNSIGNED",
     "w3c_vc_sha256": null

@@ -20,6 +20,7 @@ from estate.action_assurance_contract import (
     _valid_identifier,
     _valid_string,
     parse_timestamp,
+    reject_non_finite_json_constant,
 )
 from estate.action_assurance_passport import validate_passport
 
@@ -90,8 +91,12 @@ def evaluate_citation_ledger(
         review_at = parse_timestamp(entry.get("next_review_at"))
         if retrieved_at is None:
             entry_errors.append(f"{label}.retrieved_at is invalid")
+        elif retrieved_at > now:
+            entry_errors.append(f"{label}.retrieved_at cannot be in the future")
         if verified_at is None:
             entry_errors.append(f"{label}.last_verified_at is invalid")
+        elif verified_at > now:
+            entry_errors.append(f"{label}.last_verified_at cannot be in the future")
         if review_at is None:
             entry_errors.append(f"{label}.next_review_at is invalid")
         if retrieved_at and verified_at and verified_at < retrieved_at:
@@ -288,8 +293,11 @@ def load_json_documents(directory: Path) -> tuple[list[dict[str, Any]], list[str
         return documents, [f"passport directory does not exist: {directory}"]
     for path in sorted(directory.glob("*.json")):
         try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            value = json.loads(
+                path.read_text(encoding="utf-8"),
+                parse_constant=reject_non_finite_json_constant,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
             errors.append(f"{path}: unreadable JSON error={type(exc).__name__}")
             continue
         if not isinstance(value, dict):

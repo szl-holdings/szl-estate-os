@@ -154,6 +154,12 @@ def canonical_json_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
+def reject_non_finite_json_constant(value: str) -> Any:
+    """Reject JSON constants that RFC 8259 does not permit."""
+
+    raise ValueError(f"non-finite JSON number is not permitted: {value}")
+
+
 def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -258,7 +264,6 @@ def passport_signing_payload(passport: dict[str, Any]) -> dict[str, Any]:
 
     payload = dict(passport)
     payload.pop("signature", None)
-    payload.pop("trust_factor_delta", None)
     return payload
 
 
