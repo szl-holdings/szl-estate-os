@@ -1,0 +1,18 @@
+{
+  "drift_policy": "Synthetic CI fixture. Replace with independently re-verified production claims.",
+  "entries": [
+    {
+      "claim_id": "claim.fixture-contract",
+      "claim_text": "Synthetic fixture used only to exercise local citation drift validation.",
+      "correction": null,
+      "evidence_label": "MODELED",
+      "last_verified_at": "2026-08-01T00:00:00Z",
+      "next_review_at": "2099-01-01T00:00:00Z",
+      "retrieved_at": "2026-08-01T00:00:00Z",
+      "source_url": "https://example.com/action-assurance-fixture",
+      "status": "CURRENT"
+    }
+  ],
+  "generated_at": "2026-08-01T00:00:00Z",
+  "schema": "szl.external-claim-ledger/v1"
+}

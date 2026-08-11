@@ -1,0 +1,468 @@
+{
+  "$defs": {
+    "action": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "executed_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/identifier"
+        },
+        "parameters_sha3_256": {
+          "$ref": "#/$defs/hex64"
+        },
+        "requested_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "state": {
+          "enum": [
+            "PROPOSED",
+            "REFUSED",
+            "EXECUTED",
+            "FAILED",
+            "WITHHELD"
+          ]
+        },
+        "target": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "kind",
+        "target",
+        "parameters_sha3_256",
+        "requested_at",
+        "executed_at",
+        "state"
+      ],
+      "type": "object"
+    },
+    "claim": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "digest_sha256": {
+          "$ref": "#/$defs/hex64"
+        },
+        "label": {
+          "enum": [
+            "PROVED",
+            "MEASURED",
+            "VERIFIED",
+            "OBSERVED",
+            "REPORTED",
+            "MODELED",
+            "CONJECTURED",
+            "UNAVAILABLE",
+            "DIVERGENT"
+          ]
+        },
+        "observed_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "source_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "claim_id",
+        "label",
+        "source_refs",
+        "observed_at",
+        "digest_sha256"
+      ],
+      "type": "object"
+    },
+    "counterfactual": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence_0_to_1": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "evidence_claim_ids": {
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "statement": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "confidence_0_to_1",
+        "evidence_claim_ids",
+        "recorded_at"
+      ],
+      "type": "object"
+    },
+    "hex64": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "identifier": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$",
+      "type": "string"
+    },
+    "nullableHex64": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nullableIdentifier": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outcome": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_sha3_256": {
+          "$ref": "#/$defs/nullableHex64"
+        },
+        "measured_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metrics": {
+          "type": "object"
+        },
+        "state": {
+          "enum": [
+            "NOT_MEASURED",
+            "SUCCEEDED",
+            "FAILED",
+            "REFUSED",
+            "WITHHELD"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "measured_at",
+        "metrics",
+        "evidence_sha3_256"
+      ],
+      "type": "object"
+    },
+    "oversight": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_receipt_sha256": {
+          "$ref": "#/$defs/nullableHex64"
+        },
+        "approver_id": {
+          "$ref": "#/$defs/nullableIdentifier"
+        },
+        "recorded_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "NOT_REQUIRED",
+            "PENDING",
+            "APPROVED",
+            "REJECTED"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "approver_id",
+        "recorded_at",
+        "approval_receipt_sha256"
+      ],
+      "type": "object"
+    },
+    "rollback": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "executed_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan_sha3_256": {
+          "$ref": "#/$defs/nullableHex64"
+        },
+        "state": {
+          "enum": [
+            "NOT_REQUIRED",
+            "READY",
+            "EXECUTED",
+            "FAILED",
+            "UNAVAILABLE"
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "plan_sha3_256",
+        "state",
+        "executed_at"
+      ],
+      "type": "object"
+    },
+    "scopes": {
+      "items": {
+        "pattern": "^(?:\\*|[A-Za-z0-9][A-Za-z0-9._:/-]{0,254})$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "signature": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "ECDSA-P256"
+        },
+        "digest_algorithm": {
+          "const": "SHA3-256"
+        },
+        "dsse_envelope_sha256": {
+          "$ref": "#/$defs/nullableHex64"
+        },
+        "key_id": {
+          "$ref": "#/$defs/nullableIdentifier"
+        },
+        "payload_sha3_256": {
+          "$ref": "#/$defs/hex64"
+        },
+        "signature_b64": {
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "state": {
+          "enum": [
+            "UNSIGNED",
+            "SIGNED_UNVERIFIED"
+          ]
+        },
+        "w3c_vc_sha256": {
+          "$ref": "#/$defs/nullableHex64"
+        }
+      },
+      "required": [
+        "state",
+        "algorithm",
+        "digest_algorithm",
+        "payload_sha3_256",
+        "key_id",
+        "signature_b64",
+        "dsse_envelope_sha256",
+        "w3c_vc_sha256"
+      ],
+      "type": "object"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "type": "string"
+    }
+  },
+  "$id": "urn:szl:schema:counterfactual-action-passport:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structural contract. Cross-field subset, time-order, digest-binding, decision/action, and oversight invariants are enforced by estate/action_assurance_passport.py.",
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/action"
+    },
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "child_scopes": {
+          "$ref": "#/$defs/scopes"
+        },
+        "constraints": {
+          "type": "object"
+        },
+        "parent_scopes": {
+          "$ref": "#/$defs/scopes"
+        },
+        "resource": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "tool": {
+          "$ref": "#/$defs/identifier"
+        }
+      },
+      "required": [
+        "parent_scopes",
+        "child_scopes",
+        "tool",
+        "resource",
+        "constraints"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/claim"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "graph_sha3_256": {
+          "$ref": "#/$defs/hex64"
+        }
+      },
+      "required": [
+        "claims",
+        "graph_sha3_256"
+      ],
+      "type": "object"
+    },
+    "expected_if_acted": {
+      "$ref": "#/$defs/counterfactual"
+    },
+    "expected_if_withheld": {
+      "$ref": "#/$defs/counterfactual"
+    },
+    "human_oversight": {
+      "$ref": "#/$defs/oversight"
+    },
+    "identity": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "delegation_chain": {
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "principal_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "session_id": {
+          "$ref": "#/$defs/identifier"
+        }
+      },
+      "required": [
+        "agent_id",
+        "principal_id",
+        "session_id",
+        "delegation_chain"
+      ],
+      "type": "object"
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcome"
+    },
+    "passport_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "policy_decision": {
+      "enum": [
+        "ALLOW",
+        "BLOCK",
+        "REQUIRE_APPROVAL",
+        "THROTTLE",
+        "WARN"
+      ]
+    },
+    "recorded_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "rollback": {
+      "$ref": "#/$defs/rollback"
+    },
+    "schema": {
+      "const": "szl.counterfactual-action-passport/v1"
+    },
+    "signature": {
+      "$ref": "#/$defs/signature"
+    },
+    "trust_factor_delta": {
+      "maximum": 100,
+      "minimum": -100,
+      "type": "number"
+    }
+  },
+  "required": [
+    "schema",
+    "passport_id",
+    "recorded_at",
+    "identity",
+    "authority",
+    "evidence",
+    "policy_decision",
+    "human_oversight",
+    "expected_if_acted",
+    "expected_if_withheld",
+    "action",
+    "outcome",
+    "rollback",
+    "signature"
+  ],
+  "title": "SZL Counterfactual Action Passport v1",
+  "type": "object"
+}

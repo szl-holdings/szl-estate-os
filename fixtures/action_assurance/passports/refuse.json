@@ -1,0 +1,98 @@
+{
+  "action": {
+    "action_id": "action.fixture-002",
+    "executed_at": null,
+    "kind": "github.branch.update",
+    "parameters_sha3_256": "dbe872207d2913347d9769206ef4f1f74b5dab179eb07d53603324d0183bfb25",
+    "requested_at": "2026-08-01T13:00:00Z",
+    "state": "REFUSED",
+    "target": "szl-holdings/szl-estate-os:main"
+  },
+  "authority": {
+    "child_scopes": [
+      "repo:szl-holdings/szl-estate-os:read"
+    ],
+    "constraints": {
+      "protected_branch_write": false
+    },
+    "parent_scopes": [
+      "repo:szl-holdings/szl-estate-os:read"
+    ],
+    "resource": "szl-holdings/szl-estate-os:main",
+    "tool": "github.branch.update"
+  },
+  "evidence": {
+    "claims": [
+      {
+        "claim_id": "claim.protected-main",
+        "digest_sha256": "98dc3601973c312d8174023c53a935357ba254d785f66ac2bb69e3039ee157fe",
+        "label": "MEASURED",
+        "observed_at": "2026-08-01T12:55:00Z",
+        "source_refs": [
+          "fixture://branch-protection/main"
+        ]
+      }
+    ],
+    "graph_sha3_256": "60d7da1226fa0a7caf7cdacae6a54cb2a8bb7d19d0abafe98c6eb61a6a3b298c"
+  },
+  "expected_if_acted": {
+    "confidence_0_to_1": 0.99,
+    "evidence_claim_ids": [
+      "claim.protected-main"
+    ],
+    "recorded_at": "2026-08-01T12:59:00Z",
+    "statement": "A direct protected-main mutation would bypass review controls."
+  },
+  "expected_if_withheld": {
+    "confidence_0_to_1": 0.99,
+    "evidence_claim_ids": [
+      "claim.protected-main"
+    ],
+    "recorded_at": "2026-08-01T12:59:00Z",
+    "statement": "Protected main remains unchanged and a review branch can be used instead."
+  },
+  "human_oversight": {
+    "approval_receipt_sha256": null,
+    "approver_id": null,
+    "recorded_at": null,
+    "state": "NOT_REQUIRED"
+  },
+  "identity": {
+    "agent_id": "agent.fixture-01",
+    "delegation_chain": [
+      "principal.stephen-lutar",
+      "agent.fixture-01"
+    ],
+    "principal_id": "principal.stephen-lutar",
+    "session_id": "session.fixture-002"
+  },
+  "outcome": {
+    "evidence_sha3_256": null,
+    "measured_at": null,
+    "metrics": {
+      "protected_branch_writes": 0
+    },
+    "state": "REFUSED"
+  },
+  "passport_id": "passport.fixture.refuse-001",
+  "policy_decision": "BLOCK",
+  "recorded_at": "2026-08-01T13:05:00Z",
+  "rollback": {
+    "available": false,
+    "executed_at": null,
+    "plan_sha3_256": null,
+    "state": "NOT_REQUIRED"
+  },
+  "schema": "szl.counterfactual-action-passport/v1",
+  "signature": {
+    "algorithm": "ECDSA-P256",
+    "digest_algorithm": "SHA3-256",
+    "dsse_envelope_sha256": null,
+    "key_id": null,
+    "payload_sha3_256": "b06373dd67ebbe1f27c4ef389efa11c7028fa2f84503b61bed26eadeeee10cd6",
+    "signature_b64": null,
+    "state": "UNSIGNED",
+    "w3c_vc_sha256": null
+  },
+  "trust_factor_delta": -10.0
+}

@@ -1,0 +1,111 @@
+{
+  "action": {
+    "action_id": "action.fixture-001",
+    "executed_at": "2026-08-01T12:02:00Z",
+    "kind": "github.pull-request.propose",
+    "parameters_sha3_256": "68a851e4fccb068171a475364880e0a82296b21785147735fedf35e2f83678cf",
+    "requested_at": "2026-08-01T12:00:00Z",
+    "state": "EXECUTED",
+    "target": "szl-holdings/szl-estate-os"
+  },
+  "authority": {
+    "child_scopes": [
+      "repo:szl-holdings/szl-estate-os:propose"
+    ],
+    "constraints": {
+      "max_files": 12,
+      "protected_branch_write": false
+    },
+    "parent_scopes": [
+      "repo:szl-holdings/szl-estate-os:read",
+      "repo:szl-holdings/szl-estate-os:propose"
+    ],
+    "resource": "szl-holdings/szl-estate-os",
+    "tool": "github.pull-request.propose"
+  },
+  "evidence": {
+    "claims": [
+      {
+        "claim_id": "claim.change-window",
+        "digest_sha256": "46d8b0fcb642f581da3ef7e4a868aa51705ba37dff3a383790bab6da682c1fb6",
+        "label": "MEASURED",
+        "observed_at": "2026-08-01T11:55:00Z",
+        "source_refs": [
+          "fixture://change-window/approved"
+        ]
+      },
+      {
+        "claim_id": "claim.rollback-plan",
+        "digest_sha256": "35b6e6c4de659ccc56a531e88c72009ee0f0d586797ac056cbfedc491239a94a",
+        "label": "VERIFIED",
+        "observed_at": "2026-08-01T11:56:00Z",
+        "source_refs": [
+          "fixture://rollback/plan-v1"
+        ]
+      }
+    ],
+    "graph_sha3_256": "63912f23c304fbf6825c29943b7a1da0ea9906c25124d7d3056a75eb05b650fe"
+  },
+  "expected_if_acted": {
+    "confidence_0_to_1": 0.92,
+    "evidence_claim_ids": [
+      "claim.change-window",
+      "claim.rollback-plan"
+    ],
+    "recorded_at": "2026-08-01T11:59:00Z",
+    "statement": "The review branch is created without modifying protected main."
+  },
+  "expected_if_withheld": {
+    "confidence_0_to_1": 0.88,
+    "evidence_claim_ids": [
+      "claim.change-window"
+    ],
+    "recorded_at": "2026-08-01T11:59:00Z",
+    "statement": "The implementation remains unreviewed and no repository state changes."
+  },
+  "human_oversight": {
+    "approval_receipt_sha256": "e32098b79b1ae35c052ba1c88f53aafe9c790c43564e58f8b953f2b5de5677e5",
+    "approver_id": "principal.stephen-lutar",
+    "recorded_at": "2026-08-01T12:01:00Z",
+    "state": "APPROVED"
+  },
+  "identity": {
+    "agent_id": "agent.fixture-01",
+    "delegation_chain": [
+      "principal.stephen-lutar",
+      "agent.fixture-01"
+    ],
+    "principal_id": "principal.stephen-lutar",
+    "session_id": "session.fixture-001"
+  },
+  "outcome": {
+    "evidence_sha3_256": "3ad5f03cfd33aeaaa07422d1677de0cee904c682379084a37e3a4644ad49a240",
+    "measured_at": "2026-08-01T12:05:00Z",
+    "metrics": {
+      "files_changed": 8,
+      "protected_branch_writes": 0
+    },
+    "state": "SUCCEEDED"
+  },
+  "passport_id": "passport.fixture.execute-001",
+  "policy_decision": "REQUIRE_APPROVAL",
+  "recorded_at": "2026-08-01T12:10:00Z",
+  "rollback": {
+    "available": true,
+    "executed_at": null,
+    "plan_sha3_256": "29e6f0ead1a499b1ffa49966c15274925ddcc5cbff256336a5ba10b9f7f0c7c9",
+    "state": "READY"
+  },
+  "schema": "szl.counterfactual-action-passport/v1",
+  "signature": {
+    "algorithm": "ECDSA-P256",
+    "digest_algorithm": "SHA3-256",
+    "dsse_envelope_sha256": null,
+    "key_id": null,
+    "payload_sha3_256": "3378ae05e402a9ce63fe97849d227f6b98c2eabf9a7bbcdd5f742d05dea91e85",
+    "signature_b64": null,
+    "state": "UNSIGNED",
+    "w3c_vc_sha256": null
+  },
+  "trust_factor_delta": 2.5
+}

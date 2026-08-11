@@ -1,0 +1,101 @@
+{
+  "$id": "urn:szl:schema:external-claim-ledger:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Local claim and review-deadline contract. Network re-verification is intentionally outside this schema and must be evidenced separately.",
+  "properties": {
+    "drift_policy": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "entries": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$",
+            "type": "string"
+          },
+          "claim_text": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "correction": {
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_label": {
+            "enum": [
+              "PROVED",
+              "MEASURED",
+              "VERIFIED",
+              "OBSERVED",
+              "REPORTED",
+              "MODELED",
+              "CONJECTURED",
+              "UNAVAILABLE",
+              "DIVERGENT"
+            ]
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "next_review_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "retrieved_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source_url": {
+            "format": "uri",
+            "pattern": "^https://",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CURRENT",
+              "STALE",
+              "DIVERGENT",
+              "UNAVAILABLE"
+            ]
+          }
+        },
+        "required": [
+          "claim_id",
+          "claim_text",
+          "source_url",
+          "retrieved_at",
+          "last_verified_at",
+          "next_review_at",
+          "evidence_label",
+          "status",
+          "correction"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "schema": {
+      "const": "szl.external-claim-ledger/v1"
+    }
+  },
+  "required": [
+    "schema",
+    "generated_at",
+    "drift_policy",
+    "entries"
+  ],
+  "title": "SZL External Claim Ledger v1",
+  "type": "object"
+}
