@@ -91,10 +91,10 @@ class ActionAssuranceRuntimeTests(unittest.TestCase):
 
     def test_passport_filters_return_expected_records(self) -> None:
         self.assertEqual(self.ingest([self.execute, self.refuse])["status"], "PASS")
-        execute_only = list_passports(self.db, decision="ALLOW")
+        approval_only = list_passports(self.db, decision="REQUIRE_APPROVAL")
         block_only = list_passports(self.db, decision="BLOCK")
-        self.assertEqual(len(execute_only), 1)
-        self.assertEqual(execute_only[0]["policy_decision"], "ALLOW")
+        self.assertEqual(len(approval_only), 1)
+        self.assertEqual(approval_only[0]["policy_decision"], "REQUIRE_APPROVAL")
         self.assertEqual(len(block_only), 1)
         self.assertEqual(block_only[0]["policy_decision"], "BLOCK")
 
@@ -122,6 +122,28 @@ class ActionAssuranceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertEqual(result["citation_status"], "FAIL")
         self.assertEqual(store_status(self.db)["latest_ingest"]["status"], "FAIL")
+
+    def test_latest_ingest_uses_insertion_order_when_timestamps_match(self) -> None:
+        first = self.ingest([self.execute])
+        self.assertEqual(first["status"], "PASS")
+        stale = copy.deepcopy(self.citations)
+        stale["entries"][0]["next_review_at"] = "2026-08-10T00:00:00+00:00"
+        stale["entries"][0]["status"] = "STALE"
+        second = ingest_action_assurance(
+            self.db,
+            [self.execute],
+            stale,
+            source_label="same-clock-later",
+            now=NOW,
+        )
+        self.assertEqual(second["status"], "FAIL")
+        latest = store_status(self.db)["latest_ingest"]
+        self.assertEqual(latest["ingest_id"], second["ingest_id"])
+        self.assertEqual(latest["status"], "FAIL")
+        citations = latest_citation_report(self.db)
+        self.assertIsNotNone(citations)
+        assert citations is not None
+        self.assertEqual(citations["status"], "FAIL")
 
 
 if __name__ == "__main__":
