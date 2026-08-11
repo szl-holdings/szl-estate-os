@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from estate.action_assurance import expected_signature_payload_digest
 from estate.action_assurance_contract import reject_non_finite_json_constant
@@ -17,7 +22,6 @@ from estate.action_assurance_store import (
     store_status,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = ROOT / "fixtures" / "action_assurance"
 NOW = datetime(2026, 8, 11, 5, 30, tzinfo=timezone.utc)
 
