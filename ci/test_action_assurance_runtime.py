@@ -91,10 +91,10 @@ class ActionAssuranceRuntimeTests(unittest.TestCase):
 
     def test_passport_filters_return_expected_records(self) -> None:
         self.assertEqual(self.ingest([self.execute, self.refuse])["status"], "PASS")
-        execute_only = list_passports(self.db, decision="ALLOW")
+        approval_only = list_passports(self.db, decision="REQUIRE_APPROVAL")
         block_only = list_passports(self.db, decision="BLOCK")
-        self.assertEqual(len(execute_only), 1)
-        self.assertEqual(execute_only[0]["policy_decision"], "ALLOW")
+        self.assertEqual(len(approval_only), 1)
+        self.assertEqual(approval_only[0]["policy_decision"], "REQUIRE_APPROVAL")
         self.assertEqual(len(block_only), 1)
         self.assertEqual(block_only[0]["policy_decision"], "BLOCK")
 
