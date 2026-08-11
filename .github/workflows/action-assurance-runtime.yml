@@ -1,0 +1,79 @@
+name: Action assurance runtime
+
+on:
+  pull_request:
+    paths:
+      - "ACTION_ASSURANCE_RUNTIME.py"
+      - "estate/action_assurance_store.py"
+      - "ci/test_action_assurance_runtime.py"
+      - "fixtures/action_assurance/**"
+      - ".github/workflows/action-assurance-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: action-assurance-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: block
+          disable-telemetry: true
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            codeload.github.com:443
+            objects.githubusercontent.com:443
+            *.actions.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            *.blob.core.windows.net:443
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile runtime
+        run: >-
+          python -m py_compile
+          ACTION_ASSURANCE_RUNTIME.py
+          estate/action_assurance_store.py
+          ci/test_action_assurance_runtime.py
+
+      - name: Run runtime tests
+        run: python ci/test_action_assurance_runtime.py -v
+
+      - name: Exercise immutable ingest
+        run: >-
+          python ACTION_ASSURANCE_RUNTIME.py
+          --database outputs/action-assurance-ci.db
+          ingest
+          --passports fixtures/action_assurance/passports
+          --citations fixtures/action_assurance/citations.current.json
+          --source-label github-actions
+          --now 2026-08-11T05:30:00+00:00
+
+      - name: Read durable status
+        run: >-
+          python ACTION_ASSURANCE_RUNTIME.py
+          --database outputs/action-assurance-ci.db
+          status
+
+      - name: Read modeled report
+        run: >-
+          python ACTION_ASSURANCE_RUNTIME.py
+          --database outputs/action-assurance-ci.db
+          report
