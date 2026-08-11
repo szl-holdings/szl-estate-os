@@ -123,6 +123,28 @@ class ActionAssuranceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["citation_status"], "FAIL")
         self.assertEqual(store_status(self.db)["latest_ingest"]["status"], "FAIL")
 
+    def test_latest_ingest_uses_insertion_order_when_timestamps_match(self) -> None:
+        first = self.ingest([self.execute])
+        self.assertEqual(first["status"], "PASS")
+        stale = copy.deepcopy(self.citations)
+        stale["entries"][0]["next_review_at"] = "2026-08-10T00:00:00+00:00"
+        stale["entries"][0]["status"] = "STALE"
+        second = ingest_action_assurance(
+            self.db,
+            [self.execute],
+            stale,
+            source_label="same-clock-later",
+            now=NOW,
+        )
+        self.assertEqual(second["status"], "FAIL")
+        latest = store_status(self.db)["latest_ingest"]
+        self.assertEqual(latest["ingest_id"], second["ingest_id"])
+        self.assertEqual(latest["status"], "FAIL")
+        citations = latest_citation_report(self.db)
+        self.assertIsNotNone(citations)
+        assert citations is not None
+        self.assertEqual(citations["status"], "FAIL")
+
 
 if __name__ == "__main__":
     unittest.main()
