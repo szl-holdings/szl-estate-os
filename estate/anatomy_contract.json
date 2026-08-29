@@ -1,6 +1,6 @@
 {
   "schema": "szl.anatomy-second-brain/v1",
-  "capturedAt": "2026-08-29T03:40:00Z",
+  "capturedAt": "2026-08-29T04:05:00Z",
   "publicFreeze": "NO_MUTATION_READ_ONLY_STRATEGY",
   "mutation": {
     "thisPr": "private existing surface szl-holdings/szl-estate-os",
@@ -30,6 +30,15 @@
     "evidenceClass": "MODELED",
     "not": "live multi-party consensus network"
   },
+  "gate": {
+    "schema": "szl.anatomy-gate/v1",
+    "module": "estate.anatomy_gate.evaluate_body_gate",
+    "distinctFrom": "szl_khipu.anatomy.evaluate_anatomy",
+    "kinds": ["lyte.approve", "lyte.override", "estate.admit", "wave.unlock"],
+    "perfusionOrder": ["willay", "brain", "heart", "circulatory", "nervous", "skeleton"],
+    "modeledHeldUsd": 76500,
+    "evidenceClass": "MODELED"
+  },
   "secondBrain": {
     "claimedNodes": 9000,
     "foundLiveGraph": false,
@@ -49,5 +58,5 @@
   "classifiedNewPublic": ["szl-holdings/szl-khipu", "szl-holdings/nexus"],
   "githubLiveSearchTotal": 78,
   "packetRegistryRows": 76,
-  "limitation": "A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI. Organ quorum is MODELED. Khipu BFT remains Conjecture 2."
+  "limitation": "A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI. Organ quorum is MODELED. evaluate_body_gate is MODELED and distinct from szl-khipu organ liveness. Khipu BFT remains Conjecture 2."
 }
