@@ -1,0 +1,43 @@
+{
+  "schema": "szl.anatomy-gate/v1",
+  "capturedAt": "2026-08-29T04:05:00Z",
+  "publicFreeze": "NO_MUTATION_READ_ONLY_STRATEGY",
+  "distinctFrom": {
+    "module": "szl_khipu.anatomy.evaluate_anatomy",
+    "answers": "organ LIVE/DOWN (zero_heart, leak_canal, live_count, energy UNAVAILABLE)",
+    "thisModule": "estate.anatomy_gate.evaluate_body_gate",
+    "thisAnswers": "may this commercial action pass the body"
+  },
+  "kinds": ["lyte.approve", "lyte.override", "estate.admit", "wave.unlock"],
+  "organQuorum": {
+    "witnesses": ["heart", "willay", "circulatory", "skeleton"],
+    "rule": "3-of-4 ALLOW required; WILLAY veto is absolute; SKELETON abstains while Wave 0 unsigned",
+    "observers": ["brain", "nervous"],
+    "evidenceClass": "MODELED",
+    "conjecture": "Khipu BFT 3-of-4 = Conjecture 2",
+    "not": "live multi-party consensus network"
+  },
+  "perfusion": {
+    "order": ["willay", "brain", "heart", "circulatory", "nervous", "skeleton"],
+    "meaning": "A case travels the organs as blood. Each organ votes or observes. The body verdict gates APPROVE.",
+    "evidenceClass": "MODELED"
+  },
+  "khipuNumber": {
+    "encoding": "inca-decimal",
+    "places": [100000, 10000, 1000, 100, 10, 1],
+    "zero": "empty band",
+    "not": "live lake total or ROI"
+  },
+  "standingFixture": {
+    "denyCases": ["LYT-1041", "LYT-1042", "LYT-1044", "LYT-1045"],
+    "modeledHeldUsd": 76500,
+    "label": "MODELED leakage held — not a paid-pilot result"
+  },
+  "mutation": {
+    "thisPr": "private existing surface szl-holdings/szl-estate-os",
+    "newPublicRepo": false,
+    "newHfSpace": false,
+    "huggingfacePath": "consolidate into existing SZLHOLDINGS/anatomy"
+  },
+  "limitation": "evaluate_body_gate is MODELED. Distinct from szl-khipu evaluate_anatomy (organ LIVE/DOWN). Not production ATO. Khipu BFT remains Conjecture 2. A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI."
+}
