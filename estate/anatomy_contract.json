@@ -1,6 +1,6 @@
 {
   "schema": "szl.anatomy-second-brain/v1",
-  "capturedAt": "2026-08-29T04:05:00Z",
+  "capturedAt": "2026-08-29T04:15:00Z",
   "publicFreeze": "NO_MUTATION_READ_ONLY_STRATEGY",
   "mutation": {
     "thisPr": "private existing surface szl-holdings/szl-estate-os",
@@ -11,21 +11,42 @@
   "doctrine": {
     "version": "v11 LOCKED",
     "lockedProven": 8,
-    "lockedSet": ["F1", "F4", "F7", "F11", "F12", "F18", "F19", "F22"],
+    "lockedSet": [
+      "F1",
+      "F4",
+      "F7",
+      "F11",
+      "F12",
+      "F18",
+      "F19",
+      "F22"
+    ],
     "kernel": "c7c0ba17",
     "lambda": "Conjecture 1",
     "khipuBft": "Conjecture 2",
     "energy": "UNAVAILABLE"
   },
-  "organs": ["willay", "heart", "circulatory", "brain", "nervous", "skeleton"],
+  "organs": [
+    "willay",
+    "heart",
+    "circulatory",
+    "brain",
+    "nervous",
+    "skeleton"
+  ],
   "khipu": {
     "primaryCord": "doctrine v11 spine",
     "pendantCords": 6,
     "knots": "DERIVED recapture + local receipts",
-    "ghosts": "unknotted remainder of claimed 9000 — UNAVAILABLE, not invented live nodes"
+    "ghosts": "unknotted remainder of claimed 9000 \u2014 UNAVAILABLE, not invented live nodes"
   },
   "organQuorum": {
-    "witnesses": ["heart", "willay", "circulatory", "skeleton"],
+    "witnesses": [
+      "heart",
+      "willay",
+      "circulatory",
+      "skeleton"
+    ],
     "rule": "3-of-4 ALLOW required; WILLAY veto is absolute; SKELETON abstains while Wave 0 unsigned",
     "evidenceClass": "MODELED",
     "not": "live multi-party consensus network"
@@ -34,10 +55,24 @@
     "schema": "szl.anatomy-gate/v1",
     "module": "estate.anatomy_gate.evaluate_body_gate",
     "distinctFrom": "szl_khipu.anatomy.evaluate_anatomy",
-    "kinds": ["lyte.approve", "lyte.override", "estate.admit", "wave.unlock"],
-    "perfusionOrder": ["willay", "brain", "heart", "circulatory", "nervous", "skeleton"],
+    "kinds": [
+      "lyte.approve",
+      "lyte.override",
+      "estate.admit",
+      "wave.unlock"
+    ],
+    "perfusionOrder": [
+      "willay",
+      "brain",
+      "heart",
+      "circulatory",
+      "nervous",
+      "skeleton"
+    ],
     "modeledHeldUsd": 76500,
-    "evidenceClass": "MODELED"
+    "evidenceClass": "MODELED",
+    "ledger": "evaluate_body_gate runs before APPROVE/OVERRIDE; blocked actions emit anatomy.block and do not change status",
+    "vectors": "fixtures/anatomy_gate_vectors.json"
   },
   "secondBrain": {
     "claimedNodes": 9000,
@@ -55,8 +90,11 @@
     "loom": "https://huggingface.co/spaces/SZLHOLDINGS/Khipu-Loom",
     "holographic": "https://huggingface.co/spaces/SZLHOLDINGS/holographic"
   },
-  "classifiedNewPublic": ["szl-holdings/szl-khipu", "szl-holdings/nexus"],
+  "classifiedNewPublic": [
+    "szl-holdings/szl-khipu",
+    "szl-holdings/nexus"
+  ],
   "githubLiveSearchTotal": 78,
   "packetRegistryRows": 76,
-  "limitation": "A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI. Organ quorum is MODELED. evaluate_body_gate is MODELED and distinct from szl-khipu organ liveness. Khipu BFT remains Conjecture 2."
+  "limitation": "A receipt proves scoped integrity and lineage \u2014 not correctness, safety, authorization, customer adoption, or ROI. Organ quorum is MODELED. evaluate_body_gate is MODELED and distinct from szl-khipu organ liveness. Khipu BFT remains Conjecture 2."
 }

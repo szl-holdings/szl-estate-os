@@ -13,14 +13,20 @@
 
 Do not collapse the two. Do not brand this as a second Anatomy kernel on a new public surface.
 
+## No bandages
+
+The body is not a UI warning. The ledger calls `evaluate_body_gate` / `body_blocks_action` **before** status can become APPROVED or OVERRIDDEN.
+
+- Blocked APPROVE/OVERRIDE writes `anatomy.block` (SHA-256 receipt) and **leaves status QUEUED**
+- HOLD and ROLLBACK are never blocked
+- Golden vectors in `fixtures/anatomy_gate_vectors.json` are the shared truth with the Estate OS demo
+
 ## What it gates
 
 - `lyte.approve` — blocked unless body ALLOW
 - `lyte.override` — WILLAY vetoes override-without-reason (≥8 char written reason)
 - `estate.admit` — DENY while Wave 0 unsigned (no new public surface)
 - `wave.unlock` — DENY while skeleton abstains
-
-HOLD and ROLLBACK are never blocked by the body.
 
 ## Quorum (Conjecture 2, MODELED)
 
@@ -35,11 +41,9 @@ This is **not** a live multi-party consensus network.
 
 ## Perfusion
 
-A case travels WILLAY → BRAIN → HEART → CIRCULATORY → NERVOUS → SKELETON as blood. Each organ votes or observes. The body verdict is receipted. MODELED.
+A case travels WILLAY → BRAIN → HEART → CIRCULATORY → NERVOUS → SKELETON as blood. Each organ votes or observes. The body verdict is receipted and stamped on the case overlay. MODELED.
 
 ## Inca decimal
-
-Modeled leakage on the standing DENY fixture encodes as place-value clusters on a hanging cord. Empty band is zero. Not a live lake total. Not ROI.
 
 Standing DENY fixture: LYT-1041, LYT-1042, LYT-1044, LYT-1045 → **$76,500 MODELED held**.
 
@@ -48,6 +52,7 @@ Standing DENY fixture: LYT-1041, LYT-1042, LYT-1044, LYT-1045 → **$76,500 MODE
 - `estate/anatomy_gate.py`
 - `estate/khipu_number.py`
 - `estate/anatomy_gate.json`
+- `fixtures/anatomy_gate_vectors.json`
 - `ci/test_anatomy_gate.py`
 
 ## Hugging Face

@@ -27,11 +27,14 @@ New public surfaces after Wave 0 freeze, classified not front-doored: `szl-khipu
 
 It is **not** `szl_khipu.anatomy.evaluate_anatomy`, which answers organ LIVE/DOWN.
 
+- The ledger calls the body **before** status can become APPROVED. No UI bandage.
+- Blocked APPROVE/OVERRIDE writes `anatomy.block` and leaves the case QUEUED
 - `lyte.approve` blocked unless body ALLOW
 - `lyte.override` requires a written reason; WILLAY vetoes silence
 - `estate.admit` DENY while Wave 0 unsigned
 - `wave.unlock` DENY while skeleton abstains
-- Perfusion: a case travels WILLAY → BRAIN → HEART → CIRCULATORY → NERVOUS → SKELETON
+- Perfusion stamps the case overlay
+- Golden vectors: `fixtures/anatomy_gate_vectors.json`
 - Inca decimal of standing DENY fixture: **$76,500 MODELED held** (LYT-1041, 1042, 1044, 1045)
 
 See `docs/ANATOMY_GATE.md`, `estate/anatomy_gate.py`, `ci/test_anatomy_gate.py`.
