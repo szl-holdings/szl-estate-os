@@ -15,9 +15,10 @@ Do not collapse the two. Do not brand this as a second Anatomy kernel on a new p
 
 ## No bandages
 
-The body is not a UI warning. The ledger calls `evaluate_body_gate` / `body_blocks_action` **before** status can become APPROVED or OVERRIDDEN.
+The body is not a UI warning. **Approve is perfusion.** The case travels WILLAY → BRAIN → HEART → CIRCULATORY → NERVOUS → SKELETON, then the ledger calls `evaluate_body_gate` / `body_blocks_action` **before** status can become APPROVED or OVERRIDDEN.
 
 - Blocked APPROVE/OVERRIDE writes `anatomy.block` (SHA-256 receipt) and **leaves status QUEUED**
+- The khipu ties `anatomy.block` on WILLAY when conscience vetoes, otherwise HEART
 - HOLD and ROLLBACK are never blocked
 - Golden vectors in `fixtures/anatomy_gate_vectors.json` are the shared truth with the Estate OS demo
 
