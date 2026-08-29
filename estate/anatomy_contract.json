@@ -1,6 +1,6 @@
 {
   "schema": "szl.anatomy-second-brain/v1",
-  "capturedAt": "2026-08-29T03:10:00Z",
+  "capturedAt": "2026-08-29T03:40:00Z",
   "publicFreeze": "NO_MUTATION_READ_ONLY_STRATEGY",
   "mutation": {
     "thisPr": "private existing surface szl-holdings/szl-estate-os",
@@ -17,21 +17,25 @@
     "khipuBft": "Conjecture 2",
     "energy": "UNAVAILABLE"
   },
-  "organs": [
-    "willay",
-    "heart",
-    "circulatory",
-    "brain",
-    "nervous",
-    "skeleton"
-  ],
+  "organs": ["willay", "heart", "circulatory", "brain", "nervous", "skeleton"],
+  "khipu": {
+    "primaryCord": "doctrine v11 spine",
+    "pendantCords": 6,
+    "knots": "DERIVED recapture + local receipts",
+    "ghosts": "unknotted remainder of claimed 9000 — UNAVAILABLE, not invented live nodes"
+  },
+  "organQuorum": {
+    "witnesses": ["heart", "willay", "circulatory", "skeleton"],
+    "rule": "3-of-4 ALLOW required; WILLAY veto is absolute; SKELETON abstains while Wave 0 unsigned",
+    "evidenceClass": "MODELED",
+    "not": "live multi-party consensus network"
+  },
   "secondBrain": {
     "claimedNodes": 9000,
     "foundLiveGraph": false,
     "evidenceClass": "UNAVAILABLE",
     "foundAs": "cytoscape nodeRepulsion:9000 in szl-holdings/a11oy console/index.html",
     "operationalClass": "DERIVED",
-    "operationalNodesApprox": 139,
     "projectionClass": "MODELED",
     "projectionNote": "9000 is ROADMAP capacity of a full repo-tree + Hub + lake index, not a live count"
   },
@@ -45,5 +49,5 @@
   "classifiedNewPublic": ["szl-holdings/szl-khipu", "szl-holdings/nexus"],
   "githubLiveSearchTotal": 78,
   "packetRegistryRows": 76,
-  "limitation": "A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI."
+  "limitation": "A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI. Organ quorum is MODELED. Khipu BFT remains Conjecture 2."
 }
