@@ -1,0 +1,82 @@
+{
+  "schema": "szl.anatomy-gate.vectors/v1",
+  "evidenceClass": "MODELED",
+  "standingHeldUsd": 76500,
+  "denyCases": ["LYT-1041", "LYT-1042", "LYT-1044", "LYT-1045"],
+  "limitation": "Golden vectors for evaluate_body_gate. MODELED. Distinct from szl-khipu evaluate_anatomy. Not ATO, not live BFT, not ROI.",
+  "vectors": [
+    {
+      "id": "V0",
+      "title": "estate.admit DENY while Wave 0 unsigned",
+      "kind": "estate.admit",
+      "expect": "DENY",
+      "reached": false
+    },
+    {
+      "id": "V1",
+      "title": "wave.unlock DENY while skeleton abstains",
+      "kind": "wave.unlock",
+      "expect": "DENY",
+      "reached": false
+    },
+    {
+      "id": "V2",
+      "title": "lyte.approve of leaking SOW DENY",
+      "kind": "lyte.approve",
+      "caseId": "LYT-1041",
+      "policy_verdict": "DENY",
+      "policy_hits": ["margin floor 22%"],
+      "expect": "DENY",
+      "willayVeto": true
+    },
+    {
+      "id": "V3",
+      "title": "override without reason WILLAY veto",
+      "kind": "lyte.override",
+      "caseId": "LYT-1041",
+      "policy_verdict": "DENY",
+      "policy_hits": ["margin floor 22%"],
+      "reason": "",
+      "expect": "DENY",
+      "willayVeto": true
+    },
+    {
+      "id": "V4",
+      "title": "override with written reason ALLOW (MODELED)",
+      "kind": "lyte.override",
+      "caseId": "LYT-1041",
+      "policy_verdict": "DENY",
+      "policy_hits": ["margin floor 22%"],
+      "reason": "VP-PS written hold pending legal.",
+      "expect": "ALLOW"
+    },
+    {
+      "id": "V5",
+      "title": "lyte.approve of accepted work ALLOW",
+      "kind": "lyte.approve",
+      "caseId": "LYT-1048",
+      "policy_verdict": "ALLOW",
+      "rationale": "Acceptance evidence is present. Invoice under billed rules and close with an outcome receipt.",
+      "expect": "ALLOW",
+      "reached": true
+    },
+    {
+      "id": "V6",
+      "title": "lyte.approve of incomplete opportunity ABSTAIN",
+      "kind": "lyte.approve",
+      "caseId": "LYT-1046",
+      "policy_verdict": "ABSTAIN",
+      "expect": "ABSTAIN",
+      "reached": false
+    },
+    {
+      "id": "V7",
+      "title": "lyte.approve of silent overrun ESCALATE fails closed to ABSTAIN",
+      "kind": "lyte.approve",
+      "caseId": "LYT-1043",
+      "policy_verdict": "ESCALATE",
+      "expect": "ABSTAIN",
+      "reached": false
+    }
+  ]
+}

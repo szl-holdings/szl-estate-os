@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -10,6 +11,8 @@ if str(ROOT) not in sys.path:
 
 from estate.anatomy_gate import body_blocks_action, evaluate_body_gate  # noqa: E402
 from estate.khipu_number import decode_decimal, encode_decimal  # noqa: E402
+
+VECTORS_PATH = ROOT / "fixtures" / "anatomy_gate_vectors.json"
 
 
 class AnatomyGateTests(unittest.TestCase):
@@ -89,6 +92,11 @@ class AnatomyGateTests(unittest.TestCase):
         self.assertEqual(ev["verdict"], "ABSTAIN")
         self.assertFalse(ev["reached"])
 
+    def test_escalate_approve_fails_closed(self) -> None:
+        blocked = body_blocks_action("APPROVE", policy_verdict="ESCALATE")
+        self.assertIsNotNone(blocked)
+        self.assertEqual(blocked["verdict"], "ABSTAIN")
+
     def test_unknown_kind_raises(self) -> None:
         with self.assertRaises(ValueError):
             evaluate_body_gate(kind="public.mint")
@@ -104,6 +112,27 @@ class AnatomyGateTests(unittest.TestCase):
         self.assertEqual(ev["runtimeState"], "DEMO")
         self.assertIn("Not production ATO", ev["limitation"])
         self.assertIn("szl-khipu", ev["limitation"])
+
+    def test_golden_vectors(self) -> None:
+        payload = json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(payload["schema"], "szl.anatomy-gate.vectors/v1")
+        self.assertEqual(payload["standingHeldUsd"], 76500)
+        self.assertEqual(payload["evidenceClass"], "MODELED")
+        for row in payload["vectors"]:
+            with self.subTest(row["id"]):
+                ev = evaluate_body_gate(
+                    kind=row["kind"],
+                    policy_verdict=row.get("policy_verdict", "ABSTAIN"),
+                    policy_hits=row.get("policy_hits"),
+                    missing_evidence=row.get("missing_evidence"),
+                    rationale=row.get("rationale", ""),
+                    reason=row.get("reason", ""),
+                )
+                self.assertEqual(ev["verdict"], row["expect"], row)
+                if "willayVeto" in row:
+                    self.assertEqual(ev["willayVeto"], row["willayVeto"], row)
+                if "reached" in row:
+                    self.assertEqual(ev["reached"], row["reached"], row)
 
 
 if __name__ == "__main__":
