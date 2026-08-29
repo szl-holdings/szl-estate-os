@@ -27,7 +27,7 @@ New public surfaces after Wave 0 freeze, classified not front-doored: `szl-khipu
 
 It is **not** `szl_khipu.anatomy.evaluate_anatomy`, which answers organ LIVE/DOWN.
 
-- The ledger calls the body **before** status can become APPROVED. No UI bandage.
+- **Approve is perfusion.** The case travels the organs, then the ledger calls the body. No UI bandage.
 - Blocked APPROVE/OVERRIDE writes `anatomy.block` and leaves the case QUEUED
 - `lyte.approve` blocked unless body ALLOW
 - `lyte.override` requires a written reason; WILLAY vetoes silence
