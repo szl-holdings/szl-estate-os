@@ -1,0 +1,49 @@
+{
+  "schema": "szl.anatomy-second-brain/v1",
+  "capturedAt": "2026-08-29T03:10:00Z",
+  "publicFreeze": "NO_MUTATION_READ_ONLY_STRATEGY",
+  "mutation": {
+    "thisPr": "private existing surface szl-holdings/szl-estate-os",
+    "newPublicRepo": false,
+    "newHfSpace": false,
+    "huggingfacePath": "consolidate into existing SZLHOLDINGS/anatomy"
+  },
+  "doctrine": {
+    "version": "v11 LOCKED",
+    "lockedProven": 8,
+    "lockedSet": ["F1", "F4", "F7", "F11", "F12", "F18", "F19", "F22"],
+    "kernel": "c7c0ba17",
+    "lambda": "Conjecture 1",
+    "khipuBft": "Conjecture 2",
+    "energy": "UNAVAILABLE"
+  },
+  "organs": [
+    "willay",
+    "heart",
+    "circulatory",
+    "brain",
+    "nervous",
+    "skeleton"
+  ],
+  "secondBrain": {
+    "claimedNodes": 9000,
+    "foundLiveGraph": false,
+    "evidenceClass": "UNAVAILABLE",
+    "foundAs": "cytoscape nodeRepulsion:9000 in szl-holdings/a11oy console/index.html",
+    "operationalClass": "DERIVED",
+    "operationalNodesApprox": 139,
+    "projectionClass": "MODELED",
+    "projectionNote": "9000 is ROADMAP capacity of a full repo-tree + Hub + lake index, not a live count"
+  },
+  "surfaces": {
+    "atlas": "https://huggingface.co/spaces/SZLHOLDINGS/anatomy",
+    "atlasSource": "https://github.com/szl-holdings/anatomy",
+    "kernel": "https://github.com/szl-holdings/szl-khipu",
+    "loom": "https://huggingface.co/spaces/SZLHOLDINGS/Khipu-Loom",
+    "holographic": "https://huggingface.co/spaces/SZLHOLDINGS/holographic"
+  },
+  "classifiedNewPublic": ["szl-holdings/szl-khipu", "szl-holdings/nexus"],
+  "githubLiveSearchTotal": 78,
+  "packetRegistryRows": 76,
+  "limitation": "A receipt proves scoped integrity and lineage — not correctness, safety, authorization, customer adoption, or ROI."
+}
