@@ -53,12 +53,6 @@
       "public": true
     },
     {
-      "asset_id": "github:repo:szl-holdings/docs-site",
-      "tier": 1,
-      "role": "developer documentation surface",
-      "public": true
-    },
-    {
       "asset_id": "github:repo:szl-holdings/a11oy-net",
       "tier": 1,
       "role": "proof-registry source surface",
