@@ -63,7 +63,15 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          # This is deliberately credential-free. Authenticated organization
+          # completeness belongs to a separately authorized production packet.
+          # Passing the per-run github.token here cannot reconcile org-wide
+          # private inventory, which honestly degrades the github source to
+          # PARTIAL and fails the baseline contract that requires MEASURED.
+          GH_TOKEN: ""
+          GITHUB_TOKEN: ""
+          HF_TOKEN: ""
+          HUGGING_FACE_HUB_TOKEN: ""
         run: >-
           python SZL_ONE_OF_ONE_ESTATE_OS.py audit
           --github-org szl-holdings
