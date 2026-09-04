@@ -23,7 +23,7 @@ creates measured proposals for them instead of treating strategy as approval.
 From this directory:
 
 ```powershell
-$python = "C:\Users\steph\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+$python = (Get-Command python).Source
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py self-test
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py audit
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py operating-report
