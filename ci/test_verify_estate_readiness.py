@@ -100,6 +100,7 @@ def manifest(requirements: dict[str, object] | None = None) -> dict[str, object]
         "canonical_identities": {
             "github_organization": "szl-holdings",
             "huggingface_organization": "SZLHOLDINGS",
+            "huggingface_spaces": ["SZLHOLDINGS/a11oy"],
             "domains": ["a-11-oy.com", "a11oy.net"],
         },
         "critical_assets": [
@@ -712,6 +713,11 @@ class ReadinessTests(unittest.TestCase):
 
     def test_deployment_url_identity_is_derived_from_asset_id(self) -> None:
         contract = manifest()
+        canonical = contract["canonical_identities"]
+        assert isinstance(canonical, dict)
+        spaces = canonical["huggingface_spaces"]
+        assert isinstance(spaces, list)
+        spaces.append("betterwithage/anatomy")
         passing_urls = (
             (
                 "domain:route:a-11-oy.com/",
@@ -720,6 +726,10 @@ class ReadinessTests(unittest.TestCase):
             (
                 "huggingface:space:szlholdings/a11oy",
                 "https://huggingface.co/spaces/SZLHOLDINGS/a11oy",
+            ),
+            (
+                "huggingface:space:betterwithage/anatomy",
+                "https://huggingface.co/spaces/betterwithage/anatomy",
             ),
             (
                 "huggingface:space:szlholdings/a11oy",

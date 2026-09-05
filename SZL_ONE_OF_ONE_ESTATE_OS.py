@@ -345,6 +345,7 @@ class ScoreCard:
 class AuditConfig:
     github_org: str = DEFAULT_GITHUB_ORG
     hf_org: str = DEFAULT_HF_ORG
+    hf_spaces: tuple[str, ...] = ()
     domains: tuple[str, ...] = DEFAULT_DOMAINS
     deep: bool = False
     timeout: float = DEFAULT_TIMEOUT
@@ -353,6 +354,24 @@ class AuditConfig:
 
     def public_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
+
+
+def normalize_hf_spaces(values: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    pattern = re.compile(
+        r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}/"
+        r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+    )
+    for value in values:
+        candidate = str(value).strip()
+        if pattern.fullmatch(candidate) is None:
+            raise ValueError(f"Invalid Hugging Face Space identity: {value!r}")
+        key = candidate.lower()
+        if key not in seen:
+            seen.add(key)
+            normalized.append(candidate)
+    return tuple(normalized)
 
 
 def utc_now() -> str:
@@ -1589,7 +1608,11 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
     assets: list[Asset] = []
     errors: list[str] = []
     warnings: list[str] = []
-    metadata: dict[str, Any] = {"org": config.hf_org}
+    explicit_spaces = normalize_hf_spaces(config.hf_spaces)
+    metadata: dict[str, Any] = {
+        "org": config.hf_org,
+        "explicit_spaces": list(explicit_spaces),
+    }
     kinds = (("model", "models"), ("dataset", "datasets"), ("space", "spaces"))
     for kind, endpoint in kinds:
         query = urllib.parse.urlencode(
@@ -1607,6 +1630,41 @@ def collect_huggingface(config: AuditConfig) -> tuple[list[Asset], SourceReport]
         if not isinstance(page_data, list):
             errors.append(f"{endpoint}: INVALID_SHAPE")
             continue
+        if kind == "space":
+            observed_identities = {
+                identity.lower()
+                for item in page_data
+                if isinstance(item, dict)
+                if (identity := hf_asset_identity("space", item))
+            }
+            for identity in explicit_spaces:
+                if identity.lower() in observed_identities:
+                    continue
+                encoded_identity = urllib.parse.quote(identity, safe="/")
+                try:
+                    explicit_item, _ = get_json(
+                        f"https://huggingface.co/api/spaces/{encoded_identity}",
+                        headers=headers,
+                        timeout=config.timeout,
+                    )
+                except SourceError as exc:
+                    errors.append(
+                        f"spaces/{identity}: {exc.code}: {sanitize_error(exc)}"
+                    )
+                    continue
+                explicit_identity = (
+                    hf_asset_identity("space", explicit_item)
+                    if isinstance(explicit_item, dict)
+                    else None
+                )
+                if (
+                    explicit_identity is None
+                    or explicit_identity.lower() != identity.lower()
+                ):
+                    errors.append(f"spaces/{identity}: IDENTITY_MISMATCH")
+                    continue
+                page_data.append(explicit_item)
+                observed_identities.add(identity.lower())
         if len(page_data) >= 1000:
             warnings.append(f"{endpoint} may be truncated at 1000 items")
         details_by_identity: dict[str, dict[str, Any]] = {}
@@ -4317,6 +4375,12 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--github-org", default=DEFAULT_GITHUB_ORG)
     audit_parser.add_argument("--hf-org", default=DEFAULT_HF_ORG)
     audit_parser.add_argument(
+        "--hf-space",
+        action="append",
+        dest="hf_spaces",
+        help="Explicit owner/name Space to observe; repeat for cross-owner Spaces",
+    )
+    audit_parser.add_argument(
         "--domain",
         action="append",
         dest="domains",
@@ -4436,6 +4500,7 @@ def main(argv: list[str] | None = None) -> int:
             config = AuditConfig(
                 github_org=args.github_org,
                 hf_org=args.hf_org,
+                hf_spaces=normalize_hf_spaces(args.hf_spaces or []),
                 domains=tuple(args.domains or DEFAULT_DOMAINS),
                 deep=args.deep,
                 timeout=args.timeout,

@@ -34,5 +34,7 @@ jobs:
         run: python ci/test_verify_estate_readiness.py -v
       - name: Test GitHub evidence completeness controls
         run: python ci/test_github_controls.py -v
+      - name: Test explicit Hugging Face Space controls
+        run: python ci/test_huggingface_controls.py -v
       - name: Test immutable provenance policy
         run: python ci/test_provenance_policy.py -v
