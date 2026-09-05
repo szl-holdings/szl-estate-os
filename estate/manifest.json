@@ -1,10 +1,15 @@
 {
   "schema": "szl.estate-critical-surface/v1",
   "status": "CONTROL_CONTRACT",
-  "as_of": "2026-08-01",
+  "as_of": "2026-09-05",
   "canonical_identities": {
     "github_organization": "szl-holdings",
     "huggingface_organization": "SZLHOLDINGS",
+    "huggingface_spaces": [
+      "SZLHOLDINGS/a11oy",
+      "SZLHOLDINGS/killinchu",
+      "betterwithage/anatomy"
+    ],
     "domains": [
       "a-11-oy.com",
       "a11oy.net"
@@ -99,16 +104,9 @@
       "required_status": "LIVE"
     },
     {
-      "asset_id": "huggingface:space:szlholdings/anatomy",
+      "asset_id": "huggingface:space:betterwithage/anatomy",
       "tier": 1,
       "role": "estate anatomy Space",
-      "public": true,
-      "required_status": "LIVE"
-    },
-    {
-      "asset_id": "huggingface:space:szlholdings/cosmos",
-      "tier": 1,
-      "role": "estate discovery Space",
       "public": true,
       "required_status": "LIVE"
     },
@@ -127,6 +125,15 @@
       "evidence_requirement": "AUTHENTICATED_INVENTORY"
     }
   ],
+  "retired_assets": [
+    {
+      "asset_id": "huggingface:space:szlholdings/cosmos",
+      "status": "FOLDED",
+      "target": "huggingface:space:betterwithage/anatomy",
+      "as_of": "2026-09-05",
+      "reason": "The discovery surface is consolidated into the source-bound Anatomy Space; no replacement Space is minted."
+    }
+  ],
   "production_recovery_contract": {
     "required_scenarios": [
       "primary-store-loss"
@@ -137,8 +144,7 @@
     "domain:route:a11oy.net/": "github:repo:szl-holdings/a11oy-net",
     "huggingface:space:szlholdings/a11oy": "github:repo:szl-holdings/a11oy",
     "huggingface:space:szlholdings/killinchu": "github:repo:szl-holdings/killinchu",
-    "huggingface:space:szlholdings/anatomy": "github:repo:szl-holdings/anatomy",
-    "huggingface:space:szlholdings/cosmos": null
+    "huggingface:space:betterwithage/anatomy": "github:repo:szl-holdings/anatomy"
   },
   "production_requirements": {
     "authenticated_inventory": true,
@@ -185,7 +191,7 @@
       "id": "a11oy-net-security-headers",
       "severity": "P1",
       "status": "ACTIVE",
-      "evidence": "The 2026-08-01 exact-main live baseline observed no CSP, Referrer-Policy, HSTS, or X-Content-Type-Options headers on a11oy.net/."
+      "evidence": "The 2026-09-05 public probe observed HSTS and X-Content-Type-Options but no CSP or Referrer-Policy on a11oy.net/. Cloudflare zone reads succeed, while the connected credential rejects response-header transform writes with authentication error 10000."
     },
     {
       "id": "a11oy-primary-csp-enforcement",

@@ -306,11 +306,13 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
     if not isinstance(canonical, dict) or set(canonical) != {
         "github_organization",
         "huggingface_organization",
+        "huggingface_spaces",
         "domains",
     }:
         return "FAIL", "canonical identity contract is missing or invalid"
     github_organization = canonical.get("github_organization")
     huggingface_organization = canonical.get("huggingface_organization")
+    huggingface_spaces = canonical.get("huggingface_spaces")
     domains = canonical.get("domains")
     identity_pattern = r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}"
     if (
@@ -318,6 +320,17 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
         or re.fullmatch(identity_pattern, github_organization) is None
         or not isinstance(huggingface_organization, str)
         or re.fullmatch(identity_pattern, huggingface_organization) is None
+        or not isinstance(huggingface_spaces, list)
+        or not huggingface_spaces
+        or any(
+            not isinstance(identity, str)
+            or re.fullmatch(
+                rf"{identity_pattern}/{identity_pattern}", identity
+            ) is None
+            for identity in huggingface_spaces
+        )
+        or len({identity.lower() for identity in huggingface_spaces})
+        != len(huggingface_spaces)
         or not isinstance(domains, list)
         or not domains
         or any(
@@ -374,6 +387,9 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
     critical_deployment_ids: set[str] = set()
     observed_kinds: set[str] = set()
     canonical_domains = set(domains)
+    canonical_huggingface_spaces = {
+        identity.lower() for identity in huggingface_spaces
+    }
     for contract in critical_assets:
         if (
             not isinstance(contract, dict)
@@ -428,7 +444,8 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
             critical_deployment_ids.add(asset_id)
         elif space_identity is not None:
             if (
-                space_identity[0].lower() != huggingface_organization.lower()
+                "/".join(space_identity).lower()
+                not in canonical_huggingface_spaces
                 or contract.get("required_status") != "LIVE"
                 or public is not True
                 or "evidence_requirement" in contract
@@ -517,8 +534,16 @@ def deployment_url_identity_state(
     if space_identity is None:
         return "FAIL", "deployment asset identity is unsupported"
     owner, space = space_identity
-    canonical_owner = canonical.get("huggingface_organization")
-    if not isinstance(canonical_owner, str) or owner.lower() != canonical_owner.lower():
+    canonical_spaces = canonical.get("huggingface_spaces")
+    if (
+        not isinstance(canonical_spaces, list)
+        or f"{owner}/{space}".lower()
+        not in {
+            identity.lower()
+            for identity in canonical_spaces
+            if isinstance(identity, str)
+        }
+    ):
         return "FAIL", "deployment Space is outside the canonical manifest"
     normalized_path = (parsed.path or "/").rstrip("/").lower()
     hub_path = f"/spaces/{owner}/{space}".lower()
