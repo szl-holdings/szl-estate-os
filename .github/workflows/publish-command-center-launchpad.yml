@@ -1,6 +1,6 @@
-name: publish-command-center-launchpad
+name: Publish source-bound command-center Launchpad
 
-on:
+"on":
   workflow_dispatch: {}
 
 permissions:
@@ -12,65 +12,384 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-22.04
+    if: github.repository == 'szl-holdings/szl-estate-os' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
-    steps:
-      - name: Checkout exact source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    env:
+      SOURCE_PATH: payloads/command-center/app/launchpad.html
+      TARGET_REPOSITORY: SZLHOLDINGS/szl-command-center
+      TARGET_PATH: app/launchpad.html
+      DEPLOYMENT_PATH: app/launchpad.deployment.json
+      RUNTIME_URL: https://szlholdings-szl-command-center.hf.space/launchpad
+      PUBLICATION_RECEIPT: launchpad-publication-receipt.json
 
-      - name: Resolve credential without persisting or printing
+    steps:
+      - name: Harden the hosted runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920
+        with:
+          egress-policy: audit
+
+      - name: Check out the exact protected-main subject
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up the exact publisher Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12.14"
+
+      - name: Initialize a sanitized fail-closed receipt
+        shell: bash
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          source = Path(os.environ["SOURCE_PATH"])
+          payload = source.read_bytes()
+          receipt = {
+              "schema": "szl.launchpad-publication-receipt/v1",
+              "state": "NOT_STARTED",
+              "mutation_state": "NOT_COMMITTED",
+              "source_repository": os.environ["GITHUB_REPOSITORY"],
+              "source_revision": os.environ["GITHUB_SHA"],
+              "source_path": os.environ["SOURCE_PATH"],
+              "target_repository": os.environ["TARGET_REPOSITORY"],
+              "target_path": os.environ["TARGET_PATH"],
+              "deployment_path": os.environ["DEPLOYMENT_PATH"],
+              "payload_sha256": hashlib.sha256(payload).hexdigest(),
+              "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+              "workflow_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "workflow_run_url": os.environ["RUN_URL"],
+              "runtime_url": os.environ["RUNTIME_URL"],
+              "provider_commit": None,
+              "error_type": None,
+              "claim_boundary": "Source-bound publication evidence only; navigation does not certify downstream runtime availability.",
+          }
+          Path(os.environ["PUBLICATION_RECEIPT"]).write_text(
+              json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Validate the exact deployment subject before mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import re
+          import stat
+          from pathlib import Path
+
+          expected_repository = "szl-holdings/szl-estate-os"
+          expected_ref = "refs/heads/main"
+          sha40 = re.compile(r"^[0-9a-f]{40}$")
+          if os.environ.get("GITHUB_REPOSITORY") != expected_repository:
+              raise SystemExit("unexpected source repository")
+          if os.environ.get("GITHUB_REF") != expected_ref:
+              raise SystemExit("publisher must run from protected main")
+          if not sha40.fullmatch(os.environ.get("GITHUB_SHA", "")):
+              raise SystemExit("source revision is not an exact Git commit")
+
+          root = Path.cwd().resolve()
+          source = Path(os.environ["SOURCE_PATH"])
+          resolved = source.resolve(strict=True)
+          if not resolved.is_relative_to(root):
+              raise SystemExit("source path escapes the checked-out repository")
+          if source.is_symlink() or not stat.S_ISREG(source.stat(follow_symlinks=False).st_mode):
+              raise SystemExit("source payload must be one regular non-symlink file")
+
+          payload = source.read_bytes()
+          if not 1 <= len(payload) <= 131_072:
+              raise SystemExit("source payload is outside the bounded size contract")
+          text = payload.decode("utf-8")
+          required = (
+              '<html lang="en" data-szl-launchpad="v2">',
+              "Navigation does not certify runtime availability",
+              "navigation is not runtime proof",
+              'rel = "noopener noreferrer"',
+          )
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit(f"Launchpad honesty/accessibility contract missing: {missing}")
+          forbidden = (
+              "fonts.googleapis.com",
+              "every link on this page resolves to a live surface",
+              ".innerHTML",
+              "animation:pu",
+          )
+          present = [marker for marker in forbidden if marker in text]
+          if present:
+              raise SystemExit(f"Launchpad contains forbidden external or overclaiming markers: {present}")
+          PY
+
+      - name: Install the complete exact publisher dependency closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            --only-binary=:all: \
+            --no-deps \
+            -r requirements/launchpad-publisher.lock
+          python -m pip check
+          python - <<'PY'
+          from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
+          assert CommitOperationAdd and HfApi and hf_hub_download
+          PY
+
+      - name: Publish one atomic provider commit and verify exact bytes
+        shell: bash
         env:
           CANDIDATE_A: ${{ secrets.HF_TOKEN }}
           CANDIDATE_B: ${{ secrets.SZL_HF_TOKEN }}
           CANDIDATE_C: ${{ secrets.HF_WRITE_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          resolved=""
-          for v in "${CANDIDATE_A:-}" "${CANDIDATE_B:-}" "${CANDIDATE_C:-}"; do
-            if [ -n "$v" ]; then resolved="$v"; break; fi
-          done
-          if [ -z "$resolved" ]; then
-            echo '::error::No HF credential candidate configured (HF_TOKEN / SZL_HF_TOKEN / HF_WRITE_TOKEN)'
-            exit 1
-          fi
-          echo "HF_TOKEN=$resolved" >> "$GITHUB_ENV"
-          echo 'credential: present (source alias not recorded)'
-
-      - name: Install publisher dependency
-        run: pip install 'huggingface_hub==0.34.4'
-
-      - name: Upload Launchpad to the command-center Space
-        run: |
           python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
           import os
-          from huggingface_hub import HfApi
-          HfApi(token=os.environ['HF_TOKEN']).upload_file(
-              path_or_fileobj='payloads/command-center/app/launchpad.html',
-              path_in_repo='app/launchpad.html',
-              repo_id='SZLHOLDINGS/szl-command-center',
-              repo_type='space',
-              commit_message='app: add Launchpad — one door for every surface (governed Actions lane)',
-          )
-          print('upload: committed')
+          import re
+          import sys
+          import tempfile
+          import time
+          import urllib.parse
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from typing import Any
+
+          from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
+
+          SHA40 = re.compile(r"^[0-9a-f]{40}$")
+          source_path = Path(os.environ["SOURCE_PATH"])
+          payload = source_path.read_bytes()
+          payload_sha256 = hashlib.sha256(payload).hexdigest()
+          public_receipt_path = Path(os.environ["PUBLICATION_RECEIPT"])
+          provider_commit: str | None = None
+          mutation_state = "NOT_COMMITTED"
+
+          def canonical(value: dict[str, Any]) -> bytes:
+              return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+          def write_public_receipt(*, state: str, error_type: str | None, **extra: Any) -> None:
+              receipt = {
+                  "schema": "szl.launchpad-publication-receipt/v1",
+                  "state": state,
+                  "mutation_state": mutation_state,
+                  "source_repository": os.environ["GITHUB_REPOSITORY"],
+                  "source_revision": os.environ["GITHUB_SHA"],
+                  "source_path": os.environ["SOURCE_PATH"],
+                  "target_repository": os.environ["TARGET_REPOSITORY"],
+                  "target_path": os.environ["TARGET_PATH"],
+                  "deployment_path": os.environ["DEPLOYMENT_PATH"],
+                  "payload_sha256": payload_sha256,
+                  "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+                  "workflow_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "workflow_run_url": os.environ["RUN_URL"],
+                  "runtime_url": os.environ["RUNTIME_URL"],
+                  "provider_commit": provider_commit,
+                  "error_type": error_type,
+                  "claim_boundary": "Source-bound publication evidence only; navigation does not certify downstream runtime availability.",
+                  **extra,
+              }
+              public_receipt_path.write_bytes(canonical(receipt))
+
+          class SameOriginRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+                  source = urllib.parse.urlsplit(os.environ["RUNTIME_URL"])
+                  target = urllib.parse.urlsplit(newurl)
+                  if target.scheme != "https" or target.hostname != source.hostname:
+                      raise RuntimeError("runtime readback attempted a cross-origin redirect")
+                  return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+          try:
+              token = next(
+                  (
+                      value
+                      for value in (
+                          os.environ.get("CANDIDATE_A", ""),
+                          os.environ.get("CANDIDATE_B", ""),
+                          os.environ.get("CANDIDATE_C", ""),
+                      )
+                      if value
+                  ),
+                  None,
+              )
+              if token is None:
+                  raise RuntimeError("Hugging Face publisher credential is not configured")
+
+              api = HfApi(token=token)
+              repository = api.repo_info(
+                  repo_id=os.environ["TARGET_REPOSITORY"],
+                  repo_type="space",
+              )
+              parent_commit = str(getattr(repository, "sha", ""))
+              if not SHA40.fullmatch(parent_commit):
+                  raise RuntimeError("target repository did not expose an exact parent commit")
+
+              generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+              deployment = {
+                  "schema": "szl.launchpad-deployment/v1",
+                  "source_repository": os.environ["GITHUB_REPOSITORY"],
+                  "source_revision": os.environ["GITHUB_SHA"],
+                  "source_path": os.environ["SOURCE_PATH"],
+                  "target_repository": os.environ["TARGET_REPOSITORY"],
+                  "target_path": os.environ["TARGET_PATH"],
+                  "payload_sha256": payload_sha256,
+                  "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+                  "workflow_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "workflow_run_url": os.environ["RUN_URL"],
+                  "generated_at": generated_at,
+                  "claim_boundary": "Navigation artifact only; runtime state is verified independently.",
+              }
+              deployment_bytes = canonical(deployment)
+
+              with tempfile.TemporaryDirectory(prefix="szl-launchpad-") as temp_dir:
+                  deployment_file = Path(temp_dir) / "launchpad.deployment.json"
+                  deployment_file.write_bytes(deployment_bytes)
+                  commit = api.create_commit(
+                      repo_id=os.environ["TARGET_REPOSITORY"],
+                      repo_type="space",
+                      parent_commit=parent_commit,
+                      commit_message=f"app: publish source-bound Launchpad {os.environ['GITHUB_SHA'][:12]}",
+                      commit_description=(
+                          f"Source: {os.environ['GITHUB_REPOSITORY']}@{os.environ['GITHUB_SHA']}\n"
+                          f"Payload SHA-256: {payload_sha256}\n"
+                          "Publication is atomic and runtime verification remains fail closed."
+                      ),
+                      operations=[
+                          CommitOperationAdd(
+                              path_in_repo=os.environ["TARGET_PATH"],
+                              path_or_fileobj=str(source_path),
+                          ),
+                          CommitOperationAdd(
+                              path_in_repo=os.environ["DEPLOYMENT_PATH"],
+                              path_or_fileobj=str(deployment_file),
+                          ),
+                      ],
+                  )
+                  provider_commit = str(getattr(commit, "oid", ""))
+                  if not SHA40.fullmatch(provider_commit):
+                      raise RuntimeError("provider commit did not return an exact revision")
+                  mutation_state = "COMMITTED_UNVERIFIED"
+
+                  downloaded_html = Path(
+                      hf_hub_download(
+                          repo_id=os.environ["TARGET_REPOSITORY"],
+                          repo_type="space",
+                          filename=os.environ["TARGET_PATH"],
+                          revision=provider_commit,
+                          token=token,
+                          force_download=True,
+                      )
+                  ).read_bytes()
+                  downloaded_deployment = Path(
+                      hf_hub_download(
+                          repo_id=os.environ["TARGET_REPOSITORY"],
+                          repo_type="space",
+                          filename=os.environ["DEPLOYMENT_PATH"],
+                          revision=provider_commit,
+                          token=token,
+                          force_download=True,
+                      )
+                  ).read_bytes()
+
+              if downloaded_html != payload:
+                  raise RuntimeError("immutable provider HTML readback differs from source bytes")
+              if downloaded_deployment != deployment_bytes:
+                  raise RuntimeError("immutable provider deployment readback differs from committed bytes")
+              if hashlib.sha256(downloaded_html).hexdigest() != payload_sha256:
+                  raise RuntimeError("provider payload digest mismatch")
+
+              current = api.repo_info(
+                  repo_id=os.environ["TARGET_REPOSITORY"],
+                  repo_type="space",
+              )
+              if str(getattr(current, "sha", "")) != provider_commit:
+                  raise RuntimeError("target main moved after the source-bound publication")
+
+              opener = urllib.request.build_opener(SameOriginRedirect())
+              deadline = time.monotonic() + 720
+              observed_at: str | None = None
+              runtime_sha256: str | None = None
+              attempts = 0
+              while time.monotonic() < deadline:
+                  attempts += 1
+                  request = urllib.request.Request(
+                      os.environ["RUNTIME_URL"],
+                      headers={"User-Agent": "SZL-Launchpad-Publisher/2.0"},
+                      method="GET",
+                  )
+                  try:
+                      with opener.open(request, timeout=30) as response:
+                          body = response.read(131_073)
+                          if len(body) > 131_072:
+                              raise RuntimeError("runtime response exceeded the bounded payload size")
+                          observed_digest = hashlib.sha256(body).hexdigest()
+                          if (
+                              response.status == 200
+                              and body == payload
+                              and observed_digest == payload_sha256
+                              and b'data-szl-launchpad="v2"' in body
+                          ):
+                              observed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                              runtime_sha256 = observed_digest
+                              break
+                  except Exception:
+                      pass
+                  time.sleep(20)
+
+              if observed_at is None or runtime_sha256 is None:
+                  raise RuntimeError("runtime did not expose the exact committed payload before the deadline")
+
+              mutation_state = "COMMITTED_AND_VERIFIED"
+              write_public_receipt(
+                  state="VERIFIED",
+                  error_type=None,
+                  parent_commit=parent_commit,
+                  provider_html_sha256=hashlib.sha256(downloaded_html).hexdigest(),
+                  provider_deployment_sha256=hashlib.sha256(downloaded_deployment).hexdigest(),
+                  runtime_sha256=runtime_sha256,
+                  runtime_observed_at=observed_at,
+                  runtime_attempts=attempts,
+              )
+              print(f"publication: VERIFIED provider_commit={provider_commit} payload_sha256={payload_sha256}")
+          except BaseException as exc:
+              write_public_receipt(
+                  state="FAILED_CLOSED",
+                  error_type=type(exc).__name__,
+              )
+              print(f"::error::Launchpad publication failed closed ({type(exc).__name__})", file=sys.stderr)
+              raise SystemExit(1) from None
+          finally:
+              for name in ("CANDIDATE_A", "CANDIDATE_B", "CANDIDATE_C"):
+                  os.environ.pop(name, None)
           PY
 
-      - name: Fail-closed public readback
-        run: |
-          python - <<'PY'
-          import hashlib, time, urllib.request, sys
-          expected = hashlib.sha256(open('payloads/command-center/app/launchpad.html','rb').read()).hexdigest()
-          url = 'https://szlholdings-szl-command-center.hf.space/launchpad'
-          deadline = time.time() + 720
-          while time.time() < deadline:
-              try:
-                  with urllib.request.urlopen(url, timeout=30) as r:
-                      body = r.read()
-                      if r.status == 200 and hashlib.sha256(body).hexdigest() == expected:
-                          print(f'readback: OK sha256={expected[:20]}')
-                          sys.exit(0)
-              except Exception as e:
-                  print(f'waiting: {type(e).__name__}')
-              time.sleep(30)
-          print('::error::readback did not observe the exact pinned bytes within 12 minutes')
-          sys.exit(1)
-          PY
+      - name: Retain the sanitized publication receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: launchpad-publication-${{ github.sha }}-${{ github.run_attempt }}
+          path: launchpad-publication-receipt.json
+          if-no-files-found: error
+          retention-days: 90
