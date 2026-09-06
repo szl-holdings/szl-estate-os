@@ -30,6 +30,8 @@ jobs:
         run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py estate/*.py
       - name: Run deterministic Estate OS checks
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
+      - name: Test source-bound Launchpad publisher and navigation contracts
+        run: python ci/test_launchpad_contract.py -v
       - name: Test readiness signature-state contract
         run: python ci/test_verify_estate_readiness.py -v
       - name: Test GitHub evidence completeness controls
