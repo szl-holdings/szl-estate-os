@@ -1,0 +1,76 @@
+name: publish-command-center-launchpad
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-command-center-launchpad
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Resolve credential without persisting or printing
+        env:
+          CANDIDATE_A: ${{ secrets.HF_TOKEN }}
+          CANDIDATE_B: ${{ secrets.SZL_HF_TOKEN }}
+          CANDIDATE_C: ${{ secrets.HF_WRITE_TOKEN }}
+        run: |
+          set -euo pipefail
+          resolved=""
+          for v in "${CANDIDATE_A:-}" "${CANDIDATE_B:-}" "${CANDIDATE_C:-}"; do
+            if [ -n "$v" ]; then resolved="$v"; break; fi
+          done
+          if [ -z "$resolved" ]; then
+            echo '::error::No HF credential candidate configured (HF_TOKEN / SZL_HF_TOKEN / HF_WRITE_TOKEN)'
+            exit 1
+          fi
+          echo "HF_TOKEN=$resolved" >> "$GITHUB_ENV"
+          echo 'credential: present (source alias not recorded)'
+
+      - name: Install publisher dependency
+        run: pip install 'huggingface_hub==0.34.4'
+
+      - name: Upload Launchpad to the command-center Space
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          HfApi(token=os.environ['HF_TOKEN']).upload_file(
+              path_or_fileobj='payloads/command-center/app/launchpad.html',
+              path_in_repo='app/launchpad.html',
+              repo_id='SZLHOLDINGS/szl-command-center',
+              repo_type='space',
+              commit_message='app: add Launchpad — one door for every surface (governed Actions lane)',
+          )
+          print('upload: committed')
+          PY
+
+      - name: Fail-closed public readback
+        run: |
+          python - <<'PY'
+          import hashlib, time, urllib.request, sys
+          expected = hashlib.sha256(open('payloads/command-center/app/launchpad.html','rb').read()).hexdigest()
+          url = 'https://szlholdings-szl-command-center.hf.space/launchpad'
+          deadline = time.time() + 720
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      body = r.read()
+                      if r.status == 200 and hashlib.sha256(body).hexdigest() == expected:
+                          print(f'readback: OK sha256={expected[:20]}')
+                          sys.exit(0)
+              except Exception as e:
+                  print(f'waiting: {type(e).__name__}')
+              time.sleep(30)
+          print('::error::readback did not observe the exact pinned bytes within 12 minutes')
+          sys.exit(1)
+          PY
