@@ -303,10 +303,13 @@ public baseline evidence from authenticated and production evidence so a public
 scan cannot silently become a production claim.
 
 The scheduled `Estate readiness evidence` workflow performs deterministic
-checks, a live audit, baseline verification, receipt-chain verification, and a
-bounded read-only API stress profile as independent steps. A final aggregate
-gate fails if any step fails, while the evidence packet is still uploaded for
-diagnosis. Production evidence additionally requires provider-authenticated
+checks, a live audit, baseline verification, remediation-queue compilation,
+receipt-chain verification, and a bounded read-only API stress profile as
+independent steps. The remediation queue preserves every non-pass result,
+routes it to the source, inventory, evidence, or provider control plane, binds
+it to the exact readiness-report digest, and grants no deployment authority. A
+final aggregate gate fails if any step fails, while the evidence packet is still
+uploaded for diagnosis. Production evidence additionally requires provider-authenticated
 deployment receipts, exact report-file digests, canonical source ownership,
 an explicit `szl.estate-audit/v1` payload, exact `ASYMMETRIC_VERIFIED` signature
 state plus RSA verification, fresh source/critical-asset observations, and
@@ -329,7 +332,15 @@ Run the same gates locally after an audit:
 & $python .\ci\verify_estate_readiness.py `
   --audit .\outputs\latest_audit.json `
   --manifest .\estate\manifest.json `
-  --profile baseline
+  --profile baseline `
+  --output-json .\outputs\readiness-baseline.json `
+  --output-markdown .\outputs\readiness-baseline.md
+
+& $python .\ci\build_remediation_queue.py `
+  --readiness .\outputs\readiness-baseline.json `
+  --manifest .\estate\manifest.json `
+  --output-json .\outputs\remediation-queue.json `
+  --output-markdown .\outputs\remediation-queue.md
 
 & $python .\ci\stress_estate_os.py `
   --database .\outputs\estate.db `

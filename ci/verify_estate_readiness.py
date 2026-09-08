@@ -483,7 +483,8 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
         not isinstance(deployment_sources, dict)
         or set(deployment_sources) != critical_deployment_ids
         or any(
-            source is not None and source not in critical_repository_ids
+            source is not None
+            and (not isinstance(source, str) or source not in critical_repository_ids)
             for source in deployment_sources.values()
         )
     ):
@@ -1811,7 +1812,7 @@ def verify(
             "PASS" if not prohibited_assets else "FAIL",
             "none observed"
             if not prohibited_assets
-            else ", ".join(str(item.get("asset_id")) for item in prohibited_assets[:20]),
+            else ", ".join(str(item.get("asset_id")) for item in prohibited_assets),
         )
     )
 

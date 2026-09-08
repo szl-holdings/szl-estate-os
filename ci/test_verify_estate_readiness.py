@@ -8,6 +8,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
+from build_remediation_queue import build_queue
 from verify_estate_readiness import (
     PRODUCTION_EVIDENCE_INDEX_SCHEMA,
     PRODUCTION_SIGNATURE_ALGORITHM,
@@ -1826,6 +1827,90 @@ class ReadinessTests(unittest.TestCase):
         report = verify(value, manifest(), "baseline")
         self.assertEqual(check(report, "assets.unique_ids")["state"], "FAIL")
         self.assertIn("github:duplicate", check(report, "assets.unique_ids")["detail"])
+
+    def test_every_prohibited_asset_reaches_the_remediation_queue_beyond_twenty(self) -> None:
+        value = audit()
+        affected = {
+            f"github:repo:szl-holdings/non-critical-{index:02d}"
+            for index in range(25)
+        }
+        value["assets"] = [
+            {"asset_id": asset_id, "source": "github", "status_label": "BROKEN"}
+            for asset_id in sorted(affected)
+        ] + [
+            {
+                "asset_id": "github:repo:szl-holdings/unaffected",
+                "source": "github",
+                "status_label": "OBSERVED",
+            }
+        ]
+        value["source_reports"][0]["count"] = len(value["assets"])
+        contract = manifest()
+        report = verify(value, contract, "baseline")
+        self.assertEqual(check(report, "assets.prohibited_status")["state"], "FAIL")
+        queue = build_queue(
+            report,
+            contract,
+            readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+            manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+        )
+        actions = [
+            action
+            for action in queue["actions"]
+            if action["check_id"] == "assets.prohibited_status"
+        ]
+        self.assertEqual(len(actions), len(affected))
+        self.assertEqual({action["target"] for action in actions}, affected)
+        self.assertTrue(all(action["control_plane"] == "source" for action in actions))
+        self.assertTrue(all(action["state"] == "BLOCKED" for action in actions))
+
+    def test_malformed_deployment_mapping_reaches_contract_repair_without_binding(self) -> None:
+        missing = manifest()
+        missing.pop("production_deployment_sources")
+        contracts = [missing]
+        for mappings in (
+            None,
+            [],
+            "invalid-mapping",
+            {
+                **manifest()["production_deployment_sources"],
+                PRIMARY_DEPLOYMENT_ASSET_ID: [],
+            },
+            {
+                **manifest()["production_deployment_sources"],
+                PRIMARY_DEPLOYMENT_ASSET_ID: {"token": "hf_example_secret_value"},
+            },
+        ):
+            contract = manifest()
+            contract["production_deployment_sources"] = mappings
+            contracts.append(contract)
+        for index, contract, profile in (
+            (index, contract, profile)
+            for index, contract in enumerate(contracts)
+            for profile in ("baseline", "production")
+        ):
+            with self.subTest(case=index, profile=profile):
+                report = verify(audit(), contract, profile)
+                finding = check(report, "manifest.baseline_contract")
+                self.assertEqual(finding["state"], "FAIL")
+                self.assertIn("deployment-source contract", finding["detail"])
+                queue = build_queue(
+                    report,
+                    contract,
+                    readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+                    manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+                )
+                repair = next(
+                    action
+                    for action in queue["actions"]
+                    if action["check_id"] == "manifest.baseline_contract"
+                )
+                self.assertEqual(repair["action"], "REPAIR_EVIDENCE_CONTRACT")
+                self.assertEqual(repair["state"], "BLOCKED")
+                self.assertTrue(
+                    all(action["source_repository"] is None for action in queue["actions"])
+                )
+                self.assertNotIn("hf_example_secret_value", json.dumps(queue))
 
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
