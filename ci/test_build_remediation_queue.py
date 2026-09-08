@@ -257,7 +257,17 @@ class RemediationQueueTests(unittest.TestCase):
             readiness(
                 ("schema.asset.domain:route:a11oy.net/", "FAIL", "invalid payload"),
                 (
+                    "schema.asset.github:repo:szl-holdings/a11oy",
+                    "FAIL",
+                    "invalid observation",
+                ),
+                (
                     "freshness.asset.huggingface:space:szlholdings/a11oy",
+                    "WARN",
+                    "observation is stale",
+                ),
+                (
+                    "freshness.asset.github:repo:szl-holdings/a11oy",
                     "WARN",
                     "observation is stale",
                 ),
@@ -273,6 +283,14 @@ class RemediationQueueTests(unittest.TestCase):
         )
         self.assertEqual(
             by_check["freshness.asset.huggingface:space:szlholdings/a11oy"]["action"],
+            "REFRESH_OR_COMPLETE_EVIDENCE",
+        )
+        self.assertEqual(
+            by_check["schema.asset.github:repo:szl-holdings/a11oy"]["action"],
+            "REPAIR_EVIDENCE_CONTRACT",
+        )
+        self.assertEqual(
+            by_check["freshness.asset.github:repo:szl-holdings/a11oy"]["action"],
             "REFRESH_OR_COMPLETE_EVIDENCE",
         )
 

@@ -249,8 +249,6 @@ def classify(check_id: str, target: str | None, detail: str) -> tuple[str, str, 
             "COLLECT_AUTHENTICATED_INVENTORY",
             "MEASURED_READBACK_REQUIRED",
         )
-    if target and target.startswith("github:repo:"):
-        return "source", "REPAIR_SOURCE_CONTRACT", "SOURCE_CHANGE_REQUIRED"
     if check_id.startswith(("evidence.", "production.requirement.independent_")):
         return "evidence", "PRODUCE_INDEPENDENT_EVIDENCE", "INDEPENDENT_EVIDENCE_REQUIRED"
     if check_id.startswith(("audit.", "manifest.", "assets.", "schema.")):
@@ -259,6 +257,8 @@ def classify(check_id: str, target: str | None, detail: str) -> tuple[str, str, 
         return "evidence", "REFRESH_OR_COMPLETE_EVIDENCE", "INDEPENDENT_EVIDENCE_REQUIRED"
     if target and target.startswith(("domain:route:", "huggingface:space:")):
         return "provider", "RECONCILE_PROVIDER_TARGET", "EXTERNAL_ACTION_REQUIRED"
+    if target and target.startswith("github:repo:"):
+        return "source", "REPAIR_SOURCE_CONTRACT", "SOURCE_CHANGE_REQUIRED"
     return "evidence", "INVESTIGATE_UNCLASSIFIED_FINDING", "HUMAN_TRIAGE_REQUIRED"
 
 
