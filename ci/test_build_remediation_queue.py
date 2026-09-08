@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import unittest
 
 from build_remediation_queue import ContractError, build_queue, sanitize_detail
@@ -251,6 +252,74 @@ class RemediationQueueTests(unittest.TestCase):
             manifest_sha256=MANIFEST_DIGEST,
         )
         self.assertIsNone(queue["actions"][0]["source_repository"])
+
+    def test_rejected_manifest_mapping_still_produces_unbound_repair_queue(self) -> None:
+        missing = manifest()
+        missing.pop("production_deployment_sources")
+        contracts = [missing]
+        for mappings in (
+            None,
+            [],
+            "not-an-object",
+            {"domain:route:a11oy.net/": ["invalid-source"]},
+            {"domain:route:a11oy.net/": "github:repo:untrusted/source"},
+            {"domain:route:a11oy.net/": "hf_example_secret_value"},
+            {"hf_example_secret_value": "github:repo:owner/repository"},
+        ):
+            contract = manifest()
+            contract["production_deployment_sources"] = mappings
+            contracts.append(contract)
+        for index, contract in enumerate(contracts):
+            with self.subTest(case=index):
+                report = readiness(
+                    (
+                        "manifest.baseline_contract",
+                        "FAIL",
+                        "production deployment-source contract is missing or invalid",
+                    ),
+                    (
+                        "headers.domain:route:a11oy.net/",
+                        "FAIL",
+                        "missing=content-security-policy",
+                    ),
+                )
+                queue = build_queue(
+                    report,
+                    contract,
+                    readiness_sha256=DIGEST,
+                    manifest_sha256=MANIFEST_DIGEST,
+                )
+                by_check = {item["check_id"]: item for item in queue["actions"]}
+                repair = by_check["manifest.baseline_contract"]
+                self.assertEqual(repair["action"], "REPAIR_EVIDENCE_CONTRACT")
+                self.assertEqual(repair["state"], "BLOCKED")
+                self.assertEqual(repair["authority"], "EVIDENCE_CONTRACT_REQUIRED")
+                provider = by_check["headers.domain:route:a11oy.net/"]
+                self.assertIsNone(provider["source_repository"])
+                self.assertEqual(provider["authority"], "EXTERNAL_ACTION_REQUIRED")
+                self.assertEqual(queue["status"], "BLOCKED")
+                self.assertNotIn("hf_example_secret_value", json.dumps(queue))
+                self.assertEqual(
+                    queue,
+                    build_queue(
+                        report,
+                        contract,
+                        readiness_sha256=DIGEST,
+                        manifest_sha256=MANIFEST_DIGEST,
+                    ),
+                )
+
+    def test_invalid_mapping_requires_a_failed_manifest_contract_finding(self) -> None:
+        for mappings in (None, [], "not-an-object"):
+            with self.subTest(mappings=mappings), self.assertRaises(ContractError):
+                contract = manifest()
+                contract["production_deployment_sources"] = mappings
+                build_queue(
+                    readiness(("manifest.baseline_contract", "PASS", "verified")),
+                    contract,
+                    readiness_sha256=DIGEST,
+                    manifest_sha256=MANIFEST_DIGEST,
+                )
 
     def test_schema_and_freshness_targets_remain_evidence_work(self) -> None:
         queue = build_queue(

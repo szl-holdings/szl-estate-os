@@ -151,22 +151,27 @@ def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
 
 def validate_manifest(
     manifest: dict[str, Any],
+    *,
+    manifest_contract_failed: bool = False,
 ) -> tuple[dict[str, str | None], frozenset[str]]:
     if manifest.get("schema") != MANIFEST_SCHEMA:
         raise ContractError(f"manifest schema must be {MANIFEST_SCHEMA}")
-    mappings = manifest.get("production_deployment_sources")
-    if not isinstance(mappings, dict):
-        raise ContractError("manifest production_deployment_sources must be an object")
     normalized: dict[str, str | None] = {}
-    for target, source in mappings.items():
-        safe_target = validate_identifier(target, "deployment source target")
-        assert safe_target is not None
-        safe_source = validate_identifier(
-            source,
-            f"deployment source for {safe_target}",
-            allow_none=True,
-        )
-        normalized[safe_target] = safe_source
+    # A rejected manifest cannot provide deployment bindings. Keep the original
+    # repair finding usable without copying any of its untrusted mapping values.
+    if not manifest_contract_failed:
+        mappings = manifest.get("production_deployment_sources")
+        if not isinstance(mappings, dict):
+            raise ContractError("manifest production_deployment_sources must be an object")
+        for target, source in mappings.items():
+            safe_target = validate_identifier(target, "deployment source target")
+            assert safe_target is not None
+            safe_source = validate_identifier(
+                source,
+                f"deployment source for {safe_target}",
+                allow_none=True,
+            )
+            normalized[safe_target] = safe_source
     baseline = manifest.get("baseline")
     if not isinstance(baseline, dict):
         raise ContractError("manifest baseline must be an object")
@@ -318,7 +323,13 @@ def build_queue(
     if not re.fullmatch(r"[0-9a-f]{64}", manifest_sha256):
         raise ContractError("manifest_sha256 must be a lowercase SHA-256 digest")
     checks = validate_readiness(readiness)
-    deployment_sources, allowed_headers = validate_manifest(manifest)
+    deployment_sources, allowed_headers = validate_manifest(
+        manifest,
+        manifest_contract_failed=any(
+            check["id"] == "manifest.baseline_contract" and check["state"] == "FAIL"
+            for check in checks
+        ),
+    )
     actions: list[dict[str, Any]] = []
 
     for check in checks:

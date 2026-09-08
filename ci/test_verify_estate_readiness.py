@@ -1864,6 +1864,54 @@ class ReadinessTests(unittest.TestCase):
         self.assertTrue(all(action["control_plane"] == "source" for action in actions))
         self.assertTrue(all(action["state"] == "BLOCKED" for action in actions))
 
+    def test_malformed_deployment_mapping_reaches_contract_repair_without_binding(self) -> None:
+        missing = manifest()
+        missing.pop("production_deployment_sources")
+        contracts = [missing]
+        for mappings in (
+            None,
+            [],
+            "invalid-mapping",
+            {
+                **manifest()["production_deployment_sources"],
+                PRIMARY_DEPLOYMENT_ASSET_ID: [],
+            },
+            {
+                **manifest()["production_deployment_sources"],
+                PRIMARY_DEPLOYMENT_ASSET_ID: {"token": "hf_example_secret_value"},
+            },
+        ):
+            contract = manifest()
+            contract["production_deployment_sources"] = mappings
+            contracts.append(contract)
+        for index, contract, profile in (
+            (index, contract, profile)
+            for index, contract in enumerate(contracts)
+            for profile in ("baseline", "production")
+        ):
+            with self.subTest(case=index, profile=profile):
+                report = verify(audit(), contract, profile)
+                finding = check(report, "manifest.baseline_contract")
+                self.assertEqual(finding["state"], "FAIL")
+                self.assertIn("deployment-source contract", finding["detail"])
+                queue = build_queue(
+                    report,
+                    contract,
+                    readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+                    manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+                )
+                repair = next(
+                    action
+                    for action in queue["actions"]
+                    if action["check_id"] == "manifest.baseline_contract"
+                )
+                self.assertEqual(repair["action"], "REPAIR_EVIDENCE_CONTRACT")
+                self.assertEqual(repair["state"], "BLOCKED")
+                self.assertTrue(
+                    all(action["source_repository"] is None for action in queue["actions"])
+                )
+                self.assertNotIn("hf_example_secret_value", json.dumps(queue))
+
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
             audit(), manifest({"future_requirement": True}), "production"
