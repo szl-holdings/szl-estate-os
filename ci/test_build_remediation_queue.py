@@ -322,6 +322,100 @@ class RemediationQueueTests(unittest.TestCase):
             "provider",
         )
 
+    def test_prohibited_assets_expand_to_their_operational_control_planes(self) -> None:
+        queue = build_queue(
+            readiness(
+                (
+                    "assets.prohibited_status",
+                    "FAIL",
+                    (
+                        "domain:route:a11oy.net/, "
+                        "github:repo:szl-holdings/non-critical, "
+                        "huggingface:model:szlholdings/non-critical"
+                    ),
+                )
+            ),
+            manifest(),
+            readiness_sha256=DIGEST,
+            manifest_sha256=MANIFEST_DIGEST,
+        )
+        by_target = {item["target"]: item for item in queue["actions"]}
+        self.assertEqual(queue["summary"]["action_count"], 3)
+        self.assertEqual(queue["summary"]["blocked_count"], 3)
+        self.assertEqual(
+            set(by_target),
+            {
+                "domain:route:a11oy.net/",
+                "github:repo:szl-holdings/non-critical",
+                "huggingface:model:szlholdings/non-critical",
+            },
+        )
+        self.assertEqual(
+            by_target["domain:route:a11oy.net/"]["control_plane"], "provider"
+        )
+        self.assertEqual(
+            by_target["domain:route:a11oy.net/"]["action"],
+            "RECONCILE_PROVIDER_TARGET",
+        )
+        self.assertEqual(
+            by_target["domain:route:a11oy.net/"]["source_repository"],
+            "github:repo:szl-holdings/a11oy-net",
+        )
+        self.assertEqual(
+            by_target["github:repo:szl-holdings/non-critical"]["control_plane"],
+            "source",
+        )
+        self.assertEqual(
+            by_target["github:repo:szl-holdings/non-critical"]["source_repository"],
+            "github:repo:szl-holdings/non-critical",
+        )
+        self.assertEqual(
+            by_target["huggingface:model:szlholdings/non-critical"]["control_plane"],
+            "provider",
+        )
+
+    def test_manifest_shape_checks_route_to_contract_repair(self) -> None:
+        queue = build_queue(
+            readiness(
+                (
+                    "production.requirements_contract",
+                    "FAIL",
+                    "shape_valid=False missing=['authenticated_inventory']",
+                ),
+                ("gaps.contract", "FAIL", "known_gaps must be a list"),
+            ),
+            manifest(),
+            readiness_sha256=DIGEST,
+            manifest_sha256=MANIFEST_DIGEST,
+        )
+        by_check = {item["check_id"]: item for item in queue["actions"]}
+        for check_id in ("production.requirements_contract", "gaps.contract"):
+            with self.subTest(check_id=check_id):
+                self.assertEqual(by_check[check_id]["control_plane"], "evidence")
+                self.assertEqual(
+                    by_check[check_id]["action"], "REPAIR_EVIDENCE_CONTRACT"
+                )
+                self.assertEqual(
+                    by_check[check_id]["authority"], "EVIDENCE_CONTRACT_REQUIRED"
+                )
+
+    def test_prohibited_asset_targets_reject_malformed_or_credential_like_input(self) -> None:
+        invalid_details = (
+            "",
+            "domain:route:a11oy.net/, ",
+            "domain:route:a11oy.net/, domain:route:a11oy.net/",
+            "github:repo:szl-holdings/example token=ghp_exampleexample",
+            "github:repo:szl-holdings/hf_exampleexample",
+        )
+        for detail in invalid_details:
+            with self.subTest(detail=detail), self.assertRaises(ContractError):
+                build_queue(
+                    readiness(("assets.prohibited_status", "FAIL", detail)),
+                    manifest(),
+                    readiness_sha256=DIGEST,
+                    manifest_sha256=MANIFEST_DIGEST,
+                )
+
     def test_manifest_digest_is_part_of_queue_provenance(self) -> None:
         first = build_queue(
             readiness(

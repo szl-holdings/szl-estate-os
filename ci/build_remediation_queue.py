@@ -204,6 +204,25 @@ def target_from_check(check_id: str) -> str | None:
     return None
 
 
+def prohibited_status_targets(detail: str) -> list[str]:
+    """Recover the affected assets emitted by assets.prohibited_status."""
+    if not detail.strip():
+        raise ContractError("assets.prohibited_status must identify an affected asset")
+    targets: list[str] = []
+    seen: set[str] = set()
+    for index, item in enumerate(detail.split(",")):
+        target = validate_identifier(
+            item.strip(),
+            f"prohibited asset target {index}",
+        )
+        assert target is not None
+        if target in seen:
+            raise ContractError(f"duplicate prohibited asset target: {target}")
+        seen.add(target)
+        targets.append(target)
+    return targets
+
+
 def missing_headers(detail: str, *, allowed: frozenset[str]) -> list[str]:
     match = re.search(r"(?:^|\s)missing=([^;\s]+)", detail)
     if match is None:
@@ -251,6 +270,14 @@ def classify(check_id: str, target: str | None, detail: str) -> tuple[str, str, 
         )
     if check_id.startswith(("evidence.", "production.requirement.independent_")):
         return "evidence", "PRODUCE_INDEPENDENT_EVIDENCE", "INDEPENDENT_EVIDENCE_REQUIRED"
+    if check_id == "assets.prohibited_status":
+        if target and target.startswith("github:"):
+            return "source", "REPAIR_SOURCE_CONTRACT", "SOURCE_CHANGE_REQUIRED"
+        if target and target.startswith(("domain:", "huggingface:")):
+            return "provider", "RECONCILE_PROVIDER_TARGET", "EXTERNAL_ACTION_REQUIRED"
+        return "evidence", "INVESTIGATE_UNCLASSIFIED_FINDING", "HUMAN_TRIAGE_REQUIRED"
+    if check_id in {"production.requirements_contract", "gaps.contract"}:
+        return "evidence", "REPAIR_EVIDENCE_CONTRACT", "EVIDENCE_CONTRACT_REQUIRED"
     if check_id.startswith(("audit.", "manifest.", "assets.", "schema.")):
         return "evidence", "REPAIR_EVIDENCE_CONTRACT", "EVIDENCE_CONTRACT_REQUIRED"
     if check_id.startswith(("freshness.", "production.", "gaps.")):
@@ -298,37 +325,48 @@ def build_queue(
         if check["state"] == "PASS":
             continue
         check_id = check["id"]
-        target = target_from_check(check_id)
-        source = deployment_sources.get(target) if target else None
         sanitized_detail = sanitize_detail(check["detail"])
-        plane, action, authority = classify(check_id, target, sanitized_detail)
-        headers = (
-            missing_headers(sanitized_detail, allowed=allowed_headers)
-            if action == "APPLY_EDGE_RESPONSE_HEADERS"
-            else []
+        targets = (
+            prohibited_status_targets(check["detail"])
+            if check_id == "assets.prohibited_status"
+            else [target_from_check(check_id)]
         )
-        actions.append(
-            {
-                "id": stable_id(
-                    check_id=check_id,
-                    plane=plane,
-                    action=action,
-                    target=target,
-                    source=source,
-                ),
-                "state": "BLOCKED" if check["state"] == "FAIL" else "PLANNED",
-                "priority": "P1" if check["state"] == "FAIL" else "P2",
-                "control_plane": plane,
-                "check_id": check_id,
-                "check_state": check["state"],
-                "action": action,
-                "authority": authority,
-                "target": target,
-                "source_repository": source,
-                "required_headers": headers,
-                "detail": sanitized_detail,
-            }
-        )
+        for target in targets:
+            source = deployment_sources.get(target) if target else None
+            if (
+                check_id == "assets.prohibited_status"
+                and target
+                and target.startswith("github:repo:")
+            ):
+                source = target
+            plane, action, authority = classify(check_id, target, sanitized_detail)
+            headers = (
+                missing_headers(sanitized_detail, allowed=allowed_headers)
+                if action == "APPLY_EDGE_RESPONSE_HEADERS"
+                else []
+            )
+            actions.append(
+                {
+                    "id": stable_id(
+                        check_id=check_id,
+                        plane=plane,
+                        action=action,
+                        target=target,
+                        source=source,
+                    ),
+                    "state": "BLOCKED" if check["state"] == "FAIL" else "PLANNED",
+                    "priority": "P1" if check["state"] == "FAIL" else "P2",
+                    "control_plane": plane,
+                    "check_id": check_id,
+                    "check_state": check["state"],
+                    "action": action,
+                    "authority": authority,
+                    "target": target,
+                    "source_repository": source,
+                    "required_headers": headers,
+                    "detail": sanitized_detail,
+                }
+            )
 
     actions.sort(key=lambda item: (item["priority"], item["control_plane"], item["check_id"]))
     failures = sum(item["check_state"] == "FAIL" for item in actions)

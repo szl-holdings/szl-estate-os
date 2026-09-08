@@ -1811,7 +1811,7 @@ def verify(
             "PASS" if not prohibited_assets else "FAIL",
             "none observed"
             if not prohibited_assets
-            else ", ".join(str(item.get("asset_id")) for item in prohibited_assets[:20]),
+            else ", ".join(str(item.get("asset_id")) for item in prohibited_assets),
         )
     )
 
