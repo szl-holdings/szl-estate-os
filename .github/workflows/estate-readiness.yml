@@ -100,6 +100,17 @@ jobs:
         continue-on-error: true
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py verify-receipts
 
+      - name: Compile deterministic remediation queue
+        id: remediation
+        if: always()
+        continue-on-error: true
+        run: >-
+          python ci/build_remediation_queue.py
+          --readiness outputs/readiness-baseline.json
+          --manifest estate/manifest.json
+          --output-json outputs/remediation-queue.json
+          --output-markdown outputs/remediation-queue.md
+
       - name: Run bounded API stress profile
         id: stress
         if: always()
@@ -121,6 +132,7 @@ jobs:
           LIVE_AUDIT_OUTCOME: ${{ steps.live_audit.outcome }}
           BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
           RECEIPT_OUTCOME: ${{ steps.receipt_chain.outcome }}
+          REMEDIATION_OUTCOME: ${{ steps.remediation.outcome }}
           STRESS_OUTCOME: ${{ steps.stress.outcome }}
         run: |
           python - <<'PY'
@@ -132,6 +144,7 @@ jobs:
               "live_audit": os.environ["LIVE_AUDIT_OUTCOME"],
               "baseline": os.environ["BASELINE_OUTCOME"],
               "receipt_chain": os.environ["RECEIPT_OUTCOME"],
+              "remediation": os.environ["REMEDIATION_OUTCOME"],
               "stress": os.environ["STRESS_OUTCOME"],
           }
           failed = [name for name, outcome in outcomes.items() if outcome != "success"]
