@@ -1,0 +1,38 @@
+name: Estate Housekeeping
+
+# Runs the estate audit tooling on a schedule under repo secrets.
+# Required secrets (Settings -> Secrets and variables -> Actions):
+#   HF_TOKEN - Hugging Face token (read scope suffices for inventory)
+# GITHUB_TOKEN is provided automatically by Actions.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 13 * * 1"  # Mondays 13:00 UTC
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install huggingface_hub requests
+
+      - name: Run estate inventory
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python tools/estate_inventory.py --github-org szl-holdings --hf-org SZLHOLDINGS --out estate_state.json
+
+      - name: Commit refreshed snapshot
+        run: |
+          git config user.name "estate-bot"
+          git config user.email "estate-bot@szlholdings.com"
+          git add estate_state.json
+          git diff --cached --quiet || git commit -m "chore: refresh estate_state.json [automated]"
+          git push
