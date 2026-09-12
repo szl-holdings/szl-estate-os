@@ -636,6 +636,30 @@ def critical_deployment_asset_ids(manifest: dict[str, Any]) -> set[str]:
     }
 
 
+def catalog_observation_identity(asset_id: str) -> tuple[str, str, str, str] | None:
+    """Map nondeployment inventory kinds to their provider catalog identities."""
+    organization_prefix = "github:organization:"
+    if asset_id.startswith(organization_prefix):
+        organization = asset_id.removeprefix(organization_prefix)
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}", organization) is None:
+            return None
+        return "github", "organization", "github.com", f"/{organization}"
+
+    for kind, url_prefix in (("model", ""), ("dataset", "datasets/"), ("collection", "collections/")):
+        asset_prefix = f"huggingface:{kind}:"
+        if not asset_id.startswith(asset_prefix):
+            continue
+        identity = asset_id.removeprefix(asset_prefix)
+        parts = identity.split("/")
+        if len(parts) != 2 or any(
+            re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9._-]*", part) is None
+            for part in parts
+        ):
+            return None
+        return "huggingface", kind, "huggingface.co", f"/{url_prefix}{identity}"
+    return None
+
+
 def critical_asset_observation_state(
     contract: dict[str, Any],
     asset: dict[str, Any],
@@ -665,6 +689,7 @@ def critical_asset_observation_state(
         return interval_state, interval_detail
 
     expected_source_type: tuple[str, str] | None = None
+    catalog_identity = catalog_observation_identity(asset_id) if not require_canonical_scope else None
     repository_identity = github_repository_identity(asset_id)
     if asset_id.startswith("github:repo:"):
         expected_source_type = ("github", "repo")
@@ -672,6 +697,8 @@ def critical_asset_observation_state(
         expected_source_type = ("domains", "route")
     elif huggingface_space_identity(asset_id) is not None:
         expected_source_type = ("huggingface", "space")
+    elif catalog_identity is not None:
+        expected_source_type = catalog_identity[:2]
     if expected_source_type is None or (
         asset.get("source"), asset.get("asset_type")
     ) != expected_source_type:
@@ -701,6 +728,25 @@ def critical_asset_observation_state(
             or parsed.path.strip("/").lower() != repository.lower()
         ):
             return "FAIL", "critical GitHub repository URL does not match its asset ID"
+    elif catalog_identity is not None:
+        _, _, expected_host, expected_path = catalog_identity
+        try:
+            parsed = urllib.parse.urlparse(url)
+            port = parsed.port
+        except ValueError:
+            return "FAIL", "catalog observation URL is invalid"
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != expected_host
+            or parsed.username is not None
+            or parsed.password is not None
+            or port is not None
+            or parsed.query
+            or parsed.fragment
+            or parsed.params
+            or parsed.path.lower() != expected_path.lower()
+        ):
+            return "FAIL", "catalog observation URL does not match its asset ID"
     else:
         identity_state, identity_detail = deployment_url_identity_state(
             manifest, asset_id, url, require_canonical_scope=require_canonical_scope

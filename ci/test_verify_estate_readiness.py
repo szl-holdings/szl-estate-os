@@ -15,6 +15,7 @@ from verify_estate_readiness import (
     RSA_SHA256_DIGEST_INFO_PREFIX,
     canonical_audit_payload,
     canonical_deployment_receipt_payload,
+    critical_asset_observation_state,
     deployment_url_identity_state,
     signature_state,
     verify as verify_readiness,
@@ -1876,6 +1877,10 @@ class ReadinessTests(unittest.TestCase):
     def test_prohibited_noncritical_observations_require_valid_schema(self) -> None:
         cases = (
             (
+                "github:organization:szl-holdings", "github", "organization",
+                "https://github.com/SZL-Holdings", "REPAIR_SOURCE_CONTRACT",
+            ),
+            (
                 "github:repo:szl-holdings/unvalidated", "github", "repo",
                 "https://github.com/szl-holdings/unvalidated", "REPAIR_SOURCE_CONTRACT",
             ),
@@ -1887,9 +1892,26 @@ class ReadinessTests(unittest.TestCase):
                 "huggingface:space:szlholdings/noncritical", "huggingface", "space",
                 "https://szlholdings-noncritical.hf.space/", "RECONCILE_PROVIDER_TARGET",
             ),
+            (
+                "huggingface:model:szlholdings/noncritical", "huggingface", "model",
+                "https://huggingface.co/SZLHOLDINGS/noncritical", "RECONCILE_PROVIDER_TARGET",
+            ),
+            (
+                "huggingface:dataset:szlholdings/noncritical", "huggingface", "dataset",
+                "https://huggingface.co/datasets/SZLHOLDINGS/noncritical", "RECONCILE_PROVIDER_TARGET",
+            ),
+            (
+                "huggingface:collection:szlholdings/canonical-public-spaces-7-6a9315ac72207f841dff230d",
+                "huggingface", "collection",
+                "https://huggingface.co/collections/SZLHOLDINGS/canonical-public-spaces-7-6a9315ac72207f841dff230d",
+                "RECONCILE_PROVIDER_TARGET",
+            ),
         )
         for target, source, asset_type, url, expected_action in cases:
-            for mutation in ("valid", "incomplete", "metadata", "source", "type", "timestamp", "url", "invalid_url"):
+            for mutation in (
+                "valid", "incomplete", "metadata", "source", "type", "timestamp", "url", "invalid_url",
+                "scheme", "userinfo", "port", "query", "fragment", "params", "path",
+            ):
                 with self.subTest(target=target, mutation=mutation):
                     record = {
                         "asset_id": target,
@@ -1914,6 +1936,20 @@ class ReadinessTests(unittest.TestCase):
                         record["url"] = "https://unrelated.example/"
                     elif mutation == "invalid_url":
                         record["url"] = "https://[invalid"
+                    elif mutation == "scheme":
+                        record["url"] = url.replace("https://", "http://")
+                    elif mutation == "userinfo":
+                        record["url"] = url.replace("https://", "https://user:password@")
+                    elif mutation == "port":
+                        record["url"] = url.replace(".com/", ".com:443/").replace(".co/", ".co:443/").replace(".space/", ".space:443/")
+                    elif mutation == "query":
+                        record["url"] = url + "?download=true"
+                    elif mutation == "fragment":
+                        record["url"] = url + "#different-identity"
+                    elif mutation == "params":
+                        record["url"] = url + ";parameter=true"
+                    elif mutation == "path":
+                        record["url"] = url.rstrip("/") + "/extra"
                     value = audit()
                     add_audited_deployment(value)
                     value["assets"].append(record)
@@ -1944,6 +1980,43 @@ class ReadinessTests(unittest.TestCase):
                     if mutation == "valid" and source != "github":
                         # Observation-only scope never relaxes the default deployment gate.
                         self.assertEqual(deployment_url_identity_state(contract, target, url)[0], "FAIL")
+                    if mutation == "valid" and asset_type in {"organization", "model", "dataset", "collection"}:
+                        # Catalog entries are valid observations, never critical deployment kinds.
+                        self.assertEqual(
+                            critical_asset_observation_state(
+                                {"asset_id": target}, record, contract,
+                                datetime(2026, 8, 1, 18, 50, tzinfo=timezone.utc),
+                                datetime(2026, 8, 1, 19, 0, tzinfo=timezone.utc),
+                            )[0],
+                            "FAIL",
+                        )
+                        self.assertEqual(deployment_url_identity_state(contract, target, url)[0], "FAIL")
+
+    def test_catalog_observations_reject_invalid_identities_and_unknown_kinds(self) -> None:
+        for target, source, asset_type, url in (
+            ("github:organization:bad_name", "github", "organization", "https://github.com/bad_name"),
+            ("github:organization:owner/extra", "github", "organization", "https://github.com/owner/extra"),
+            ("huggingface:model:szlholdings", "huggingface", "model", "https://huggingface.co/szlholdings"),
+            ("huggingface:dataset:szlholdings/../other", "huggingface", "dataset", "https://huggingface.co/datasets/szlholdings/../other"),
+            ("huggingface:collection:szlholdings/", "huggingface", "collection", "https://huggingface.co/collections/szlholdings/"),
+            ("huggingface:checkpoint:szlholdings/unknown", "huggingface", "checkpoint", "https://huggingface.co/szlholdings/unknown"),
+            ("github:team:szl-holdings/builders", "github", "team", "https://github.com/szl-holdings/builders"),
+        ):
+            with self.subTest(target=target):
+                record = {
+                    "asset_id": target, "source": source, "asset_type": asset_type,
+                    "status_label": "BROKEN", "observed_at": "2026-08-01T18:56:00Z",
+                    "url": url, "metadata": {},
+                }
+                self.assertEqual(
+                    critical_asset_observation_state(
+                        {"asset_id": target}, record, manifest(),
+                        datetime(2026, 8, 1, 18, 50, tzinfo=timezone.utc),
+                        datetime(2026, 8, 1, 19, 0, tzinfo=timezone.utc),
+                        require_canonical_scope=False,
+                    )[0],
+                    "FAIL",
+                )
 
     def test_unsafe_prohibited_identifiers_are_not_promoted_to_schema_checks(self) -> None:
         for unsafe_id in (
