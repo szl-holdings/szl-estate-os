@@ -315,7 +315,10 @@ list and detail identify the prerequisite checks that must pass before an
 operational diagnosis is available; they contain no required-header suggestions
 or source bindings. Space alignment reports explicitly identify the schema check
 for the source repository observation they actually reference, including missing
-or noncritical repositories; this is not inferred from the deployment mapping.
+or noncritical repositories, only when evaluation consults that observation;
+this is not inferred from the deployment mapping. Prohibited noncritical assets
+also require validated observation schemas. Those schema checks bind the observed
+URL to its asset identity without granting critical-deployment authorization.
 Valid observations retain their operational routing. A
 final aggregate gate fails if any step fails, while the evidence packet is still
 uploaded for diagnosis. Production evidence additionally requires provider-authenticated
