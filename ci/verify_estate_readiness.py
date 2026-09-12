@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from build_remediation_queue import ContractError, validate_identifier
+
 
 ALIGNMENT_READY = {"EXACT_RUNTIME_HEAD"}
 BASELINE_SIGNATURE_STATES = {
@@ -493,10 +495,14 @@ def manifest_baseline_contract_state(manifest: dict[str, Any]) -> tuple[str, str
 
 
 def deployment_url_identity_state(
-    manifest: dict[str, Any], asset_id: str, url: str
+    manifest: dict[str, Any],
+    asset_id: str,
+    url: str,
+    *,
+    require_canonical_scope: bool = True,
 ) -> tuple[str, str]:
-    parsed = urllib.parse.urlparse(url)
     try:
+        parsed = urllib.parse.urlparse(url)
         port = parsed.port
     except ValueError:
         return "FAIL", "deployment URL identity is invalid"
@@ -513,13 +519,15 @@ def deployment_url_identity_state(
         return "FAIL", "deployment URL identity is invalid"
 
     canonical = manifest.get("canonical_identities")
-    if not isinstance(canonical, dict):
+    if require_canonical_scope and not isinstance(canonical, dict):
         return "FAIL", "canonical identity contract is missing or invalid"
+    if not isinstance(canonical, dict):
+        canonical = {}
     domain_identity = domain_route_identity(asset_id)
     if domain_identity is not None:
         expected_host, expected_path = domain_identity
         canonical_domains = canonical.get("domains")
-        if (
+        if require_canonical_scope and (
             not isinstance(canonical_domains, list)
             or expected_host not in canonical_domains
         ):
@@ -529,14 +537,14 @@ def deployment_url_identity_state(
             or (parsed.path or "/") != expected_path
         ):
             return "FAIL", "deployment URL does not match the domain route identity"
-        return "PASS", f"canonical domain route={expected_host}{expected_path}"
+        return "PASS", f"{'canonical ' if require_canonical_scope else ''}domain route={expected_host}{expected_path}"
 
     space_identity = huggingface_space_identity(asset_id)
     if space_identity is None:
         return "FAIL", "deployment asset identity is unsupported"
     owner, space = space_identity
     canonical_spaces = canonical.get("huggingface_spaces")
-    if (
+    if require_canonical_scope and (
         not isinstance(canonical_spaces, list)
         or f"{owner}/{space}".lower()
         not in {
@@ -555,7 +563,7 @@ def deployment_url_identity_state(
     )
     if not hub_match and not runtime_match:
         return "FAIL", "deployment URL does not match the Hugging Face Space identity"
-    return "PASS", f"canonical_huggingface_space={owner}/{space}"
+    return "PASS", f"{'canonical_' if require_canonical_scope else ''}huggingface_space={owner}/{space}"
 
 
 def audited_live_target_state(
@@ -634,6 +642,8 @@ def critical_asset_observation_state(
     manifest: dict[str, Any],
     audit_started_at: datetime | None,
     audit_completed_at: datetime | None,
+    *,
+    require_canonical_scope: bool = True,
 ) -> tuple[str, str]:
     asset_id = str(contract.get("asset_id") or "")
     if not CRITICAL_RECORD_REQUIRED_KEYS.issubset(asset):
@@ -674,8 +684,8 @@ def critical_asset_observation_state(
         if repository_identity is None:
             return "FAIL", "critical GitHub repository identity is invalid"
         repository = "/".join(repository_identity)
-        parsed = urllib.parse.urlparse(url)
         try:
+            parsed = urllib.parse.urlparse(url)
             port = parsed.port
         except ValueError:
             return "FAIL", "critical GitHub repository URL is invalid"
@@ -693,17 +703,39 @@ def critical_asset_observation_state(
             return "FAIL", "critical GitHub repository URL does not match its asset ID"
     else:
         identity_state, identity_detail = deployment_url_identity_state(
-            manifest, asset_id, url
+            manifest, asset_id, url, require_canonical_scope=require_canonical_scope
         )
         if identity_state != "PASS":
             return identity_state, identity_detail
     return "PASS", f"critical audited record bound asset_id={asset_id}"
 
 
+def runtime_alignment_source_asset_id(
+    asset: dict[str, Any], github_organization: str
+) -> str | None:
+    """Return the canonical source observation referenced by Space metadata."""
+    metadata = asset.get("metadata")
+    alignment = metadata.get("github_alignment") if isinstance(metadata, dict) else None
+    source = alignment.get("source_repository") if isinstance(alignment, dict) else None
+    if not isinstance(source, str):
+        return None
+    asset_id = f"github:repo:{source.lower()}"
+    identity = github_repository_identity(asset_id)
+    if (
+        identity is None
+        or identity[0].lower() != github_organization.lower()
+        or not observation_identifier_is_safe(asset_id)
+    ):
+        return None
+    return asset_id
+
+
 def critical_runtime_alignment_state(
     asset: dict[str, Any],
     assets: dict[str, dict[str, Any]],
     github_organization: str,
+    *,
+    consulted_sources: set[str] | None = None,
 ) -> tuple[str, str]:
     metadata = asset.get("metadata")
     if not isinstance(metadata, dict):
@@ -713,16 +745,10 @@ def critical_runtime_alignment_state(
     documents = metadata.get("provenance_docs")
     if not isinstance(alignment, dict) or alignment.get("status") != "EXACT_RUNTIME_HEAD":
         return "FAIL", f"alignment={alignment_state(asset)}"
-    repository = str(alignment.get("source_repository") or "").lower()
-    canonical_prefix = f"{github_organization.lower()}/"
-    repository_identity = github_repository_identity(f"github:repo:{repository}")
-    if (
-        not github_organization
-        or repository_identity is None
-        or repository_identity[0].lower() != github_organization.lower()
-        or not repository.startswith(canonical_prefix)
-    ):
+    repository_asset_id = runtime_alignment_source_asset_id(asset, github_organization)
+    if repository_asset_id is None:
         return "FAIL", "runtime source repository is outside the canonical organization"
+    repository = repository_asset_id.removeprefix("github:repo:")
     source_revision = str(alignment.get("source_revision") or "").lower()
     github_revision = str(alignment.get("github_default_revision") or "").lower()
     runtime_revision = (
@@ -737,7 +763,9 @@ def critical_runtime_alignment_state(
         revisions
     ) != 1:
         return "FAIL", "source, GitHub, and runtime revisions are not exact and equal"
-    repository_asset = assets.get(f"github:repo:{repository}")
+    if consulted_sources is not None:
+        consulted_sources.add(repository_asset_id)
+    repository_asset = assets.get(repository_asset_id)
     repository_metadata = (
         repository_asset.get("metadata") if isinstance(repository_asset, dict) else None
     )
@@ -1678,6 +1706,17 @@ def production_artifact_requirement_state(
     return "PASS", f"verified critical deployment targets={len(required_targets)}"
 
 
+def observation_identifier_is_safe(value: Any) -> bool:
+    """Do not promote rejected inventory identifiers into readiness check IDs."""
+    if not isinstance(value, str):
+        return False
+    try:
+        validate_identifier(f"schema.asset.{value}", "observation schema identifier")
+    except ContractError:
+        return False
+    return bool(value)
+
+
 def verify(
     audit: dict[str, Any],
     manifest: dict[str, Any],
@@ -1686,7 +1725,7 @@ def verify(
     evidence_root: Path | None = None,
     verification_time: datetime | None = None,
 ) -> dict[str, Any]:
-    checks: list[dict[str, str]] = []
+    checks: list[dict[str, Any]] = []
     observed_verification_time = verification_time or datetime.now(timezone.utc)
     audit_contract, audit_detail = audit_payload_contract_state(audit)
     checks.append(result("audit.payload_contract", audit_contract, audit_detail))
@@ -1700,7 +1739,7 @@ def verify(
         invalid_asset_inventory = True
     else:
         invalid_asset_inventory = any(
-            not isinstance(item, dict) or not str(item.get("asset_id") or "")
+            not isinstance(item, dict) or not observation_identifier_is_safe(item.get("asset_id"))
             for item in asset_records
         )
     asset_ids = [
@@ -1806,13 +1845,22 @@ def verify(
         for item in assets.values()
         if str(item.get("status_label") or "UNAVAILABLE") in prohibited
     ]
+    prohibited_asset_ids = {
+        item["asset_id"] for item in prohibited_assets
+        if observation_identifier_is_safe(item.get("asset_id"))
+    }
+    invalid_prohibited_identifiers = len(prohibited_asset_ids) != len(prohibited_assets)
     checks.append(
         result(
             "assets.prohibited_status",
             "PASS" if not prohibited_assets else "FAIL",
             "none observed"
             if not prohibited_assets
-            else ", ".join(str(item.get("asset_id")) for item in prohibited_assets),
+            else (
+                "prohibited observations include invalid asset identifiers"
+                if invalid_prohibited_identifiers
+                else ", ".join(str(item.get("asset_id")) for item in prohibited_assets)
+            ),
         )
     )
 
@@ -1841,6 +1889,7 @@ def verify(
         if isinstance(audit_meta, dict)
         else None
     )
+    alignment_source_ids: set[str] = set()
     for contract in critical_assets:
         if not isinstance(contract, dict) or not contract.get("asset_id"):
             continue
@@ -1857,7 +1906,16 @@ def verify(
             )
             continue
         if asset is None:
+            checks.append(result(
+                f"schema.asset.{asset_id}", "FAIL", "Critical asset observation missing"
+            ))
             checks.append(result(f"asset.{asset_id}", "FAIL", "Critical asset missing"))
+            if profile == "production" and asset_id.startswith("huggingface:space:"):
+                checks.append(
+                    result(
+                        f"alignment.{asset_id}", "FAIL", "Critical Space runtime observation missing"
+                    ) | {"dependencies": []}
+                )
             continue
         schema_state, schema_detail = critical_asset_observation_state(
             contract,
@@ -1918,16 +1976,42 @@ def verify(
             )
 
         if profile == "production" and asset_id.startswith("huggingface:space:"):
+            consulted_sources: set[str] = set()
             alignment, alignment_detail = critical_runtime_alignment_state(
-                asset, assets, github_organization
+                asset, assets, github_organization, consulted_sources=consulted_sources
             )
+            alignment_source_ids.update(consulted_sources)
             checks.append(
                 result(
                     f"alignment.{asset_id}",
                     alignment,
                     alignment_detail,
                 )
+                | {"dependencies": [f"schema.asset.{source_id}" for source_id in sorted(consulted_sources)]}
             )
+
+    # Validate every prohibited observation, not only critical assets, and every
+    # repository actually consulted by alignment. Noncritical observations need
+    # exact URL identity without inheriting critical-deployment scope policy.
+    existing_check_ids = {check["id"] for check in checks}
+    for source_asset_id in sorted(alignment_source_ids | prohibited_asset_ids):
+        schema_check_id = f"schema.asset.{source_asset_id}"
+        if schema_check_id in existing_check_ids:
+            continue
+        source_asset = assets.get(source_asset_id)
+        source_schema = (
+            critical_asset_observation_state(
+                {"asset_id": source_asset_id},
+                source_asset,
+                manifest,
+                audit_started_contract_at,
+                audit_completed_contract_at,
+                require_canonical_scope=source_asset_id not in prohibited_asset_ids,
+            )
+            if source_asset is not None
+            else ("FAIL", "referenced runtime source repository observation is missing")
+        )
+        checks.append(result(schema_check_id, *source_schema))
 
     receipt = audit.get("receipt") or {}
     signature_status = str(receipt.get("signature_status") or "UNAVAILABLE")

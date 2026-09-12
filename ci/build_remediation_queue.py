@@ -101,7 +101,7 @@ def validate_identifier(value: Any, label: str, *, allow_none: bool = False) -> 
     return value
 
 
-def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
+def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, Any]]:
     if readiness.get("schema") != READINESS_SCHEMA:
         raise ContractError(f"readiness schema must be {READINESS_SCHEMA}")
     profile = readiness.get("profile")
@@ -111,7 +111,7 @@ def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
     if not isinstance(raw_checks, list):
         raise ContractError("readiness checks must be a list")
 
-    checks: list[dict[str, str]] = []
+    checks: list[dict[str, Any]] = []
     seen: set[str] = set()
     for index, item in enumerate(raw_checks):
         if not isinstance(item, dict):
@@ -127,8 +127,32 @@ def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
             raise ContractError(f"readiness check {check_id} has invalid state={state!r}")
         if not isinstance(detail, str):
             raise ContractError(f"readiness check {check_id} detail must be a string")
+        normalized: dict[str, Any] = {"id": check_id, "state": state, "detail": detail}
+        if "dependencies" in item:
+            dependencies = item["dependencies"]
+            if not check_id.startswith("alignment.huggingface:space:"):
+                raise ContractError("explicit dependencies are only supported on Space alignment checks")
+            if not isinstance(dependencies, list):
+                raise ContractError(f"readiness check {check_id} dependencies must be a list")
+            validated_dependencies: set[str] = set()
+            for dependency in dependencies:
+                dependency = validate_identifier(dependency, "readiness dependency")
+                assert dependency is not None
+                if not re.fullmatch(
+                    r"schema\.asset\.github:repo:[A-Za-z0-9][A-Za-z0-9-]{0,38}/"
+                    r"[A-Za-z0-9._-]{1,100}", dependency
+                ) or dependency.rsplit("/", 1)[-1] in {".", ".."}:
+                    raise ContractError("alignment dependency must identify a GitHub repository schema check")
+                if dependency in validated_dependencies:
+                    raise ContractError("duplicate readiness dependency")
+                validated_dependencies.add(dependency)
+            normalized["dependencies"] = sorted(validated_dependencies)
         seen.add(check_id)
-        checks.append({"id": check_id, "state": state, "detail": detail})
+        checks.append(normalized)
+
+    for check in checks:
+        if any(dependency not in seen for dependency in check.get("dependencies", [])):
+            raise ContractError(f"readiness check {check['id']} dependency check is missing")
 
     failures = sum(item["state"] == "FAIL" for item in checks)
     warnings = sum(item["state"] in {"WARN", "UNAVAILABLE"} for item in checks)
@@ -154,24 +178,25 @@ def validate_manifest(
     *,
     manifest_contract_failed: bool = False,
 ) -> tuple[dict[str, str | None], frozenset[str]]:
+    # A rejected manifest supplies no policy or bindings, even if some fields
+    # happen to look valid. Its existing failure must remain repairable.
+    if manifest_contract_failed:
+        return {}, frozenset()
     if manifest.get("schema") != MANIFEST_SCHEMA:
         raise ContractError(f"manifest schema must be {MANIFEST_SCHEMA}")
     normalized: dict[str, str | None] = {}
-    # A rejected manifest cannot provide deployment bindings. Keep the original
-    # repair finding usable without copying any of its untrusted mapping values.
-    if not manifest_contract_failed:
-        mappings = manifest.get("production_deployment_sources")
-        if not isinstance(mappings, dict):
-            raise ContractError("manifest production_deployment_sources must be an object")
-        for target, source in mappings.items():
-            safe_target = validate_identifier(target, "deployment source target")
-            assert safe_target is not None
-            safe_source = validate_identifier(
-                source,
-                f"deployment source for {safe_target}",
-                allow_none=True,
-            )
-            normalized[safe_target] = safe_source
+    mappings = manifest.get("production_deployment_sources")
+    if not isinstance(mappings, dict):
+        raise ContractError("manifest production_deployment_sources must be an object")
+    for target, source in mappings.items():
+        safe_target = validate_identifier(target, "deployment source target")
+        assert safe_target is not None
+        safe_source = validate_identifier(
+            source,
+            f"deployment source for {safe_target}",
+            allow_none=True,
+        )
+        normalized[safe_target] = safe_source
     baseline = manifest.get("baseline")
     if not isinstance(baseline, dict):
         raise ContractError("manifest baseline must be an object")
@@ -311,6 +336,40 @@ def stable_id(
     return f"rem-{hashlib.sha256(identity).hexdigest()[:16]}"
 
 
+def failed_dependencies(
+    check_id: str,
+    target: str | None,
+    states: dict[str, str],
+    *,
+    explicit_dependencies: list[str] | None = None,
+    source_repository: str | None = None,
+) -> list[str]:
+    """Identify rejected prerequisites of operational observation findings."""
+    if not (
+        check_id.startswith(("asset.", "headers.", "alignment.", "freshness.asset."))
+        or check_id
+        in {"assets.prohibited_status", "production.requirement.critical_huggingface_alignment"}
+    ):
+        return []
+    dependencies = {"manifest.baseline_contract", "audit.payload_contract", "assets.unique_ids"}
+    if target:
+        dependencies.add(f"schema.asset.{target}")
+    elif check_id == "production.requirement.critical_huggingface_alignment":
+        dependencies.update(explicit_dependencies or [])
+    if check_id.startswith("alignment.huggingface:space:"):
+        if explicit_dependencies is not None:
+            dependencies.update(explicit_dependencies)
+        elif source_repository:
+            # Legacy reports lack actual-observation dependencies. Use only the
+            # validated manifest binding, never infer a source from prose.
+            dependencies.add(f"schema.asset.{source_repository}")
+    return sorted(
+        dependency
+        for dependency in dependencies
+        if states.get(dependency) in CHECK_STATES - {"PASS"}
+    )
+
+
 def build_queue(
     readiness: dict[str, Any],
     manifest: dict[str, Any],
@@ -323,13 +382,25 @@ def build_queue(
     if not re.fullmatch(r"[0-9a-f]{64}", manifest_sha256):
         raise ContractError("manifest_sha256 must be a lowercase SHA-256 digest")
     checks = validate_readiness(readiness)
+    states = {check["id"]: check["state"] for check in checks}
+    manifest_contract_failed = states.get("manifest.baseline_contract") == "FAIL"
     deployment_sources, allowed_headers = validate_manifest(
         manifest,
-        manifest_contract_failed=any(
-            check["id"] == "manifest.baseline_contract" and check["state"] == "FAIL"
-            for check in checks
-        ),
+        manifest_contract_failed=manifest_contract_failed,
     )
+    aggregate_alignment_dependencies = sorted({
+        dependency
+        for check in checks
+        if check["id"].startswith("alignment.huggingface:space:")
+        and check["state"] != "PASS"
+        for dependency in failed_dependencies(
+            check["id"],
+            target_from_check(check["id"]),
+            states,
+            explicit_dependencies=check.get("dependencies"),
+            source_repository=deployment_sources.get(target_from_check(check["id"])),
+        )
+    })
     actions: list[dict[str, Any]] = []
 
     for check in checks:
@@ -340,6 +411,7 @@ def build_queue(
         targets = (
             prohibited_status_targets(check["detail"])
             if check_id == "assets.prohibited_status"
+            and not failed_dependencies(check_id, None, states)
             else [target_from_check(check_id)]
         )
         for target in targets:
@@ -351,6 +423,27 @@ def build_queue(
             ):
                 source = target
             plane, action, authority = classify(check_id, target, sanitized_detail)
+            blocked_by = failed_dependencies(
+                check_id,
+                target,
+                states,
+                explicit_dependencies=(
+                    aggregate_alignment_dependencies
+                    if check_id == "production.requirement.critical_huggingface_alignment"
+                    else check.get("dependencies")
+                ),
+                source_repository=source,
+            )
+            detail = sanitized_detail
+            if blocked_by:
+                plane, action, authority = (
+                    "evidence", "REPAIR_EVIDENCE_CONTRACT", "EVIDENCE_CONTRACT_REQUIRED"
+                )
+                source = None
+                detail = (
+                    f"Operational diagnosis unavailable until {', '.join(blocked_by)} "
+                    f"passes. Original finding: {sanitized_detail}"
+                )
             headers = (
                 missing_headers(sanitized_detail, allowed=allowed_headers)
                 if action == "APPLY_EDGE_RESPONSE_HEADERS"
@@ -375,7 +468,8 @@ def build_queue(
                     "target": target,
                     "source_repository": source,
                     "required_headers": headers,
-                    "detail": sanitized_detail,
+                    "blocked_by": blocked_by,
+                    "detail": detail,
                 }
             )
 
