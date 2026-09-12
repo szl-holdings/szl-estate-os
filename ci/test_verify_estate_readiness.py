@@ -2169,6 +2169,46 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(aggregate["action"], "RECONCILE_RUNTIME_SOURCE_BINDING")
         self.assertEqual(aggregate["blocked_by"], [])
 
+    def test_missing_critical_observations_emit_evidence_prerequisites(self) -> None:
+        space = "huggingface:space:szlholdings/a11oy"
+        for missing_target in (space, PRIMARY_REPOSITORY_ASSET_ID, PRIMARY_DEPLOYMENT_ASSET_ID):
+            with self.subTest(missing_target=missing_target):
+                value = audit()
+                add_audited_deployment(value)
+                add_audited_deployment(
+                    value,
+                    deployment_witness(
+                        deployment_asset_id=space,
+                        deployment_url="https://szlholdings-a11oy.hf.space/",
+                    ),
+                )
+                removed = next(asset for asset in value["assets"] if asset["asset_id"] == missing_target)
+                value["assets"].remove(removed)
+                next(report for report in value["source_reports"] if report["source"] == removed["source"])["count"] -= 1
+                contract = manifest()
+                report = verify(value, contract, "production")
+                self.assertEqual(check(report, "audit.payload_contract")["state"], "PASS")
+                schema_id = f"schema.asset.{missing_target}"
+                self.assertEqual(check(report, schema_id)["state"], "FAIL")
+                self.assertEqual(sum(item["id"] == schema_id for item in report["checks"]), 1)
+                queue = build_queue(
+                    report, contract, readiness_sha256="a" * 64, manifest_sha256="b" * 64,
+                )
+                by_check = {action["check_id"]: action for action in queue["actions"]}
+                asset_action = by_check[f"asset.{missing_target}"]
+                self.assertEqual(asset_action["action"], "REPAIR_EVIDENCE_CONTRACT")
+                self.assertEqual(asset_action["blocked_by"], [schema_id])
+                self.assertIsNone(asset_action["source_repository"])
+                if missing_target == space:
+                    self.assertEqual(check(report, f"alignment.{space}")["dependencies"], [])
+                    for check_id in (
+                        f"alignment.{space}",
+                        "production.requirement.critical_huggingface_alignment",
+                    ):
+                        self.assertEqual(by_check[check_id]["action"], "REPAIR_EVIDENCE_CONTRACT")
+                        self.assertEqual(by_check[check_id]["blocked_by"], [schema_id])
+                        self.assertIsNone(by_check[check_id]["source_repository"])
+
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
             audit(), manifest({"future_requirement": True}), "production"

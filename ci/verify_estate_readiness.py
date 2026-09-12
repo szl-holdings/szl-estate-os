@@ -1868,7 +1868,16 @@ def verify(
             )
             continue
         if asset is None:
+            checks.append(result(
+                f"schema.asset.{asset_id}", "FAIL", "Critical asset observation missing"
+            ))
             checks.append(result(f"asset.{asset_id}", "FAIL", "Critical asset missing"))
+            if profile == "production" and asset_id.startswith("huggingface:space:"):
+                checks.append(
+                    result(
+                        f"alignment.{asset_id}", "FAIL", "Critical Space runtime observation missing"
+                    ) | {"dependencies": []}
+                )
             continue
         schema_state, schema_detail = critical_asset_observation_state(
             contract,
