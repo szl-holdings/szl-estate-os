@@ -355,11 +355,7 @@ def failed_dependencies(
     if target:
         dependencies.add(f"schema.asset.{target}")
     elif check_id == "production.requirement.critical_huggingface_alignment":
-        dependencies.update(
-            candidate
-            for candidate in states
-            if candidate.startswith(("schema.asset.huggingface:", "schema.asset.github:"))
-        )
+        dependencies.update(explicit_dependencies or [])
     if check_id.startswith("alignment.huggingface:space:"):
         if explicit_dependencies is not None:
             dependencies.update(explicit_dependencies)
@@ -392,6 +388,19 @@ def build_queue(
         manifest,
         manifest_contract_failed=manifest_contract_failed,
     )
+    aggregate_alignment_dependencies = sorted({
+        dependency
+        for check in checks
+        if check["id"].startswith("alignment.huggingface:space:")
+        and check["state"] != "PASS"
+        for dependency in failed_dependencies(
+            check["id"],
+            target_from_check(check["id"]),
+            states,
+            explicit_dependencies=check.get("dependencies"),
+            source_repository=deployment_sources.get(target_from_check(check["id"])),
+        )
+    })
     actions: list[dict[str, Any]] = []
 
     for check in checks:
@@ -418,7 +427,11 @@ def build_queue(
                 check_id,
                 target,
                 states,
-                explicit_dependencies=check.get("dependencies"),
+                explicit_dependencies=(
+                    aggregate_alignment_dependencies
+                    if check_id == "production.requirement.critical_huggingface_alignment"
+                    else check.get("dependencies")
+                ),
                 source_repository=source,
             )
             detail = sanitized_detail

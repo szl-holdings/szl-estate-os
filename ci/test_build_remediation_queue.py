@@ -202,6 +202,32 @@ class RemediationQueueTests(unittest.TestCase):
         self.assertEqual(alignment["action"], "RECONCILE_RUNTIME_SOURCE_BINDING")
         self.assertEqual(alignment["blocked_by"], [])
 
+    def test_aggregate_alignment_uses_only_failed_alignment_dependencies(self) -> None:
+        target = "alignment.huggingface:space:szlholdings/a11oy"
+        source = "schema.asset.github:repo:szl-holdings/a11oy"
+        unrelated_source = "schema.asset.github:repo:szl-holdings/unrelated"
+        unrelated_space = "schema.asset.huggingface:space:szlholdings/unrelated"
+        aggregate = "production.requirement.critical_huggingface_alignment"
+        for source_state in ("PASS", "FAIL"):
+            with self.subTest(source_state=source_state):
+                report = readiness(
+                    (source, source_state, "source schema observation"),
+                    (unrelated_source, "FAIL", "unrelated malformed source"),
+                    (unrelated_space, "FAIL", "unrelated malformed Space"),
+                    (target, "FAIL", "runtime revision mismatch"),
+                    (aggregate, "FAIL", "failed=huggingface:space:szlholdings/a11oy"),
+                )
+                report["checks"][3]["dependencies"] = [source]
+                queue = build_queue(
+                    report, manifest(), readiness_sha256=DIGEST,
+                    manifest_sha256=MANIFEST_DIGEST,
+                )
+                by_check = {action["check_id"]: action for action in queue["actions"]}
+                expected = [source] if source_state == "FAIL" else []
+                self.assertEqual(by_check[target]["blocked_by"], expected)
+                self.assertEqual(by_check[aggregate]["blocked_by"], expected)
+                self.assertEqual(by_check[aggregate]["action"], by_check[target]["action"])
+
     def test_stable_ids_do_not_depend_on_transient_or_secret_detail(self) -> None:
         first = build_queue(
             readiness(("source.github", "WARN", "count=10 token=ghp_exampleexample")),

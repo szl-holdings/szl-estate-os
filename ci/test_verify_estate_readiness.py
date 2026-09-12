@@ -2162,6 +2162,12 @@ class ReadinessTests(unittest.TestCase):
         alignment = next(action for action in queue["actions"] if action["check_id"] == f"alignment.{target}")
         self.assertEqual(alignment["action"], "RECONCILE_RUNTIME_SOURCE_BINDING")
         self.assertEqual(alignment["blocked_by"], [])
+        aggregate = next(
+            action for action in queue["actions"]
+            if action["check_id"] == "production.requirement.critical_huggingface_alignment"
+        )
+        self.assertEqual(aggregate["action"], "RECONCILE_RUNTIME_SOURCE_BINDING")
+        self.assertEqual(aggregate["blocked_by"], [])
 
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
