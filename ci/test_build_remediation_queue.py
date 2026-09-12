@@ -296,7 +296,9 @@ class RemediationQueueTests(unittest.TestCase):
                 self.assertEqual(repair["authority"], "EVIDENCE_CONTRACT_REQUIRED")
                 provider = by_check["headers.domain:route:a11oy.net/"]
                 self.assertIsNone(provider["source_repository"])
-                self.assertEqual(provider["authority"], "EXTERNAL_ACTION_REQUIRED")
+                self.assertEqual(provider["authority"], "EVIDENCE_CONTRACT_REQUIRED")
+                self.assertEqual(provider["required_headers"], [])
+                self.assertEqual(provider["blocked_by"], ["manifest.baseline_contract"])
                 self.assertEqual(queue["status"], "BLOCKED")
                 self.assertNotIn("hf_example_secret_value", json.dumps(queue))
                 self.assertEqual(
@@ -360,7 +362,11 @@ class RemediationQueueTests(unittest.TestCase):
         )
         self.assertEqual(
             by_check["freshness.asset.github:repo:szl-holdings/a11oy"]["action"],
-            "REFRESH_OR_COMPLETE_EVIDENCE",
+            "REPAIR_EVIDENCE_CONTRACT",
+        )
+        self.assertEqual(
+            by_check["freshness.asset.github:repo:szl-holdings/a11oy"]["blocked_by"],
+            ["schema.asset.github:repo:szl-holdings/a11oy"],
         )
 
     def test_production_requirement_planes_are_specific(self) -> None:
@@ -484,6 +490,26 @@ class RemediationQueueTests(unittest.TestCase):
                     readiness_sha256=DIGEST,
                     manifest_sha256=MANIFEST_DIGEST,
                 )
+
+    def test_rejected_audit_does_not_promote_untrusted_prohibited_asset_identifiers(self) -> None:
+        queue = build_queue(
+            readiness(
+                ("audit.payload_contract", "FAIL", "audit payload is malformed"),
+                ("assets.prohibited_status", "FAIL", "hf_example_secret_value, invalid target"),
+            ),
+            manifest(),
+            readiness_sha256=DIGEST,
+            manifest_sha256=MANIFEST_DIGEST,
+        )
+        action = next(
+            action for action in queue["actions"]
+            if action["check_id"] == "assets.prohibited_status"
+        )
+        self.assertEqual(action["action"], "REPAIR_EVIDENCE_CONTRACT")
+        self.assertEqual(action["blocked_by"], ["audit.payload_contract"])
+        self.assertIsNone(action["target"])
+        self.assertIsNone(action["source_repository"])
+        self.assertNotIn("hf_example_secret_value", json.dumps(queue))
 
     def test_manifest_digest_is_part_of_queue_provenance(self) -> None:
         first = build_queue(

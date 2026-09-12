@@ -154,24 +154,25 @@ def validate_manifest(
     *,
     manifest_contract_failed: bool = False,
 ) -> tuple[dict[str, str | None], frozenset[str]]:
+    # A rejected manifest supplies no policy or bindings, even if some fields
+    # happen to look valid. Its existing failure must remain repairable.
+    if manifest_contract_failed:
+        return {}, frozenset()
     if manifest.get("schema") != MANIFEST_SCHEMA:
         raise ContractError(f"manifest schema must be {MANIFEST_SCHEMA}")
     normalized: dict[str, str | None] = {}
-    # A rejected manifest cannot provide deployment bindings. Keep the original
-    # repair finding usable without copying any of its untrusted mapping values.
-    if not manifest_contract_failed:
-        mappings = manifest.get("production_deployment_sources")
-        if not isinstance(mappings, dict):
-            raise ContractError("manifest production_deployment_sources must be an object")
-        for target, source in mappings.items():
-            safe_target = validate_identifier(target, "deployment source target")
-            assert safe_target is not None
-            safe_source = validate_identifier(
-                source,
-                f"deployment source for {safe_target}",
-                allow_none=True,
-            )
-            normalized[safe_target] = safe_source
+    mappings = manifest.get("production_deployment_sources")
+    if not isinstance(mappings, dict):
+        raise ContractError("manifest production_deployment_sources must be an object")
+    for target, source in mappings.items():
+        safe_target = validate_identifier(target, "deployment source target")
+        assert safe_target is not None
+        safe_source = validate_identifier(
+            source,
+            f"deployment source for {safe_target}",
+            allow_none=True,
+        )
+        normalized[safe_target] = safe_source
     baseline = manifest.get("baseline")
     if not isinstance(baseline, dict):
         raise ContractError("manifest baseline must be an object")
@@ -311,6 +312,32 @@ def stable_id(
     return f"rem-{hashlib.sha256(identity).hexdigest()[:16]}"
 
 
+def failed_dependencies(
+    check_id: str, target: str | None, states: dict[str, str]
+) -> list[str]:
+    """Identify rejected prerequisites of operational observation findings."""
+    if not (
+        check_id.startswith(("asset.", "headers.", "alignment.", "freshness.asset."))
+        or check_id
+        in {"assets.prohibited_status", "production.requirement.critical_huggingface_alignment"}
+    ):
+        return []
+    dependencies = {"manifest.baseline_contract", "audit.payload_contract", "assets.unique_ids"}
+    if target:
+        dependencies.add(f"schema.asset.{target}")
+    elif check_id == "production.requirement.critical_huggingface_alignment":
+        dependencies.update(
+            candidate
+            for candidate in states
+            if candidate.startswith(("schema.asset.huggingface:", "schema.asset.github:"))
+        )
+    return sorted(
+        dependency
+        for dependency in dependencies
+        if states.get(dependency) in CHECK_STATES - {"PASS"}
+    )
+
+
 def build_queue(
     readiness: dict[str, Any],
     manifest: dict[str, Any],
@@ -323,12 +350,11 @@ def build_queue(
     if not re.fullmatch(r"[0-9a-f]{64}", manifest_sha256):
         raise ContractError("manifest_sha256 must be a lowercase SHA-256 digest")
     checks = validate_readiness(readiness)
+    states = {check["id"]: check["state"] for check in checks}
+    manifest_contract_failed = states.get("manifest.baseline_contract") == "FAIL"
     deployment_sources, allowed_headers = validate_manifest(
         manifest,
-        manifest_contract_failed=any(
-            check["id"] == "manifest.baseline_contract" and check["state"] == "FAIL"
-            for check in checks
-        ),
+        manifest_contract_failed=manifest_contract_failed,
     )
     actions: list[dict[str, Any]] = []
 
@@ -340,6 +366,7 @@ def build_queue(
         targets = (
             prohibited_status_targets(check["detail"])
             if check_id == "assets.prohibited_status"
+            and not failed_dependencies(check_id, None, states)
             else [target_from_check(check_id)]
         )
         for target in targets:
@@ -351,6 +378,17 @@ def build_queue(
             ):
                 source = target
             plane, action, authority = classify(check_id, target, sanitized_detail)
+            blocked_by = failed_dependencies(check_id, target, states)
+            detail = sanitized_detail
+            if blocked_by:
+                plane, action, authority = (
+                    "evidence", "REPAIR_EVIDENCE_CONTRACT", "EVIDENCE_CONTRACT_REQUIRED"
+                )
+                source = None
+                detail = (
+                    f"Operational diagnosis unavailable until {', '.join(blocked_by)} "
+                    f"passes. Original finding: {sanitized_detail}"
+                )
             headers = (
                 missing_headers(sanitized_detail, allowed=allowed_headers)
                 if action == "APPLY_EDGE_RESPONSE_HEADERS"
@@ -375,7 +413,8 @@ def build_queue(
                     "target": target,
                     "source_repository": source,
                     "required_headers": headers,
-                    "detail": sanitized_detail,
+                    "blocked_by": blocked_by,
+                    "detail": detail,
                 }
             )
 

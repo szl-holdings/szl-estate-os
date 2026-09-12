@@ -308,6 +308,12 @@ receipt-chain verification, and a bounded read-only API stress profile as
 independent steps. The remediation queue preserves every non-pass result,
 routes it to the source, inventory, evidence, or provider control plane, binds
 it to the exact readiness-report digest, and grants no deployment authority. A
+rejected baseline supplies no source mappings or header policy. Operational
+findings derived from a rejected manifest, audit payload, inventory identity
+contract, or paired asset schema route to evidence repair. Their `blocked_by`
+list and detail identify the prerequisite checks that must pass before an
+operational diagnosis is available; they contain no required-header suggestions
+or source bindings. Valid observations retain their operational routing. A
 final aggregate gate fails if any step fails, while the evidence packet is still
 uploaded for diagnosis. Production evidence additionally requires provider-authenticated
 deployment receipts, exact report-file digests, canonical source ownership,

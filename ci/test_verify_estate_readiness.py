@@ -1845,6 +1845,7 @@ class ReadinessTests(unittest.TestCase):
             }
         ]
         value["source_reports"][0]["count"] = len(value["assets"])
+        value["meta"]["status"] = "MEASURED"
         contract = manifest()
         report = verify(value, contract, "baseline")
         self.assertEqual(check(report, "assets.prohibited_status")["state"], "FAIL")
@@ -1911,6 +1912,166 @@ class ReadinessTests(unittest.TestCase):
                     all(action["source_repository"] is None for action in queue["actions"])
                 )
                 self.assertNotIn("hf_example_secret_value", json.dumps(queue))
+
+    def test_rejected_baseline_cannot_supply_operational_remediation_policy(self) -> None:
+        missing = manifest()
+        missing.pop("baseline")
+        wrong_schema = manifest()
+        wrong_schema["schema"] = "invalid-schema"
+        contracts = [missing, wrong_schema]
+        for baseline in (None, [], "invalid-baseline", {}):
+            contract = manifest()
+            contract["baseline"] = baseline
+            contracts.append(contract)
+        for headers in (
+            None,
+            [],
+            "invalid-headers",
+            [None, {}],
+            ["content-security-policy", "content-security-policy"],
+            ["authorization", "hf_example_secret_value"],
+        ):
+            contract = manifest()
+            contract["baseline"]["required_security_headers"] = headers
+            contracts.append(contract)
+        missing_headers = manifest()
+        missing_headers["baseline"].pop("required_security_headers")
+        contracts.append(missing_headers)
+        for index, contract in enumerate(contracts):
+            with self.subTest(case=index):
+                value = audit()
+                add_audited_deployment(value)
+                value["assets"][0]["operational_status"] = "INACTIVE"
+                report = verify(value, contract, "baseline")
+                self.assertEqual(check(report, "manifest.baseline_contract")["state"], "FAIL")
+                queue = build_queue(
+                    report,
+                    contract,
+                    readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+                    manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+                )
+                by_check = {action["check_id"]: action for action in queue["actions"]}
+                self.assertEqual(
+                    by_check["manifest.baseline_contract"]["action"],
+                    "REPAIR_EVIDENCE_CONTRACT",
+                )
+                self.assertFalse(
+                    any(action["control_plane"] in {"provider", "source"} for action in queue["actions"])
+                )
+                for action in queue["actions"]:
+                    self.assertEqual(action["required_headers"], [])
+                    self.assertIsNone(action["source_repository"])
+                    if action["check_id"].startswith(("asset.", "headers.")):
+                        self.assertIn("manifest.baseline_contract", action["blocked_by"])
+                        self.assertIn("Operational diagnosis unavailable", action["detail"])
+                self.assertNotIn("hf_example_secret_value", json.dumps(queue))
+                self.assertEqual(queue["status"], "BLOCKED")
+
+    def test_invalid_observation_schema_blocks_only_its_operational_derivatives(self) -> None:
+        for invalid_target in (PRIMARY_REPOSITORY_ASSET_ID, PRIMARY_DEPLOYMENT_ASSET_ID):
+            with self.subTest(invalid_target=invalid_target):
+                value = audit()
+                add_audited_deployment(value)
+                for asset in value["assets"]:
+                    asset["status_label"] = "BROKEN"
+                    if asset["asset_id"] == invalid_target:
+                        asset["metadata"] = None
+                contract = manifest()
+                report = verify(value, contract, "baseline")
+                self.assertEqual(check(report, "manifest.baseline_contract")["state"], "PASS")
+                schema_check = f"schema.asset.{invalid_target}"
+                self.assertEqual(check(report, schema_check)["state"], "FAIL")
+                queue = build_queue(
+                    report,
+                    contract,
+                    readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+                    manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+                )
+                for action in queue["actions"]:
+                    if action["target"] == invalid_target and action["check_id"] != schema_check:
+                        self.assertEqual(action["control_plane"], "evidence")
+                        self.assertEqual(action["action"], "REPAIR_EVIDENCE_CONTRACT")
+                        self.assertEqual(action["authority"], "EVIDENCE_CONTRACT_REQUIRED")
+                        self.assertIn(schema_check, action["blocked_by"])
+                        self.assertIn(schema_check, action["detail"])
+                        self.assertEqual(action["required_headers"], [])
+                        self.assertIsNone(action["source_repository"])
+                valid_target = (
+                    PRIMARY_DEPLOYMENT_ASSET_ID
+                    if invalid_target == PRIMARY_REPOSITORY_ASSET_ID
+                    else PRIMARY_REPOSITORY_ASSET_ID
+                )
+                self.assertEqual(check(report, f"schema.asset.{valid_target}")["state"], "PASS")
+                by_check = {action["check_id"]: action for action in queue["actions"]}
+                valid_check = (
+                    f"headers.{valid_target}"
+                    if valid_target == PRIMARY_DEPLOYMENT_ASSET_ID
+                    else f"asset.{valid_target}"
+                )
+                expected_action = (
+                    "APPLY_EDGE_RESPONSE_HEADERS"
+                    if valid_target == PRIMARY_DEPLOYMENT_ASSET_ID
+                    else "REPAIR_SOURCE_CONTRACT"
+                )
+                self.assertEqual(by_check[valid_check]["action"], expected_action)
+                self.assertEqual(by_check[valid_check]["blocked_by"], [])
+
+    def test_invalid_audit_prerequisites_block_operational_diagnoses(self) -> None:
+        for dependency in ("audit.payload_contract", "assets.unique_ids"):
+            with self.subTest(dependency=dependency):
+                value = audit()
+                add_audited_deployment(value)
+                value["assets"][0]["operational_status"] = "INACTIVE"
+                if dependency == "audit.payload_contract":
+                    value["meta"]["started_at"] = "invalid-timestamp"
+                else:
+                    value["assets"].append(dict(value["assets"][0]))
+                    value["source_reports"][0]["count"] += 1
+                contract = manifest()
+                report = verify(value, contract, "baseline")
+                self.assertEqual(check(report, dependency)["state"], "FAIL")
+                queue = build_queue(
+                    report,
+                    contract,
+                    readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+                    manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+                )
+                by_check = {action["check_id"]: action for action in queue["actions"]}
+                for check_id in (
+                    f"asset.{PRIMARY_REPOSITORY_ASSET_ID}",
+                    f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}",
+                ):
+                    self.assertEqual(by_check[check_id]["action"], "REPAIR_EVIDENCE_CONTRACT")
+                    self.assertIn(dependency, by_check[check_id]["blocked_by"])
+
+    def test_invalid_space_schema_blocks_runtime_alignment_diagnoses(self) -> None:
+        target = "huggingface:space:szlholdings/a11oy"
+        value = audit()
+        add_audited_deployment(value)
+        add_audited_deployment(
+            value,
+            deployment_witness(
+                deployment_asset_id=target,
+                deployment_url="https://szlholdings-a11oy.hf.space/",
+            ),
+        )
+        next(asset for asset in value["assets"] if asset["asset_id"] == target)["metadata"] = None
+        contract = manifest()
+        report = verify(value, contract, "production")
+        self.assertEqual(check(report, f"schema.asset.{target}")["state"], "FAIL")
+        queue = build_queue(
+            report,
+            contract,
+            readiness_sha256=hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+            manifest_sha256=hashlib.sha256(json.dumps(contract).encode()).hexdigest(),
+        )
+        by_check = {action["check_id"]: action for action in queue["actions"]}
+        for check_id in (
+            f"alignment.{target}",
+            "production.requirement.critical_huggingface_alignment",
+        ):
+            self.assertEqual(by_check[check_id]["action"], "REPAIR_EVIDENCE_CONTRACT")
+            self.assertIn(f"schema.asset.{target}", by_check[check_id]["blocked_by"])
 
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
