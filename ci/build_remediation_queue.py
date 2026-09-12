@@ -101,7 +101,7 @@ def validate_identifier(value: Any, label: str, *, allow_none: bool = False) -> 
     return value
 
 
-def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
+def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, Any]]:
     if readiness.get("schema") != READINESS_SCHEMA:
         raise ContractError(f"readiness schema must be {READINESS_SCHEMA}")
     profile = readiness.get("profile")
@@ -111,7 +111,7 @@ def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
     if not isinstance(raw_checks, list):
         raise ContractError("readiness checks must be a list")
 
-    checks: list[dict[str, str]] = []
+    checks: list[dict[str, Any]] = []
     seen: set[str] = set()
     for index, item in enumerate(raw_checks):
         if not isinstance(item, dict):
@@ -127,8 +127,32 @@ def validate_readiness(readiness: dict[str, Any]) -> list[dict[str, str]]:
             raise ContractError(f"readiness check {check_id} has invalid state={state!r}")
         if not isinstance(detail, str):
             raise ContractError(f"readiness check {check_id} detail must be a string")
+        normalized: dict[str, Any] = {"id": check_id, "state": state, "detail": detail}
+        if "dependencies" in item:
+            dependencies = item["dependencies"]
+            if not check_id.startswith("alignment.huggingface:space:"):
+                raise ContractError("explicit dependencies are only supported on Space alignment checks")
+            if not isinstance(dependencies, list):
+                raise ContractError(f"readiness check {check_id} dependencies must be a list")
+            validated_dependencies: set[str] = set()
+            for dependency in dependencies:
+                dependency = validate_identifier(dependency, "readiness dependency")
+                assert dependency is not None
+                if not re.fullmatch(
+                    r"schema\.asset\.github:repo:[A-Za-z0-9][A-Za-z0-9-]{0,38}/"
+                    r"[A-Za-z0-9._-]{1,100}", dependency
+                ) or dependency.rsplit("/", 1)[-1] in {".", ".."}:
+                    raise ContractError("alignment dependency must identify a GitHub repository schema check")
+                if dependency in validated_dependencies:
+                    raise ContractError("duplicate readiness dependency")
+                validated_dependencies.add(dependency)
+            normalized["dependencies"] = sorted(validated_dependencies)
         seen.add(check_id)
-        checks.append({"id": check_id, "state": state, "detail": detail})
+        checks.append(normalized)
+
+    for check in checks:
+        if any(dependency not in seen for dependency in check.get("dependencies", [])):
+            raise ContractError(f"readiness check {check['id']} dependency check is missing")
 
     failures = sum(item["state"] == "FAIL" for item in checks)
     warnings = sum(item["state"] in {"WARN", "UNAVAILABLE"} for item in checks)
@@ -313,7 +337,12 @@ def stable_id(
 
 
 def failed_dependencies(
-    check_id: str, target: str | None, states: dict[str, str]
+    check_id: str,
+    target: str | None,
+    states: dict[str, str],
+    *,
+    explicit_dependencies: list[str] | None = None,
+    source_repository: str | None = None,
 ) -> list[str]:
     """Identify rejected prerequisites of operational observation findings."""
     if not (
@@ -331,6 +360,13 @@ def failed_dependencies(
             for candidate in states
             if candidate.startswith(("schema.asset.huggingface:", "schema.asset.github:"))
         )
+    if check_id.startswith("alignment.huggingface:space:"):
+        if explicit_dependencies is not None:
+            dependencies.update(explicit_dependencies)
+        elif source_repository:
+            # Legacy reports lack actual-observation dependencies. Use only the
+            # validated manifest binding, never infer a source from prose.
+            dependencies.add(f"schema.asset.{source_repository}")
     return sorted(
         dependency
         for dependency in dependencies
@@ -378,7 +414,13 @@ def build_queue(
             ):
                 source = target
             plane, action, authority = classify(check_id, target, sanitized_detail)
-            blocked_by = failed_dependencies(check_id, target, states)
+            blocked_by = failed_dependencies(
+                check_id,
+                target,
+                states,
+                explicit_dependencies=check.get("dependencies"),
+                source_repository=source,
+            )
             detail = sanitized_detail
             if blocked_by:
                 plane, action, authority = (

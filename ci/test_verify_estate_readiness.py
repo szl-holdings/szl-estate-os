@@ -2073,6 +2073,96 @@ class ReadinessTests(unittest.TestCase):
             self.assertEqual(by_check[check_id]["action"], "REPAIR_EVIDENCE_CONTRACT")
             self.assertIn(f"schema.asset.{target}", by_check[check_id]["blocked_by"])
 
+    def test_invalid_actual_source_schema_blocks_alignment_not_independent_headers(self) -> None:
+        target = "huggingface:space:szlholdings/a11oy"
+        for actual_source in (
+            PRIMARY_REPOSITORY_ASSET_ID,
+            "github:repo:szl-holdings/runtime-source",
+        ):
+            for missing in (False, True):
+                with self.subTest(actual_source=actual_source, missing=missing):
+                    value = audit()
+                    add_audited_deployment(value)
+                    add_audited_deployment(
+                        value,
+                        deployment_witness(
+                            repository_asset_id=actual_source,
+                            deployment_asset_id=target,
+                            deployment_url="https://szlholdings-a11oy.hf.space/",
+                        ),
+                    )
+                    if missing:
+                        value["assets"] = [
+                            asset for asset in value["assets"]
+                            if asset["asset_id"] != actual_source
+                        ]
+                        value["source_reports"][0]["count"] -= 1
+                    else:
+                        next(
+                            asset for asset in value["assets"]
+                            if asset["asset_id"] == actual_source
+                        )["metadata"] = None
+                    contract = manifest()
+                    report = verify(value, contract, "production")
+                    source_schema = f"schema.asset.{actual_source}"
+                    self.assertEqual(check(report, "audit.payload_contract")["state"], "PASS")
+                    self.assertEqual(check(report, "manifest.baseline_contract")["state"], "PASS")
+                    self.assertEqual(check(report, source_schema)["state"], "FAIL")
+                    self.assertEqual(check(report, f"schema.asset.{target}")["state"], "PASS")
+                    self.assertEqual(
+                        check(report, f"alignment.{target}")["dependencies"],
+                        [source_schema],
+                    )
+                    self.assertEqual(
+                        sum(item["id"] == source_schema for item in report["checks"]), 1
+                    )
+                    queue = build_queue(
+                        report, contract,
+                        readiness_sha256="a" * 64, manifest_sha256="b" * 64,
+                    )
+                    by_check = {action["check_id"]: action for action in queue["actions"]}
+                    for check_id in (
+                        f"alignment.{target}",
+                        "production.requirement.critical_huggingface_alignment",
+                    ):
+                        self.assertEqual(by_check[check_id]["action"], "REPAIR_EVIDENCE_CONTRACT")
+                        self.assertEqual(by_check[check_id]["blocked_by"], [source_schema])
+                        self.assertIsNone(by_check[check_id]["source_repository"])
+                    headers = by_check[f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}"]
+                    self.assertEqual(headers["action"], "APPLY_EDGE_RESPONSE_HEADERS")
+                    self.assertEqual(headers["blocked_by"], [])
+
+    def test_valid_actual_source_keeps_alignment_repair_when_mapping_source_schema_fails(self) -> None:
+        target = "huggingface:space:szlholdings/a11oy"
+        actual_source = "github:repo:szl-holdings/runtime-source"
+        value = audit()
+        add_audited_deployment(value)
+        add_audited_deployment(
+            value,
+            deployment_witness(
+                repository_asset_id=actual_source,
+                deployment_asset_id=target,
+                deployment_url="https://szlholdings-a11oy.hf.space/",
+            ),
+        )
+        next(
+            asset for asset in value["assets"]
+            if asset["asset_id"] == PRIMARY_REPOSITORY_ASSET_ID
+        )["metadata"] = None
+        next(
+            asset for asset in value["assets"] if asset["asset_id"] == target
+        )["metadata"]["runtime_build"]["revision"] = "d" * 40
+        contract = manifest()
+        report = verify(value, contract, "production")
+        self.assertEqual(check(report, f"schema.asset.{actual_source}")["state"], "PASS")
+        self.assertEqual(check(report, f"alignment.{target}")["dependencies"], [f"schema.asset.{actual_source}"])
+        queue = build_queue(
+            report, contract, readiness_sha256="a" * 64, manifest_sha256="b" * 64,
+        )
+        alignment = next(action for action in queue["actions"] if action["check_id"] == f"alignment.{target}")
+        self.assertEqual(alignment["action"], "RECONCILE_RUNTIME_SOURCE_BINDING")
+        self.assertEqual(alignment["blocked_by"], [])
+
     def test_unknown_enabled_requirement_fails_closed(self) -> None:
         report = verify(
             audit(), manifest({"future_requirement": True}), "production"

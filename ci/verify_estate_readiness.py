@@ -700,6 +700,22 @@ def critical_asset_observation_state(
     return "PASS", f"critical audited record bound asset_id={asset_id}"
 
 
+def runtime_alignment_source_asset_id(
+    asset: dict[str, Any], github_organization: str
+) -> str | None:
+    """Return the canonical source observation referenced by Space metadata."""
+    metadata = asset.get("metadata")
+    alignment = metadata.get("github_alignment") if isinstance(metadata, dict) else None
+    source = alignment.get("source_repository") if isinstance(alignment, dict) else None
+    if not isinstance(source, str):
+        return None
+    asset_id = f"github:repo:{source.lower()}"
+    identity = github_repository_identity(asset_id)
+    if identity is None or identity[0].lower() != github_organization.lower():
+        return None
+    return asset_id
+
+
 def critical_runtime_alignment_state(
     asset: dict[str, Any],
     assets: dict[str, dict[str, Any]],
@@ -713,16 +729,10 @@ def critical_runtime_alignment_state(
     documents = metadata.get("provenance_docs")
     if not isinstance(alignment, dict) or alignment.get("status") != "EXACT_RUNTIME_HEAD":
         return "FAIL", f"alignment={alignment_state(asset)}"
-    repository = str(alignment.get("source_repository") or "").lower()
-    canonical_prefix = f"{github_organization.lower()}/"
-    repository_identity = github_repository_identity(f"github:repo:{repository}")
-    if (
-        not github_organization
-        or repository_identity is None
-        or repository_identity[0].lower() != github_organization.lower()
-        or not repository.startswith(canonical_prefix)
-    ):
+    repository_asset_id = runtime_alignment_source_asset_id(asset, github_organization)
+    if repository_asset_id is None:
         return "FAIL", "runtime source repository is outside the canonical organization"
+    repository = repository_asset_id.removeprefix("github:repo:")
     source_revision = str(alignment.get("source_revision") or "").lower()
     github_revision = str(alignment.get("github_default_revision") or "").lower()
     runtime_revision = (
@@ -737,7 +747,7 @@ def critical_runtime_alignment_state(
         revisions
     ) != 1:
         return "FAIL", "source, GitHub, and runtime revisions are not exact and equal"
-    repository_asset = assets.get(f"github:repo:{repository}")
+    repository_asset = assets.get(repository_asset_id)
     repository_metadata = (
         repository_asset.get("metadata") if isinstance(repository_asset, dict) else None
     )
@@ -1686,7 +1696,7 @@ def verify(
     evidence_root: Path | None = None,
     verification_time: datetime | None = None,
 ) -> dict[str, Any]:
-    checks: list[dict[str, str]] = []
+    checks: list[dict[str, Any]] = []
     observed_verification_time = verification_time or datetime.now(timezone.utc)
     audit_contract, audit_detail = audit_payload_contract_state(audit)
     checks.append(result("audit.payload_contract", audit_contract, audit_detail))
@@ -1841,6 +1851,7 @@ def verify(
         if isinstance(audit_meta, dict)
         else None
     )
+    alignment_source_ids: set[str] = set()
     for contract in critical_assets:
         if not isinstance(contract, dict) or not contract.get("asset_id"):
             continue
@@ -1921,13 +1932,39 @@ def verify(
             alignment, alignment_detail = critical_runtime_alignment_state(
                 asset, assets, github_organization
             )
+            source_asset_id = runtime_alignment_source_asset_id(asset, github_organization)
+            if source_asset_id is not None:
+                alignment_source_ids.add(source_asset_id)
             checks.append(
                 result(
                     f"alignment.{asset_id}",
                     alignment,
                     alignment_detail,
                 )
+                | {"dependencies": [f"schema.asset.{source_asset_id}"] if source_asset_id else []}
             )
+
+    # A Space may reference a repository other than its configured deployment
+    # source. Emit the schema prerequisite for the observation actually read,
+    # including noncritical or missing repositories, without duplicate checks.
+    existing_check_ids = {check["id"] for check in checks}
+    for source_asset_id in sorted(alignment_source_ids):
+        schema_check_id = f"schema.asset.{source_asset_id}"
+        if schema_check_id in existing_check_ids:
+            continue
+        source_asset = assets.get(source_asset_id)
+        source_schema = (
+            critical_asset_observation_state(
+                {"asset_id": source_asset_id},
+                source_asset,
+                manifest,
+                audit_started_contract_at,
+                audit_completed_contract_at,
+            )
+            if source_asset is not None
+            else ("FAIL", "referenced runtime source repository observation is missing")
+        )
+        checks.append(result(schema_check_id, *source_schema))
 
     receipt = audit.get("receipt") or {}
     signature_status = str(receipt.get("signature_status") or "UNAVAILABLE")

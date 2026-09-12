@@ -133,6 +133,75 @@ class RemediationQueueTests(unittest.TestCase):
                 manifest_sha256=MANIFEST_DIGEST,
             )
 
+    def test_alignment_dependency_contract_rejects_invalid_or_missing_references(self) -> None:
+        source_schema = "schema.asset.github:repo:szl-holdings/a11oy"
+        target_check = "alignment.huggingface:space:szlholdings/a11oy"
+        invalid_dependencies = (
+            None,
+            source_schema,
+            {},
+            [None],
+            [[]],
+            [source_schema, source_schema],
+            ["schema.asset.github:repo:szl-holdings/missing"],
+            ["schema.asset.github:repo:szl-holdings/.."],
+            ["schema.asset.github:repo:szl-holdings/hf_example_secret_value"],
+            ["headers.domain:route:a11oy.net/"],
+            [target_check],
+            [source_schema + "\n"],
+        )
+        for dependencies in invalid_dependencies:
+            with self.subTest(dependencies=dependencies):
+                report = readiness(
+                    (source_schema, "FAIL", "malformed source"),
+                    (target_check, "FAIL", "source binding unavailable"),
+                )
+                report["checks"][1]["dependencies"] = dependencies
+                with self.assertRaises(ContractError):
+                    build_queue(
+                        report, manifest(), readiness_sha256=DIGEST,
+                        manifest_sha256=MANIFEST_DIGEST,
+                    )
+        report = readiness((source_schema, "FAIL", "malformed source"))
+        report["checks"][0]["dependencies"] = []
+        with self.assertRaisesRegex(ContractError, "only supported on Space alignment"):
+            build_queue(
+                report, manifest(), readiness_sha256=DIGEST,
+                manifest_sha256=MANIFEST_DIGEST,
+            )
+
+    def test_legacy_alignment_uses_manifest_source_schema_without_blocking_headers(self) -> None:
+        source_schema = "schema.asset.github:repo:szl-holdings/a11oy"
+        alignment_check = "alignment.huggingface:space:szlholdings/a11oy"
+        report = readiness(
+            (source_schema, "FAIL", "malformed source"),
+            (alignment_check, "FAIL", "source binding unavailable"),
+            ("headers.domain:route:a11oy.net/", "FAIL", "missing=content-security-policy"),
+        )
+        queue = build_queue(
+            report, manifest(), readiness_sha256=DIGEST, manifest_sha256=MANIFEST_DIGEST,
+        )
+        by_check = {action["check_id"]: action for action in queue["actions"]}
+        self.assertEqual(by_check[alignment_check]["action"], "REPAIR_EVIDENCE_CONTRACT")
+        self.assertEqual(by_check[alignment_check]["blocked_by"], [source_schema])
+        self.assertIsNone(by_check[alignment_check]["source_repository"])
+        self.assertEqual(by_check["headers.domain:route:a11oy.net/"]["action"], "APPLY_EDGE_RESPONSE_HEADERS")
+
+    def test_explicit_empty_alignment_dependencies_do_not_fall_back_to_manifest(self) -> None:
+        source_schema = "schema.asset.github:repo:szl-holdings/a11oy"
+        alignment_check = "alignment.huggingface:space:szlholdings/a11oy"
+        report = readiness(
+            (source_schema, "FAIL", "malformed source"),
+            (alignment_check, "FAIL", "runtime has no source declaration"),
+        )
+        report["checks"][1]["dependencies"] = []
+        queue = build_queue(
+            report, manifest(), readiness_sha256=DIGEST, manifest_sha256=MANIFEST_DIGEST,
+        )
+        alignment = next(action for action in queue["actions"] if action["check_id"] == alignment_check)
+        self.assertEqual(alignment["action"], "RECONCILE_RUNTIME_SOURCE_BINDING")
+        self.assertEqual(alignment["blocked_by"], [])
+
     def test_stable_ids_do_not_depend_on_transient_or_secret_detail(self) -> None:
         first = build_queue(
             readiness(("source.github", "WARN", "count=10 token=ghp_exampleexample")),
