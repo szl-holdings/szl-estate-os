@@ -656,6 +656,17 @@ def catalog_observation_identity(asset_id: str) -> tuple[str, str, str, str] | N
             for part in parts
         ):
             return None
+        if kind in {"model", "dataset"}:
+            # Mirror the Hub's repo-name boundary, not a 96-character cap on
+            # owner/name. Collections use a distinct title/unique-ID slug.
+            if (
+                len(parts[1]) > 96
+                or any(part.endswith((".", "-")) for part in parts)
+                or ".." in identity
+                or "--" in identity
+                or parts[1].endswith(".git")
+            ):
+                return None
         return "huggingface", kind, "huggingface.co", f"/{url_prefix}{identity}"
     return None
 
@@ -734,22 +745,9 @@ def critical_asset_observation_state(
             return "FAIL", "critical GitHub repository URL does not match its asset ID"
     elif catalog_identity is not None:
         _, _, expected_host, expected_path = catalog_identity
-        try:
-            parsed = urllib.parse.urlparse(url)
-            port = parsed.port
-        except ValueError:
-            return "FAIL", "catalog observation URL is invalid"
-        if (
-            parsed.scheme != "https"
-            or parsed.hostname != expected_host
-            or parsed.username is not None
-            or parsed.password is not None
-            or port is not None
-            or parsed.query
-            or parsed.fragment
-            or parsed.params
-            or parsed.path.lower() != expected_path.lower()
-        ):
+        # Exact serialization also rejects empty ?, #, ; and port delimiters
+        # which urlparse otherwise represents as absent components.
+        if url.lower() != f"https://{expected_host}{expected_path}".lower():
             return "FAIL", "catalog observation URL does not match its asset ID"
     else:
         identity_state, identity_detail = deployment_url_identity_state(

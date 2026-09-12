@@ -1908,12 +1908,16 @@ class ReadinessTests(unittest.TestCase):
             ),
         )
         for target, source, asset_type, url, expected_action in cases:
+            catalog_mutations = (
+                ("empty_query", "empty_fragment", "empty_params", "empty_port")
+                if asset_type in {"organization", "model", "dataset", "collection"} else ()
+            )
             for mutation in (
                 "valid", "incomplete", "metadata", "source", "type", "timestamp", "url", "invalid_url",
                 "scheme", "userinfo", "port", "query", "fragment", "params", "path",
                 "embedded_tab", "embedded_cr", "embedded_lf",
                 "trailing_tab", "trailing_cr", "trailing_lf",
-            ) + tuple(f"leading_control_{codepoint}" for codepoint in (*range(33), 127)):
+            ) + tuple(f"leading_control_{codepoint}" for codepoint in (*range(33), 127)) + catalog_mutations:
                 with self.subTest(target=target, mutation=mutation):
                     record = {
                         "asset_id": target,
@@ -1952,6 +1956,10 @@ class ReadinessTests(unittest.TestCase):
                         record["url"] = url + ";parameter=true"
                     elif mutation == "path":
                         record["url"] = url.rstrip("/") + "/extra"
+                    elif mutation in {"empty_query", "empty_fragment", "empty_params"}:
+                        record["url"] = url + {"empty_query": "?", "empty_fragment": "#", "empty_params": ";"}[mutation]
+                    elif mutation == "empty_port":
+                        record["url"] = url.replace(".com/", ".com:/").replace(".co/", ".co:/")
                     elif mutation.startswith("leading_control_"):
                         record["url"] = chr(int(mutation.removeprefix("leading_control_"))) + url
                     elif mutation.startswith("embedded_") or mutation.startswith("trailing_"):
@@ -2027,6 +2035,44 @@ class ReadinessTests(unittest.TestCase):
                     )[0],
                     "FAIL",
                 )
+
+    def test_huggingface_catalog_repository_name_boundaries(self) -> None:
+        valid_names = ("a", "_", "A_b.c-d", "a" * 96)
+        invalid_names = (
+            "a" * 97, "trailing.", "trailing-", "double..dot", "double--dash",
+            ".leading", "-leading", "repository.git",
+        )
+        for kind in ("model", "dataset"):
+            for name in valid_names + invalid_names:
+                with self.subTest(kind=kind, name=name):
+                    # The total owner/name length may exceed 96: only the repo
+                    # name has that bound in huggingface_hub's validator.
+                    target = f"huggingface:{kind}:szlholdings/{name}"
+                    prefix = "datasets/" if kind == "dataset" else ""
+                    record = {
+                        "asset_id": target, "source": "huggingface", "asset_type": kind,
+                        "status_label": "BROKEN", "observed_at": "2026-08-01T18:56:00Z",
+                        "url": f"https://huggingface.co/{prefix}szlholdings/{name}", "metadata": {},
+                    }
+                    value = audit()
+                    add_audited_deployment(value)
+                    value["assets"].append(record)
+                    for source_report in value["source_reports"]:
+                        source_report["count"] = sum(
+                            asset.get("source") == source_report["source"] for asset in value["assets"]
+                        )
+                    contract = manifest()
+                    report = verify(value, contract, "baseline")
+                    schema_id = f"schema.asset.{target}"
+                    valid = name in valid_names
+                    self.assertEqual(check(report, schema_id)["state"], "PASS" if valid else "FAIL")
+                    queue = build_queue(report, contract, readiness_sha256="a" * 64, manifest_sha256="b" * 64)
+                    action = next(
+                        item for item in queue["actions"]
+                        if item["check_id"] == "assets.prohibited_status" and item["target"] == target
+                    )
+                    self.assertEqual(action["action"], "RECONCILE_PROVIDER_TARGET" if valid else "REPAIR_EVIDENCE_CONTRACT")
+                    self.assertEqual(action["blocked_by"], [] if valid else [schema_id])
 
     def test_unsafe_prohibited_identifiers_are_not_promoted_to_schema_checks(self) -> None:
         for unsafe_id in (
