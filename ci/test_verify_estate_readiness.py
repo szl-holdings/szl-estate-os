@@ -1911,7 +1911,9 @@ class ReadinessTests(unittest.TestCase):
             for mutation in (
                 "valid", "incomplete", "metadata", "source", "type", "timestamp", "url", "invalid_url",
                 "scheme", "userinfo", "port", "query", "fragment", "params", "path",
-            ):
+                "embedded_tab", "embedded_cr", "embedded_lf",
+                "trailing_tab", "trailing_cr", "trailing_lf",
+            ) + tuple(f"leading_control_{codepoint}" for codepoint in (*range(33), 127)):
                 with self.subTest(target=target, mutation=mutation):
                     record = {
                         "asset_id": target,
@@ -1950,6 +1952,14 @@ class ReadinessTests(unittest.TestCase):
                         record["url"] = url + ";parameter=true"
                     elif mutation == "path":
                         record["url"] = url.rstrip("/") + "/extra"
+                    elif mutation.startswith("leading_control_"):
+                        record["url"] = chr(int(mutation.removeprefix("leading_control_"))) + url
+                    elif mutation.startswith("embedded_") or mutation.startswith("trailing_"):
+                        control = {"tab": "\t", "cr": "\r", "lf": "\n"}[mutation.rsplit("_", 1)[1]]
+                        record["url"] = (
+                            url[:10] + control + url[10:]
+                            if mutation.startswith("embedded_") else url + control
+                        )
                     value = audit()
                     add_audited_deployment(value)
                     value["assets"].append(record)

@@ -707,6 +707,10 @@ def critical_asset_observation_state(
     url = asset.get("url")
     if not isinstance(url, str) or not url:
         return "FAIL", "critical audited record URL is missing"
+    # urlparse removes some raw controls and leading whitespace. Evidence must
+    # match its original representation, not a parser-repaired URL.
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in url):
+        return "FAIL", "critical audited record URL contains whitespace or control characters"
     if expected_source_type == ("github", "repo"):
         if repository_identity is None:
             return "FAIL", "critical GitHub repository identity is invalid"
