@@ -40,3 +40,5 @@ jobs:
         run: python ci/test_huggingface_controls.py -v
       - name: Test immutable provenance policy
         run: python ci/test_provenance_policy.py -v
+      - name: Test public housekeeping privacy and failure contracts
+        run: python ci/test_estate_inventory.py -v
