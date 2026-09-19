@@ -747,7 +747,7 @@ def critical_asset_observation_state(
         _, _, expected_host, expected_path = catalog_identity
         # Exact serialization also rejects empty ?, #, ; and port delimiters
         # which urlparse otherwise represents as absent components.
-        if url.lower() != f"https://{expected_host}{expected_path}".lower():
+        if not url.isascii() or url.lower() != f"https://{expected_host}{expected_path}".lower():
             return "FAIL", "catalog observation URL does not match its asset ID"
     else:
         identity_state, identity_detail = deployment_url_identity_state(

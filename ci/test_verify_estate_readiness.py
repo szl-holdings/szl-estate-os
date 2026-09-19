@@ -2036,6 +2036,44 @@ class ReadinessTests(unittest.TestCase):
                     "FAIL",
                 )
 
+    def test_catalog_url_case_normalization_is_ascii_only(self) -> None:
+        for target, source, kind, url in (
+            ("github:organization:k", "github", "organization", "https://github.com/k"),
+            ("huggingface:model:owner/k", "huggingface", "model", "https://huggingface.co/owner/k"),
+            ("huggingface:dataset:owner/k", "huggingface", "dataset", "https://huggingface.co/datasets/owner/k"),
+            (
+                "huggingface:collection:owner/k-6a9315ac72207f841dff230d", "huggingface", "collection",
+                "https://huggingface.co/collections/owner/k-6a9315ac72207f841dff230d",
+            ),
+        ):
+            for uppercase_character in ("K", "\u212a"):
+                with self.subTest(kind=kind, uppercase_character=uppercase_character):
+                    record = {
+                        "asset_id": target, "source": source, "asset_type": kind,
+                        "status_label": "BROKEN", "observed_at": "2026-08-01T18:56:00Z",
+                        "url": url.replace("/k", f"/{uppercase_character}"), "metadata": {},
+                    }
+                    value = audit()
+                    add_audited_deployment(value)
+                    value["assets"].append(record)
+                    for source_report in value["source_reports"]:
+                        source_report["count"] = sum(
+                            asset.get("source") == source_report["source"] for asset in value["assets"]
+                        )
+                    contract = manifest()
+                    report = verify(value, contract, "baseline")
+                    schema_id = f"schema.asset.{target}"
+                    valid = uppercase_character == "K"
+                    self.assertEqual(check(report, schema_id)["state"], "PASS" if valid else "FAIL")
+                    queue = build_queue(report, contract, readiness_sha256="a" * 64, manifest_sha256="b" * 64)
+                    action = next(
+                        item for item in queue["actions"]
+                        if item["check_id"] == "assets.prohibited_status" and item["target"] == target
+                    )
+                    expected_action = "REPAIR_SOURCE_CONTRACT" if source == "github" else "RECONCILE_PROVIDER_TARGET"
+                    self.assertEqual(action["action"], expected_action if valid else "REPAIR_EVIDENCE_CONTRACT")
+                    self.assertEqual(action["blocked_by"], [] if valid else [schema_id])
+
     def test_huggingface_catalog_repository_name_boundaries(self) -> None:
         valid_names = ("a", "_", "A_b.c-d", "a" * 96)
         invalid_names = (
