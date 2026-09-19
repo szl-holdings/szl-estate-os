@@ -1,38 +1,55 @@
 name: Estate Housekeeping
 
-# Runs the estate audit tooling on a schedule under repo secrets.
-# Required secrets (Settings -> Secrets and variables -> Actions):
-#   HF_TOKEN - Hugging Face token (read scope suffices for inventory)
-# GITHUB_TOKEN is provided automatically by Actions.
+# Credential-free public observations only. This job never updates main.
 
 on:
   workflow_dispatch: {}
   schedule:
     - cron: "0 13 * * 1"  # Mondays 13:00 UTC
 
+permissions:
+  contents: read
+
+concurrency:
+  group: estate-housekeeping-public
+  cancel-in-progress: false
+
 jobs:
   inventory:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: pip install huggingface_hub requests
+      - name: Test public inventory privacy and failure contracts
+        run: python ci/test_estate_inventory.py -v
 
-      - name: Run estate inventory
+      - name: Run public estate inventory
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python tools/estate_inventory.py --github-org szl-holdings --hf-org SZLHOLDINGS --out estate_state.json
+          GH_TOKEN: ""
+          GITHUB_TOKEN: ""
+          HF_TOKEN: ""
+          HUGGING_FACE_HUB_TOKEN: ""
+        run: >-
+          python tools/estate_inventory.py
+          --github-org szl-holdings
+          --hf-org SZLHOLDINGS
+          --out outputs/housekeeping/estate_state.json
 
-      - name: Commit refreshed snapshot
-        run: |
-          git config user.name "estate-bot"
-          git config user.email "estate-bot@szlholdings.com"
-          git add estate_state.json
-          git diff --cached --quiet || git commit -m "chore: refresh estate_state.json [automated]"
-          git push
+      - name: Upload public observation snapshot
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: estate-housekeeping-public-${{ github.run_id }}-${{ github.run_attempt }}
+          path: outputs/housekeeping/estate_state.json
+          if-no-files-found: error
+          retention-days: 30

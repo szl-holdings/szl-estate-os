@@ -1,200 +1,219 @@
-"""
-estate_inventory.py
+"""Credential-free, public-only housekeeping inventory (standard library).
 
-Phase 0 ground-truth inventory for the SZL Holdings estate.
-Produces estate_state.json: every GitHub repo and every Hugging Face
-model/dataset, classified by status, before consolidation or new builds.
-
-Env vars (recommended to avoid rate limits):
-    GITHUB_TOKEN   - GitHub PAT (repo:read)
-    HF_TOKEN       - Hugging Face token (read)
-
-Usage:
-    python estate_inventory.py --github-org szl-holdings --hf-org SZLHOLDINGS
+An observation snapshot, not private inventory or runtime verification. No
+environment or cached credentials are read. Only explicitly public rows survive.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
-from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
+from http.client import HTTPException
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
-import requests
-
-ARCHIVE_KEYWORDS = re.compile(
-    r"\bARCHIVED\b|\bhologram\b|\bduplicate\b|\bcanonical:\s*\S+", re.IGNORECASE
-)
-
-STATUS_FLAGSHIP = "FLAGSHIP"
-STATUS_COMPONENT = "COMPONENT"
-STATUS_REFERENCE = "REFERENCE"
-STATUS_EXPERIMENT = "EXPERIMENT"
-STATUS_ARCHIVED = "ARCHIVED"
-STATUS_RETIRED = "RETIRED"
-
-KNOWN_FLAGSHIPS = {
-    "a11oy", "szl-receipt", "governed-receipt-spec", "hatun-mcp",
-    "lutar-lean", "killinchu", "szl-khipu", "szl-atelier", "immune",
-}
+MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+MAX_PAGES = 20
+REQUEST_TIMEOUT = 15
+IDENTIFIER = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]{0,127}")
+GITHUB_REPO_NAME = re.compile(r"[A-Za-z0-9._-]{1,128}")
 
 
-@dataclass
-class RepoRecord:
-    name: str
-    full_name: str
-    archived: bool
-    fork: bool
-    stargazers_count: int
-    pushed_at: str | None
-    description: str | None
-    readme_flags: list = field(default_factory=list)
-    canonical_successor: str | None = None
-    status: str = STATUS_EXPERIMENT
+class InventoryError(Exception):
+    """Contains only a fixed safe error code, never response bodies or URLs."""
 
 
-@dataclass
-class HFAssetRecord:
-    id: str
-    kind: str
-    downloads: int
-    likes: int
-    last_modified: str | None
-    status: str = STATUS_EXPERIMENT
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
-def fetch_github_repos(org, token):
-    headers = {"Accept": "application/vnd.github+json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    repos, page = [], 1
-    while True:
-        resp = requests.get(
-            f"https://api.github.com/orgs/{org}/repos",
-            headers=headers,
-            params={"per_page": 100, "page": page, "type": "public"},
-            timeout=30,
-        )
-        if resp.status_code != 200:
-            print(f"GitHub API error {resp.status_code}", file=sys.stderr)
-            break
-        batch = resp.json()
-        if not batch:
-            break
-        for r in batch:
-            repos.append(RepoRecord(
-                r["name"], r["full_name"], r.get("archived", False),
-                r.get("fork", False), r.get("stargazers_count", 0),
-                r.get("pushed_at"), r.get("description"),
-            ))
-        page += 1
-    return repos
-
-
-def fetch_readme_flags(org, repo, token):
-    headers = {"Accept": "application/vnd.github.raw+json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+def get_public_page(url: str) -> tuple[list, str]:
+    # A fresh opener avoids cached authentication, cookies, netrc and ambient
+    # proxy credentials. Redirects are denied instead of changing origins.
+    opener = build_opener(ProxyHandler({}), NoRedirect())
+    request = Request(url, headers={
+        "Accept": "application/json",
+        "User-Agent": "szl-estate-public-housekeeping/2",
+    })
     try:
-        resp = requests.get(
-            f"https://api.github.com/repos/{org}/{repo}/readme",
-            headers=headers, timeout=15,
-        )
-        if resp.status_code != 200:
-            return [], None
-        text = resp.text
-    except requests.RequestException:
-        return [], None
-    flags = list(set(m.group(0).upper() for m in ARCHIVE_KEYWORDS.finditer(text)))
-    successor = None
-    m = re.search(
-        r"[Cc]anonical(?:\s*(?:GitHub)?)?:?\s*(?:https?://\S+/)?([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)",
-        text,
-    )
-    if m:
-        successor = m.group(1)
-    return flags, successor
+        with opener.open(request, timeout=REQUEST_TIMEOUT) as response:
+            if response.status != 200:
+                raise InventoryError("HTTP_STATUS")
+            payload = response.read(MAX_RESPONSE_BYTES + 1)
+            if len(payload) > MAX_RESPONSE_BYTES:
+                raise InventoryError("RESPONSE_TOO_LARGE")
+            page = json.loads(payload)
+            if not isinstance(page, list):
+                raise InventoryError("INVALID_PAGE_SHAPE")
+            return page, response.headers.get("Link", "")
+    except HTTPError as error:
+        raise InventoryError(f"HTTP_{error.code}") from None
+    except (URLError, OSError, TimeoutError, HTTPException):
+        raise InventoryError("NETWORK_ERROR") from None
+    except (ValueError, UnicodeError):
+        raise InventoryError("INVALID_JSON") from None
 
 
-def classify_repo(r):
-    if r.archived:
-        return STATUS_ARCHIVED
-    if r.canonical_successor:
-        return STATUS_RETIRED
-    if r.name in KNOWN_FLAGSHIPS:
-        return STATUS_FLAGSHIP
-    if r.readme_flags:
-        return STATUS_EXPERIMENT
-    if r.stargazers_count > 0 or (r.pushed_at and r.pushed_at > "2026-06-01"):
-        return STATUS_COMPONENT
-    return STATUS_REFERENCE
-
-
-def fetch_hf_assets(org, token):
-    from huggingface_hub import HfApi
-    api = HfApi(token=token)
-    assets = []
+def next_page_url(link: str, current_url: str, initial_url: str) -> str | None:
+    links = re.findall(r'<([^<>]+)>\s*;\s*rel="next"', link)
+    if not links:
+        if re.search(r"\bnext\b", link):
+            raise InventoryError("INVALID_PAGINATION")
+        return None
+    if len(links) != 1:
+        raise InventoryError("INVALID_PAGINATION")
+    if any(ord(character) <= 32 or ord(character) == 127 for character in links[0]):
+        raise InventoryError("INVALID_PAGINATION")
     try:
-        for m in api.list_models(author=org, full=True):
-            assets.append(HFAssetRecord(
-                m.id, "model", getattr(m, "downloads", 0) or 0,
-                getattr(m, "likes", 0) or 0, str(getattr(m, "lastModified", None)),
-            ))
-    except Exception as e:
-        print(f"HF model listing failed: {e}", file=sys.stderr)
+        candidate = urljoin(current_url, links[0])
+        initial = urlsplit(initial_url)
+        parsed = urlsplit(candidate)
+    except ValueError:
+        raise InventoryError("INVALID_PAGINATION") from None
+    if (
+        not candidate.isascii()
+        or any(ord(character) <= 32 or ord(character) == 127 for character in candidate)
+        or parsed.scheme != "https"
+        or parsed.netloc != initial.netloc
+        or parsed.path != initial.path
+        or parsed.fragment
+    ):
+        raise InventoryError("INVALID_PAGINATION")
+    expected = parse_qs(initial.query)
+    actual = parse_qs(parsed.query)
+    for name in ("author", "type"):
+        if name in expected and actual.get(name) != expected[name]:
+            raise InventoryError("INVALID_PAGINATION")
+    return candidate
+
+
+def public_record(raw: object, org: str, kind: str) -> dict | None:
+    if not isinstance(raw, dict) or raw.get("private") is not False:
+        return None
+    identity = raw.get("full_name" if kind == "repo" else "id")
+    if not isinstance(identity, str):
+        return None
+    parts = identity.split("/")
+    if (len(parts) != 2 or parts[0].lower() != org.lower()
+            or IDENTIFIER.fullmatch(parts[0]) is None
+            or (GITHUB_REPO_NAME if kind == "repo" else IDENTIFIER).fullmatch(parts[1]) is None
+            or parts[1] in {".", ".."}):
+        return None
+    record = {"id": identity, "kind": kind, "visibility": "PUBLIC"}
+    # Never retain descriptions, README/card bodies, configuration or raw API
+    # dictionaries. Missing counters are unknown, never zero.
+    counters = ("stargazers_count",) if kind == "repo" else ("downloads", "likes")
+    for name in counters:
+        value = raw.get(name)
+        record[name] = value if type(value) is int and value >= 0 else None
+    if kind == "repo":
+        for name in ("archived", "fork"):
+            record[name] = raw.get(name) if type(raw.get(name)) is bool else None
+    return record
+
+
+def collect_source(org: str, kind: str, *, fetch=get_public_page, max_pages=MAX_PAGES) -> dict:
+    if kind == "repo":
+        url = f"https://api.github.com/orgs/{org}/repos?" + urlencode({
+            "type": "public", "per_page": 100, "sort": "full_name", "direction": "asc",
+        })
+    else:
+        url = f"https://huggingface.co/api/{kind}s?" + urlencode({"author": org, "limit": 100})
+    initial_url = url
+    records, errors, visited, identities = [], [], set(), set()
+    complete = False
+    pages = 0
     try:
-        for d in api.list_datasets(author=org, full=True):
-            assets.append(HFAssetRecord(
-                d.id, "dataset", getattr(d, "downloads", 0) or 0,
-                getattr(d, "likes", 0) or 0, str(getattr(d, "lastModified", None)),
-            ))
-    except Exception as e:
-        print(f"HF dataset listing failed: {e}", file=sys.stderr)
-    return assets
-
-
-def build_inventory(github_org, hf_org, gh_token, hf_token):
-    repos = fetch_github_repos(github_org, gh_token)
-    for r in repos:
-        flags, successor = fetch_readme_flags(github_org, r.name, gh_token)
-        r.readme_flags = flags
-        r.canonical_successor = successor
-        r.status = classify_repo(r)
-    hf_assets = fetch_hf_assets(hf_org, hf_token)
+        for _ in range(max_pages):
+            if url in visited:
+                raise InventoryError("PAGINATION_CYCLE")
+            visited.add(url)
+            batch, link = fetch(url)
+            pages += 1
+            if not isinstance(batch, list):
+                raise InventoryError("INVALID_PAGE_SHAPE")
+            for raw in batch:
+                record = public_record(raw, org, kind)
+                if record is None:
+                    errors.append("NONPUBLIC_OR_INVALID_RECORD")
+                    continue
+                identity = record["id"].lower()
+                if identity in identities:
+                    errors.append("DUPLICATE_RECORD")
+                    continue
+                identities.add(identity)
+                records.append(record)
+            # GitHub's Link may use /organizations/<numeric-id>/repos instead
+            # of the requested org endpoint. Construct page numbers ourselves
+            # to retain the exact public organization scope and origin.
+            next_url = (
+                initial_url + f"&page={pages + 1}" if len(batch) == 100 else None
+            ) if kind == "repo" else next_page_url(link, url, initial_url)
+            if next_url is None:
+                complete = True
+                break
+            url = next_url
+        if not complete:
+            errors.append("PAGE_LIMIT_REACHED")
+    except InventoryError as error:
+        errors.append(str(error))
     return {
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "github_org": github_org,
-        "hf_org": hf_org,
-        "summary": {
-            "total_repos": len(repos),
-            "archived_repos": sum(1 for r in repos if r.status == STATUS_ARCHIVED),
-            "retired_repos": sum(1 for r in repos if r.status == STATUS_RETIRED),
-            "flagship_repos": sum(1 for r in repos if r.status == STATUS_FLAGSHIP),
-            "total_hf_assets": len(hf_assets),
-            "zero_download_hf_assets": sum(1 for a in hf_assets if a.downloads == 0),
-        },
-        "github_repos": [asdict(r) for r in repos],
-        "hf_assets": [asdict(a) for a in hf_assets],
+        "source": "github" if kind == "repo" else "huggingface",
+        "kind": kind,
+        "scope": "PUBLIC_ONLY",
+        "status": "MEASURED" if complete and not errors else "PARTIAL",
+        "pagination_exhausted": complete,
+        "pages_observed": pages,
+        "errors": sorted(set(errors)),
+        "records": sorted(records, key=lambda record: record["id"].lower()),
     }
 
 
-def main():
-    parser = argparse.ArgumentParser(description="SZL Holdings Phase 0 estate inventory")
+def build_inventory(github_org: str, hf_org: str, *, fetch=get_public_page) -> dict:
+    if any(IDENTIFIER.fullmatch(org) is None for org in (github_org, hf_org)):
+        raise ValueError("Organization must be a single ASCII identifier")
+    sources = [collect_source(org, kind, fetch=fetch) for org, kind in (
+        (github_org, "repo"), (hf_org, "model"), (hf_org, "dataset"),
+    )]
+    return {
+        "schema": "szl.estate-housekeeping-public/v2",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "status": "MEASURED" if all(source["status"] == "MEASURED" for source in sources) else "PARTIAL",
+        "scope": "PUBLIC_ONLY",
+        "private_inventory": "UNAVAILABLE",
+        "complete_estate": False,
+        "runtime_verified": False,
+        "limitations": [
+            "Anonymous public listing only; no private inventory or organization-wide completeness claim.",
+            "GitHub repositories and Hugging Face models/datasets only; Spaces, collections and domains are not assessed.",
+            "No README classification, source-file audit, training verification or deployment authorization.",
+            "Pagination is bounded and not an atomic snapshot; rate limits and collection errors remain PARTIAL.",
+        ],
+        "github_org": github_org,
+        "hf_org": hf_org,
+        "summary": {source["kind"] + "_count": len(source["records"]) for source in sources},
+        "sources": sources,
+    }
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="Public-only, read-only estate housekeeping snapshot")
     parser.add_argument("--github-org", default="szl-holdings")
     parser.add_argument("--hf-org", default="SZLHOLDINGS")
-    parser.add_argument("--out", default="estate_state.json")
-    args = parser.parse_args()
-    inventory = build_inventory(
-        args.github_org, args.hf_org,
-        os.environ.get("GITHUB_TOKEN"), os.environ.get("HF_TOKEN"),
-    )
-    with open(args.out, "w") as f:
-        json.dump(inventory, f, indent=2)
-    print(json.dumps(inventory["summary"], indent=2))
+    parser.add_argument("--out", type=Path, default=Path("estate_state.json"))
+    args = parser.parse_args(argv)
+    inventory = build_inventory(args.github_org, args.hf_org)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"status": inventory["status"], "scope": inventory["scope"], **inventory["summary"]}))
+    return 0 if inventory["status"] == "MEASURED" else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
