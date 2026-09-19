@@ -39,6 +39,35 @@ The default data files are:
 
 ## Credentials and scope
 
+### Lightweight registry census
+
+`python tools/estate_inventory.py --out outputs/estate_state.json` runs a
+standard-library-only reader for GitHub repositories and Hugging Face models,
+datasets, Spaces, and collections. It follows the providers' pagination links,
+rejects cross-origin links and redirects, retains successfully collected pages
+when a later page fails, and returns exit code 2 for partial enumeration.
+`GH_TOKEN`/`GITHUB_TOKEN` and `HF_TOKEN`/`HUGGING_FACE_HUB_TOKEN` are optional;
+credentials are never included in output. The default output is under the
+ignored `outputs/` directory because authenticated results may include private
+repository metadata.
+
+The companion `estate_state.json.sha256` hashes the exact written file bytes,
+including the final newline. It is an integrity checksum, not a signature.
+`COMPLETE_VISIBLE_LISTING` means the visible pages were exhausted. It does not
+prove complete organization access, stable membership, immutable GitHub source
+revisions, file review, readiness, or release authority. Use the deep Estate OS
+audit above for source and policy evidence. Missing metrics remain null; a
+canonical README link cannot retire an asset; provider runtime, evidence,
+signer, authorization, and publication fields remain separate.
+
+The v2 JSON retains the `github_repos`, `hf_assets`, and `summary` collections
+and adds explicit coverage, collections, scope, and evidence fields. Repository
+status now uses the provider's archive flag or a declared local taxonomy;
+unverified lifecycle guesses are `UNCLASSIFIED`. Consumers must check the
+schema and coverage instead of treating a zero count or exit code as readiness.
+
+Run `python ci/test_estate_inventory.py -v` for the offline regression suite.
+
 No credential is required for a public audit. Without credentials, private or
 protected inventory is labeled `UNAVAILABLE`, not counted as zero.
 
