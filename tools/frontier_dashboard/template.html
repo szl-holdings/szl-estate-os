@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="__CSP__">
+<meta name="color-scheme" content="light dark">
+<title>SZL — Estate observatory</title>
+<style>__STYLE__</style>
+</head>
+<body>
+<a class="skip" href="#registry">Skip to asset registry</a>
+<header class="masthead">
+  <a class="identity" href="#overview" aria-label="SZL estate observatory overview"><span class="brand-mark" aria-hidden="true">S</span><span>SZL <span class="identity-sub">/ Estate observatory</span></span></a>
+  <div class="header-actions"><span class="offline"><span aria-hidden="true">◈</span> Offline snapshot</span><button id="theme" type="button" aria-pressed="false">Dark mode</button></div>
+</header>
+<div class="layout">
+<aside class="rail" aria-label="Audit navigation">
+ <p class="eyebrow">Control plane</p>
+ <nav><a class="nav-current" href="#overview"><span aria-hidden="true">◉</span> Observatory</a><a href="#registry"><span aria-hidden="true">▦</span> Asset registry</a><a href="#coverage"><span aria-hidden="true">⌁</span> Coverage &amp; provenance</a></nav>
+ <div class="rail-note"><span class="small-label">Snapshot discipline</span><p>Every status has a scope.<br>Every claim needs evidence.</p><span class="rail-line"></span><p class="small">Read-only observations.<br>No deployment controls.</p></div>
+</aside>
+<main id="overview">
+ <section class="intro" aria-labelledby="page-title">
+  <div><p class="eyebrow">SZL Holdings / Engineering evidence</p><h1 id="page-title">One estate.<br><span class="title-soft">The evidence in view.</span></h1><p class="lede">Explore source, artifact and checkout observations across the estate. Inspect an asset to see exactly what was measured, what remains unverified, and where the evidence came from.</p></div>
+  <div class="snapshot-card"><span class="small-label">Captured</span><strong id="snapshot-day">Timestamp unavailable</strong><span id="snapshot-range" class="small">Three bounded inventory snapshots</span><span class="status-label">Readiness unverified</span><p>Registry presence and provider runtime do not establish operational readiness.</p></div>
+ </section>
+ <section class="metrics" aria-label="Inventory coverage">
+  <button class="metric" type="button" data-platform="GitHub"><span class="small-label">GitHub repositories <span aria-hidden="true">↗</span></span><strong id="github-count">—</strong><span id="github-sub" class="small">Observed organization inventory</span></button>
+  <button class="metric" type="button" data-platform="Hugging Face"><span class="small-label">Hugging Face repositories <span aria-hidden="true">↗</span></span><strong id="hf-count">—</strong><span id="hf-sub" class="small">Models · datasets · Spaces</span></button>
+  <button class="metric" type="button" data-platform="Local"><span class="small-label">Local checkouts audited <span aria-hidden="true">↗</span></span><strong id="local-count">—</strong><span id="local-sub" class="small">Bounded local metadata sample</span></button>
+ </section>
+ <section class="notice-strip" aria-label="Evidence limits"><span class="notice-icon" aria-hidden="true">!</span><div><strong>Coverage is explicit. Readiness is separate.</strong><p id="coverage-brief">Inventory is a dated observation. Open any record to inspect its limits.</p></div><a href="#coverage">Inspect coverage <span aria-hidden="true">↓</span></a></section>
+ <section id="registry" class="registry" aria-labelledby="registry-title">
+  <div class="section-heading"><div><p class="eyebrow">Measured inventory</p><h2 id="registry-title">Asset registry</h2></div><span class="small">Source → facts → evidence</span></div>
+  <div class="toolbar">
+    <div class="search-wrap"><label for="search">Search the estate</label><input id="search" type="search" placeholder="Name, exact revision, local path…" autocomplete="off" spellcheck="false"></div>
+    <div><label for="platform">Source</label><select id="platform"><option value="">All sources</option><option>GitHub</option><option>Hugging Face</option><option>Local</option></select></div>
+    <div><label for="type">Artifact container</label><select id="type"><option value="">All types</option><option value="repository">Repository</option><option value="model">Model</option><option value="dataset">Dataset</option><option value="space">Space</option><option value="checkout">Checkout</option></select></div>
+    <div><label for="attention">Observations</label><select id="attention"><option value="">All records</option><option value="notices">Has recorded notices</option><option value="dirty">Tracked changes</option><option value="runtime">Provider running</option></select></div>
+    <button id="reset" type="button" class="reset">Reset</button>
+  </div>
+  <div class="result-meta"><p id="results" role="status" aria-live="polite" aria-atomic="true"></p><span>Each row opens a fact record</span></div>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Asset observations table, horizontally scrollable on small screens">
+  <table><caption class="sr-only">Observed assets with independent evidence, runtime and authorization states</caption><thead><tr><th scope="col">Asset / container</th><th scope="col">Evidence</th><th scope="col">Provider runtime</th><th scope="col">Authorization</th><th scope="col">Signer</th><th scope="col">Revision</th></tr></thead><tbody id="rows"></tbody></table>
+  </div>
+  <div id="empty" class="empty" hidden><strong>No matching records</strong><p>Try a shorter name or clear the source and type filters.</p><button id="empty-reset" type="button">Clear filters</button></div>
+  <div class="pagination"><span id="page-label"></span><div><button id="previous" type="button">← Previous</button><button id="next" type="button">Next →</button></div></div>
+ </section>
+ <section id="coverage" class="coverage" aria-labelledby="coverage-title"><div class="section-heading"><div><p class="eyebrow">Boundaries &amp; provenance</p><h2 id="coverage-title">Know the scope.</h2></div></div><div class="coverage-grid">
+ <article><span class="source-symbol" aria-hidden="true">G</span><h3>GitHub</h3><p id="github-coverage"></p><p>Repository enumeration is distinct from a file audit. Workflow definitions, individual checks, review conversations and complete deployment evidence are outside this view.</p><p class="small" id="github-time"></p></article>
+ <article><span class="source-symbol" aria-hidden="true">H</span><h3>Hugging Face</h3><p id="hf-coverage"></p><p>Readme and immutable file metadata were observed. Other file contents, model quality, training, application contracts and signer validity were not audited.</p><p class="small" id="hf-time"></p></article>
+ <article><span class="source-symbol" aria-hidden="true">L</span><h3>Local estate</h3><p id="local-coverage"></p><p>Discovery had depth and directory exclusions. Untracked files, nested repositories inside discovered roots and current remote heads were not audited.</p><p class="small" id="local-time"></p></article>
+ </div><details class="provenance"><summary>Inspect source inventory hashes</summary><p>SHA-256 binds this view to the exact source files used at build time. A digest does not establish signer identity or immutable external custody.</p><dl id="hashes"></dl></details></section>
+ <footer><span>SZL Holdings · Estate observatory</span><span>No telemetry. No automatic network requests. Snapshot only.</span></footer>
+</main>
+</div>
+<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-heading"><div><p class="eyebrow" id="detail-platform"></p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" aria-label="Close asset details">Close ×</button></div><p id="detail-note" class="detail-note"></p><div class="detail-states" id="detail-states"></div><h3>Source &amp; revision</h3><dl class="facts" id="identity-facts"></dl><div class="source-links" id="source-links"></div><h3>Observed facts</h3><dl class="facts" id="facts"></dl><h3>Recorded notices</h3><ul class="notices" id="notices"></ul><p class="scope-note" id="detail-limit"></p></dialog>
+<noscript><p class="no-script">This offline dashboard needs JavaScript to filter its embedded observations. The adjacent JSON inventories contain the source evidence.</p></noscript>
+<script id="inventory" type="application/json">__DATA__</script>
+<script>__SCRIPT__</script>
+</body>
+</html>
