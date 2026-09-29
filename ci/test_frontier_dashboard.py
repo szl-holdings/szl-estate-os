@@ -8,6 +8,7 @@ import base64
 import re
 import html
 import sys
+import subprocess
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -60,6 +61,40 @@ class DashboardTests(unittest.TestCase):
         asset=next(a for a in self.embedded()["assets"] if a["platform"]=="Hugging Face")
         self.assertEqual([asset[k] for k in ("readiness","authorization","signer")],["UNVERIFIED"]*3)
         self.assertEqual(asset["evidence"],"OBSERVED_METADATA")
+    def test_rebuilds_have_identical_bytes_and_receipts(self):
+        first=self.build()
+        first_bytes=self.output.read_bytes()
+        second=dashboard.build(self.root,self.output)
+        self.assertEqual(first_bytes,self.output.read_bytes())
+        self.assertEqual(first,second)
+        self.assertNotIn("created",self.embedded())
+    def test_local_names_are_portable_without_primary_path_exposure(self):
+        for path in (r"C:\synthetic\repo","C:\\synthetic\\repo\\","/synthetic/repo","/synthetic/repo/",r"\\server\share\repo"):
+            with self.subTest(path=path):
+                self.data["local"]["repositories"][0]["path"]=path
+                self.build()
+                asset=next(a for a in self.embedded()["assets"] if a["platform"]=="Local")
+                self.assertEqual(asset["name"],"repo")
+                self.assertEqual(asset["facts"]["Local path"],path)
+    def test_missing_or_invalid_snapshot_times_stay_unavailable(self):
+        for value in (None,"",0,False,"UNAVAILABLE","2026-01-01","2026-02-30T00:00:00Z","2026-01-01T00:00:00"):
+            with self.subTest(value=value):
+                self.data["huggingface"]["completed_at"]=value
+                self.build()
+                self.assertIsNone(self.embedded()["snapshots"]["huggingface"])
+        for value in ("2026-01-01T00:00:00Z","2026-01-01T00:00:00.123456+00:00"):
+            self.assertEqual(dashboard.snapshot_timestamp(value),value)
+    def test_browser_time_never_coerces_missing_values_to_epoch(self):
+        source=(ROOT/"tools/frontier_dashboard/app.js").read_text(encoding="utf-8")
+        helper=re.search(r"  const time = (.*);\n  const c =",source,re.S).group(1)
+        cases=[None,"",0,False,"UNAVAILABLE","not-a-date","2026-01-01","2026-01-01T25:00:00Z","2026-01-01T24:00:00Z","2026-02-30T00:00:00Z","2026-02-29T00:00:00Z","2026-04-31T00:00:00Z","1900-02-29T00:00:00Z","2026-01-01T00:00:00+24:00"]
+        script="const time="+helper+";process.stdout.write(JSON.stringify("+json.dumps(cases)+".map(time)));"
+        result=subprocess.run(["node","-e",script],capture_output=True,text=True,check=True)
+        self.assertEqual(json.loads(result.stdout),["Timestamp unavailable"]*len(cases))
+        valid=["2024-02-29T00:00:00Z","2000-02-29T00:00:00Z","2026-01-01T01:30:00+01:30"]
+        script="const time="+helper+";process.stdout.write(JSON.stringify("+json.dumps(valid)+".map(time)));"
+        result=subprocess.run(["node","-e",script],capture_output=True,text=True,check=True)
+        self.assertEqual(json.loads(result.stdout),["2024-02-29 00:00:00 UTC","2000-02-29 00:00:00 UTC","2026-01-01 00:00:00 UTC"])
     def test_links_are_derived_from_identity_and_revision(self):
         self.data["github"]["repositories"][0]["url"]="https://github.com/foreign/unrelated"
         self.data["github"]["repositories"][0]["defaultBranchRef"]["target"]["url"]="javascript:alert(1)"

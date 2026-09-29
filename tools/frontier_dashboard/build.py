@@ -39,6 +39,21 @@ MAX_INPUT_BYTES = 25_000_000
 MAX_RECORDS = 10000
 IDENTITY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 REVISION = re.compile(r"[a-f0-9]{40}\Z")
+TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\Z")
+
+def snapshot_timestamp(value):
+    """Keep a real, timezone-qualified observation; unavailable stays null."""
+    if not isinstance(value, str) or not TIMESTAMP.fullmatch(value):
+        return None
+    try:
+        parsed = datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return value if parsed.utcoffset() is not None else None
+
+def local_basename(value):
+    """Inventory paths can come from either OS, regardless of this build host."""
+    return re.split(r"[\\/]", value.rstrip("\\/"))[-1]
 
 def require(condition, label):
     if not condition:
@@ -132,10 +147,10 @@ def build(estate_dir, output):
         source = next((url(m.get("url", "").removesuffix(".git")) for m in r.get("remotes", []) if url(m.get("url", "").removesuffix(".git"))), None)
         path = r["path"]
         changes = r.get("tracked_changes", {})
-        assets.append({"id": "local/" + str(index), "name": Path(path).name, "owner": "Local checkout", "platform": "Local", "type": "checkout", "visibility": "LOCAL", "source": source, "revisionSource": url(source + "/commit/" + r["head"]) if source and "github.com" in source and r.get("head") else None, "revision": clean(r.get("head")), "branch": clean(r.get("branch")), "evidence": "OBSERVED_METADATA", "runtime": "UNAVAILABLE", "authorization": "UNVERIFIED", "signer": "UNVERIFIED", "readiness": "UNVERIFIED", "timestamp": clean(r.get("observed_at")), "notices": [clean(x) for x in r.get("blockers", [])], "facts": {"Local path": path, "Tracked changes": clean(changes.get("count")), "Untracked files": clean(changes.get("untracked")), "Tracked files": clean(r.get("tracked_file_count")), "Tracked environment paths": clean(r.get("tracked_environment", {}).get("count")), "Weight filename candidates": clean(r.get("tracked_weight_candidates", {}).get("count")), "Remote refresh": clean(r.get("remote_state")), "Repository code execution": clean(r.get("code_execution"))}, "limit": "Local checkout records can refer to the same remote repository. Only tracked status was counted; untracked files and repository contents were not audited. Local revisions were not fetched or verified against current remote heads."})
+        assets.append({"id": "local/" + str(index), "name": local_basename(path), "owner": "Local checkout", "platform": "Local", "type": "checkout", "visibility": "LOCAL", "source": source, "revisionSource": url(source + "/commit/" + r["head"]) if source and "github.com" in source and r.get("head") else None, "revision": clean(r.get("head")), "branch": clean(r.get("branch")), "evidence": "OBSERVED_METADATA", "runtime": "UNAVAILABLE", "authorization": "UNVERIFIED", "signer": "UNVERIFIED", "readiness": "UNVERIFIED", "timestamp": clean(r.get("observed_at")), "notices": [clean(x) for x in r.get("blockers", [])], "facts": {"Local path": path, "Tracked changes": clean(changes.get("count")), "Untracked files": clean(changes.get("untracked")), "Tracked files": clean(r.get("tracked_file_count")), "Tracked environment paths": clean(r.get("tracked_environment", {}).get("count")), "Weight filename candidates": clean(r.get("tracked_weight_candidates", {}).get("count")), "Remote refresh": clean(r.get("remote_state")), "Repository code execution": clean(r.get("code_execution"))}, "limit": "Local checkout records can refer to the same remote repository. Only tracked status was counted; untracked files and repository contents were not audited. Local revisions were not fetched or verified against current remote heads."})
 
     assets.sort(key=lambda a: (a["platform"], a["name"].lower(), a["id"]))
-    data = {"assets": assets, "created": datetime.datetime.now(datetime.timezone.utc).isoformat(), "snapshots": {key: value.get("completed_at") or value.get("observed_at") for key, value in inputs.items()}, "counts": {"github": len(inputs["github"]["repositories"]), "huggingface": len(inputs["huggingface"]["assets"]), "models": inputs["huggingface"]["counts"]["models"], "datasets": inputs["huggingface"]["counts"]["datasets"], "spaces": inputs["huggingface"]["counts"]["spaces"], "collections": inputs["huggingface"]["counts"]["collections"], "local": len(inputs["local"]["repositories"]), "local_discovered": inputs["local"]["scope"]["discovered_git_roots"], "local_dirty": inputs["local"]["summary"]["checkouts_with_tracked_changes"], "github_private": inputs["github"]["summary"]["private"], "workflow_unavailable": sum(r.get("supplement", {}).get("workflows", {}).get("state") == "UNAVAILABLE" for r in inputs["github"]["repositories"])}, "digests": {key + "_inventory.json": hashlib.sha256(raw_inputs[key]).hexdigest() for key in inputs}}
+    data = {"assets": assets, "snapshots": {key: snapshot_timestamp(value.get("completed_at") or value.get("observed_at")) for key, value in inputs.items()}, "counts": {"github": len(inputs["github"]["repositories"]), "huggingface": len(inputs["huggingface"]["assets"]), "models": inputs["huggingface"]["counts"]["models"], "datasets": inputs["huggingface"]["counts"]["datasets"], "spaces": inputs["huggingface"]["counts"]["spaces"], "collections": inputs["huggingface"]["counts"]["collections"], "local": len(inputs["local"]["repositories"]), "local_discovered": inputs["local"]["scope"]["discovered_git_roots"], "local_dirty": inputs["local"]["summary"]["checkouts_with_tracked_changes"], "github_private": inputs["github"]["summary"]["private"], "workflow_unavailable": sum(r.get("supplement", {}).get("workflows", {}).get("state") == "UNAVAILABLE" for r in inputs["github"]["repositories"])}, "digests": {key + "_inventory.json": hashlib.sha256(raw_inputs[key]).hexdigest() for key in inputs}}
 
 
     css = (HERE / "style.css").read_text(encoding="utf-8")
