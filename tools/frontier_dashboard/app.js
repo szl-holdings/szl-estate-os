@@ -4,7 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const set = (id, text) => { $(id).textContent = String(text); };
   const n = (value) => new Intl.NumberFormat("en-US").format(value);
-  const time = (value) => { const d = new Date(value); return Number.isNaN(d.valueOf()) ? "Timestamp unavailable" : d.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC"); };
+  const time = (value) => { if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return "Timestamp unavailable"; const d = new Date(value); return Number.isNaN(d.valueOf()) ? "Timestamp unavailable" : d.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC"); };
   const c = data.counts; set("snapshot-day", time(data.snapshots.huggingface));
   set("github-count", n(c.github)); set("hf-count", n(c.huggingface)); set("local-count", n(c.local));
   set("github-sub", `${n(c.github - c.github_private)} public · ${n(c.github_private)} private observed`);
