@@ -86,11 +86,15 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(dashboard.snapshot_timestamp(value),value)
     def test_browser_time_never_coerces_missing_values_to_epoch(self):
         source=(ROOT/"tools/frontier_dashboard/app.js").read_text(encoding="utf-8")
-        helper=re.search(r"  const time = (.*);\n  const c =",source).group(1)
-        cases=[None,"",0,False,"UNAVAILABLE","not-a-date","2026-01-01","2026-01-01T25:00:00Z"]
+        helper=re.search(r"  const time = (.*);\n  const c =",source,re.S).group(1)
+        cases=[None,"",0,False,"UNAVAILABLE","not-a-date","2026-01-01","2026-01-01T25:00:00Z","2026-01-01T24:00:00Z","2026-02-30T00:00:00Z","2026-02-29T00:00:00Z","2026-04-31T00:00:00Z","1900-02-29T00:00:00Z","2026-01-01T00:00:00+24:00"]
         script="const time="+helper+";process.stdout.write(JSON.stringify("+json.dumps(cases)+".map(time)));"
         result=subprocess.run(["node","-e",script],capture_output=True,text=True,check=True)
         self.assertEqual(json.loads(result.stdout),["Timestamp unavailable"]*len(cases))
+        valid=["2024-02-29T00:00:00Z","2000-02-29T00:00:00Z","2026-01-01T01:30:00+01:30"]
+        script="const time="+helper+";process.stdout.write(JSON.stringify("+json.dumps(valid)+".map(time)));"
+        result=subprocess.run(["node","-e",script],capture_output=True,text=True,check=True)
+        self.assertEqual(json.loads(result.stdout),["2024-02-29 00:00:00 UTC","2000-02-29 00:00:00 UTC","2026-01-01 00:00:00 UTC"])
     def test_links_are_derived_from_identity_and_revision(self):
         self.data["github"]["repositories"][0]["url"]="https://github.com/foreign/unrelated"
         self.data["github"]["repositories"][0]["defaultBranchRef"]["target"]["url"]="javascript:alert(1)"

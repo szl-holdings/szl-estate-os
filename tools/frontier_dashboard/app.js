@@ -4,7 +4,17 @@
   const $ = (id) => document.getElementById(id);
   const set = (id, text) => { $(id).textContent = String(text); };
   const n = (value) => new Intl.NumberFormat("en-US").format(value);
-  const time = (value) => { if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return "Timestamp unavailable"; const d = new Date(value); return Number.isNaN(d.valueOf()) ? "Timestamp unavailable" : d.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC"); };
+  const time = (value) => {
+    if (typeof value !== "string") return "Timestamp unavailable";
+    const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(value);
+    if (!parts) return "Timestamp unavailable";
+    const [year, month, day, hour, minute, second] = parts.slice(1, 7).map(Number);
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1] || hour > 23 || minute > 59 || second > 59 || Number(parts[7] || 0) > 23 || Number(parts[8] || 0) > 59) return "Timestamp unavailable";
+    const d = new Date(value);
+    return Number.isNaN(d.valueOf()) ? "Timestamp unavailable" : d.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
+  };
   const c = data.counts; set("snapshot-day", time(data.snapshots.huggingface));
   set("github-count", n(c.github)); set("hf-count", n(c.huggingface)); set("local-count", n(c.local));
   set("github-sub", `${n(c.github - c.github_private)} public · ${n(c.github_private)} private observed`);
