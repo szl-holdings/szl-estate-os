@@ -44,6 +44,16 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from estate.provenance_policy import classify_provenance
+from frontier_steward import (
+    DEFAULT_MISSION as STEWARD_DEFAULT_MISSION,
+    DEFAULT_MODEL_ID as STEWARD_DEFAULT_MODEL_ID,
+    compile_plan as compile_steward_plan,
+    model_draft_schema as steward_draft_schema,
+    plan_envelope_schema as steward_plan_schema,
+    runtime_status as steward_runtime_status,
+    validate_plan as validate_steward_plan,
+    strict_json_loads as strict_steward_json_loads,
+)
 from operating_fabric import (
     LANE_ORDER,
     assess_web_security_headers,
@@ -69,6 +79,7 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_DIR = ROOT / "outputs"
 DEFAULT_DB = DEFAULT_OUTPUT_DIR / "estate.db"
 DEFAULT_EXPORT = DEFAULT_OUTPUT_DIR / "latest_audit.json"
+DEFAULT_STEWARD_PLAN = DEFAULT_OUTPUT_DIR / "frontier_steward_plan.json"
 
 DOMAIN_ROUTES = {
     "a-11-oy.com": ("/",),
@@ -2788,8 +2799,12 @@ def persist_audit(
         connection.close()
 
 
-def verify_receipt_chain(db_path: Path) -> dict[str, Any]:
-    connection = connect_db(db_path)
+def verify_receipt_chain(db_path: Path, *, read_only: bool = False) -> dict[str, Any]:
+    connection = (
+        sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=30)
+        if read_only else connect_db(db_path)
+    )
+    connection.row_factory = sqlite3.Row
     try:
         rows = connection.execute(
             "SELECT * FROM receipts ORDER BY sequence ASC"
@@ -3245,7 +3260,7 @@ def json_load(value: str) -> Any:
 
 def latest_audit_id(connection: sqlite3.Connection) -> str | None:
     row = connection.execute(
-        "SELECT audit_id FROM audit_runs ORDER BY completed_at DESC LIMIT 1"
+        "SELECT audit_id FROM audit_runs ORDER BY completed_at DESC, rowid DESC LIMIT 1"
     ).fetchone()
     return row["audit_id"] if row else None
 
@@ -3696,6 +3711,11 @@ DASHBOARD_HTML = """<!doctype html>
     <div class="card wide"><span class="mono">Receipt chain</span><b id="chain" style="font-size:18px">-</b></div>
   </div>
   <section><h2>Source truth</h2><div id="sources" class="card"></div></section>
+  <section><h2>Frontier Steward</h2>
+    <p id="steward-state" class="mono">Checking recorded plan</p>
+    <p id="steward-boundary">Proposal-only. A model plan is not an approval, deployment, or model qualification.</p>
+    <div id="steward-proposals"></div>
+  </section>
   <section><h2>Seven-lane operating fabric</h2><div class="table-wrap"><table>
     <thead><tr><th>Lane</th><th>Assessment</th><th>Score</th><th>Coverage</th><th>Claim</th></tr></thead>
     <tbody id="lanes"></tbody>
@@ -3721,8 +3741,24 @@ Promise.all([
   fetch("/api/v1/status").then(r => r.json()),
   fetch("/api/v1/proposals?limit=25").then(r => r.json()),
   fetch("/api/v1/assets?limit=100").then(r => r.json()),
-  fetch("/api/v1/operating-fabric").then(r => r.json())
-]).then(([status, proposalData, assetData, fabric]) => {
+  fetch("/api/v1/operating-fabric").then(r => r.json()),
+  fetch("/api/v1/steward/status").then(r => r.json())
+]).then(([status, proposalData, assetData, fabric, steward]) => {
+  const plan = steward.latest_plan || {};
+  document.getElementById("steward-state").textContent = `${plan.state || "UNAVAILABLE"} / ${plan.plan_status || "NO PLAN"}`;
+  const model = plan.model || {};
+  const violations = plan.policy?.violations || [];
+  document.getElementById("steward-boundary").textContent =
+    `Provider: ${model.adapter || steward.runtime?.default_provider || "unavailable"}. ` +
+    `Model: ${model.resolved_model || model.requested_model || "not invoked"}. ` +
+    `Identity: ${model.identity_state || "UNAVAILABLE"}. ` +
+    `Receipt: ${plan.signature_status || "unrecorded"}. Proposal-only; release authority stays outside the model.` +
+    (violations.length ? ` Blockers: ${violations.join(", ")}.` : "");
+  document.getElementById("steward-proposals").innerHTML = (plan.proposals || []).map(item =>
+    `<article><h3>${esc(item.title)}</h3><p>${esc(item.objective)}</p><p><b>Testable hypothesis:</b> ${esc(item.hypothesis)}</p>` +
+    `<p><b>Success measures:</b> ${esc((item.success_metrics || []).join("; "))}</p>` +
+    `<p class="mono">${esc(item.release_phase)} / ${esc(item.risk_level)} / ${esc(item.novelty_claim)}</p></article>`
+  ).join("");
   document.getElementById("stamp").textContent = status.status || "UNAVAILABLE";
   document.getElementById("stamp").classList.add(status.status || "UNAVAILABLE");
   document.getElementById("assets").textContent = status.asset_count ?? 0;
@@ -3766,6 +3802,7 @@ Promise.all([
 class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
     server_version = f"SZLEstateOS/{APP_VERSION}"
     db_path: Path = DEFAULT_DB
+    steward_plan_path: Path = DEFAULT_STEWARD_PLAN
     require_auth: bool = False
     control_token: str | None = None
 
@@ -3890,6 +3927,9 @@ class EstateRequestHandler(http.server.BaseHTTPRequestHandler):
                 load_operating_fabric(self.db_path, lane=lane, state=state),
             )
             return
+        if path == "/api/v1/steward/status":
+            self.send_json(200, load_steward_status(self.steward_plan_path, self.db_path))
+            return
         if path == "/api/v1/receipts":
             limit = safe_int((query.get("limit") or ["100"])[0], 100)
             items = load_receipts(self.db_path, limit=limit)
@@ -3951,7 +3991,10 @@ class EstateHTTPServer(http.server.ThreadingHTTPServer):
     request_queue_size = DEFAULT_REQUEST_QUEUE_SIZE
 
 
-def serve(db_path: Path, host: str, port: int, allow_remote: bool) -> None:
+def serve(
+    db_path: Path, host: str, port: int, allow_remote: bool,
+    steward_plan_path: Path = DEFAULT_STEWARD_PLAN,
+) -> None:
     loopback_hosts = {"127.0.0.1", "localhost", "::1"}
     is_loopback = host in loopback_hosts
     if not is_loopback and not allow_remote:
@@ -3966,6 +4009,7 @@ def serve(db_path: Path, host: str, port: int, allow_remote: bool) -> None:
         (EstateRequestHandler,),
         {
             "db_path": db_path,
+            "steward_plan_path": steward_plan_path,
             "require_auth": not is_loopback,
             "control_token": control_token,
         },
@@ -4440,6 +4484,84 @@ def build_parser() -> argparse.ArgumentParser:
     )
     template_parser.add_argument("--output", type=Path)
 
+    steward_status_parser = subparsers.add_parser(
+        "steward-status",
+        help="Show Frontier Steward runtime identity, authority, and latest plan state",
+    )
+    add_db_argument(steward_status_parser)
+    steward_status_parser.add_argument(
+        "--plan",
+        type=Path,
+        default=DEFAULT_STEWARD_PLAN,
+        help=f"Compiled plan path (default: {DEFAULT_STEWARD_PLAN})",
+    )
+    steward_status_parser.add_argument(
+        "--model",
+        help="Exact model ID when independently configured; a family label is not an identity",
+    )
+
+    steward_plan_parser = subparsers.add_parser(
+        "steward-plan",
+        help="Generate a governed, proposal-only Frontier Steward plan",
+    )
+    add_db_argument(steward_plan_parser)
+    mission_group = steward_plan_parser.add_mutually_exclusive_group()
+    mission_group.add_argument(
+        "--mission",
+        default=STEWARD_DEFAULT_MISSION,
+        help="Bounded planning mission",
+    )
+    mission_group.add_argument(
+        "--mission-file",
+        type=Path,
+        help="UTF-8 mission text file",
+    )
+    steward_plan_parser.add_argument(
+        "--provider",
+        choices=("responses", "codex-cli", "deterministic"),
+        default="responses",
+        help="Reasoning provider; deterministic is an honest degraded-mode planner",
+    )
+    steward_plan_parser.add_argument(
+        "--model",
+        default=STEWARD_DEFAULT_MODEL_ID,
+        help=(
+            "Accessible model alias (default: gpt-daybreak-blue-latest); "
+            "the mutable alias remains unverified until separately attested"
+        ),
+    )
+    steward_plan_parser.add_argument("--timeout", type=int, default=300)
+    steward_plan_parser.add_argument(
+        "--allow-local-agent", action="store_true",
+        help="Explicit development-only opt-in for the workspace-reading CLI adapter",
+    )
+    steward_plan_parser.add_argument(
+        "--output",
+        type=Path,
+        default=DEFAULT_STEWARD_PLAN,
+    )
+
+    steward_verify_parser = subparsers.add_parser(
+        "steward-verify",
+        help="Verify a compiled Frontier Steward plan and its content digest",
+    )
+    steward_verify_parser.add_argument(
+        "--plan",
+        type=Path,
+        default=DEFAULT_STEWARD_PLAN,
+    )
+
+    steward_schema_parser = subparsers.add_parser(
+        "steward-schema",
+        help="Emit the model-draft or compiled-plan JSON Schema",
+    )
+    steward_schema_parser.add_argument(
+        "--kind",
+        choices=("draft", "plan"),
+        default="plan",
+    )
+    steward_schema_parser.add_argument("--output", type=Path)
+
     serve_parser = subparsers.add_parser(
         "serve",
         help="Serve the local dashboard and read-only API",
@@ -4447,6 +4569,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_db_argument(serve_parser)
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8787)
+    serve_parser.add_argument("--steward-plan", type=Path, default=DEFAULT_STEWARD_PLAN)
     serve_parser.add_argument(
         "--allow-remote",
         action="store_true",
@@ -4475,6 +4598,300 @@ def command_export(db_path: Path, output_path: Path) -> dict[str, Any]:
     }
 
 
+def read_steward_artifact(path: Path) -> tuple[bytes, dict[str, Any]]:
+    """Bound file reads and reject ambiguous JSON before any semantic access."""
+    with path.open("rb") as handle:
+        content = handle.read(MAX_RESPONSE_BYTES + 1)
+    if len(content) > MAX_RESPONSE_BYTES:
+        raise ValueError("Steward artifact exceeds bounded size")
+    payload = strict_steward_json_loads(content)
+    if not isinstance(payload, dict):
+        raise ValueError("Steward artifact must be an object")
+    return content, payload
+
+
+def audit_receipt_binding(connection: sqlite3.Connection, audit: sqlite3.Row | None) -> dict[str, Any]:
+    """Bind the database's audit projection to its actual retained receipt."""
+    if audit is None:
+        return {"valid": False, "state": "UNAVAILABLE"}
+    receipt = connection.execute(
+        "SELECT * FROM receipts WHERE receipt_hash = ? AND audit_id = ? AND kind = 'ESTATE_AUDIT'",
+        (audit["receipt_hash"], audit["audit_id"]),
+    ).fetchall()
+    if len(receipt) != 1:
+        return {"valid": False, "state": "MISSING_OR_AMBIGUOUS_AUDIT_RECEIPT"}
+    try:
+        payload = strict_steward_json_loads(receipt[0]["payload_json"])
+        valid = isinstance(payload, dict) and all(
+            payload.get(key) == audit[key]
+            for key in ("audit_id", "status", "completed_at", "asset_count", "proposal_count")
+        ) and payload.get("scope") == strict_steward_json_loads(audit["scope_json"]) and payload.get("sources") == strict_steward_json_loads(audit["source_reports_json"])
+    except (ValueError, TypeError, RecursionError):
+        valid = False
+    return {"valid": bool(valid), "state": "BOUND" if valid else "AUDIT_PROJECTION_MISMATCH"}
+
+
+def load_steward_status(
+    plan_path: Path, db_path: Path = DEFAULT_DB,
+) -> dict[str, Any]:
+    """Read-only proof of bytes, plan digest, receipt binding, and chain integrity.
+
+    The latest JSON file is a convenience projection, never the authority.
+    An interrupted/concurrent publisher cannot make an unrecorded file green.
+    """
+    resolved = plan_path.resolve()
+    latest: dict[str, Any] = {
+        "state": "UNAVAILABLE", "path": str(resolved), "validation": None,
+        "recorded": False, "proposals": [],
+    }
+    if resolved.exists():
+        try:
+            content, payload = read_steward_artifact(resolved)
+            validation = validate_steward_plan(payload)
+            latest.update({
+                "state": "BROKEN" if not validation["valid"] else "UNRECORDED",
+                "plan_id": payload.get("plan_id"),
+                "plan_status": payload.get("status"),
+                "proposal_digest": payload.get("proposal_digest"),
+                "validation": validation,
+            })
+            if validation["valid"] and db_path.exists():
+                connection = sqlite3.connect(
+                    db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=30,
+                )
+                connection.row_factory = sqlite3.Row
+                try:
+                    audit_row = connection.execute(
+                        "SELECT * FROM audit_runs ORDER BY completed_at DESC, rowid DESC LIMIT 1"
+                    ).fetchone()
+                    audit_binding = audit_receipt_binding(connection, audit_row)
+                    rows = connection.execute(
+                        "SELECT * FROM receipts WHERE kind IN (?, ?, ?) ORDER BY sequence DESC",
+                        ("frontier_steward_plan", "frontier_steward_refusal", "frontier_steward_blocked"),
+                    ).fetchall()
+                finally:
+                    connection.close()
+                chain = verify_receipt_chain(db_path, read_only=True)
+                latest["receipt_chain"] = chain
+                newest_for_output: dict[str, Any] | None = None
+                binding: dict[str, Any] | None = None
+                for row in rows:
+                    receipt_payload = json.loads(row["payload_json"])
+                    if receipt_payload.get("output_path") == str(resolved) and newest_for_output is None:
+                        newest_for_output = receipt_payload
+                    if receipt_payload.get("plan_id") == payload["plan_id"]:
+                        binding = dict(row)
+                        binding["payload"] = receipt_payload
+                        break
+                if binding is not None:
+                    receipt_payload = binding["payload"]
+                    artifact_path = resolved.parent / "steward-plans" / (payload["plan_id"] + ".json")
+                    artifact_bytes, _ = read_steward_artifact(artifact_path)
+                    byte_binding = (
+                        receipt_payload.get("artifact_sha256") == sha256_bytes(content)
+                        and artifact_bytes == content
+                        and receipt_payload.get("proposal_digest") == payload["proposal_digest"]
+                        and receipt_payload.get("artifact_path") == str(artifact_path)
+                        and receipt_payload.get("output_path") == str(resolved)
+                        and receipt_payload.get("status") == payload["status"]
+                    )
+                    recorded = bool(chain["chain_valid"] and byte_binding)
+                    newest = newest_for_output is not None and newest_for_output.get("plan_id") == payload["plan_id"]
+                    evidence = payload["evidence_snapshot"]
+                    evidence_current = bool(
+                        audit_row and audit_binding["valid"]
+                        and audit_row["audit_id"] == evidence.get("audit_id")
+                        and audit_row["receipt_hash"] == evidence.get("audit_receipt_hash")
+                        and audit_row["completed_at"] == evidence.get("audit_completed_at")
+                        and audit_row["status"] == evidence.get("audit_status")
+                    )
+                    evidence_fresh = False
+                    try:
+                        observed = dt.datetime.fromisoformat(str(evidence.get("audit_completed_at", "")).replace("Z", "+00:00"))
+                        age = (dt.datetime.now(dt.timezone.utc) - observed).total_seconds()
+                        evidence_fresh = observed.utcoffset() is not None and 0 <= age <= 24 * 3600
+                    except (ValueError, TypeError):
+                        pass
+                    state = ("RECORDED" if newest else "STALE_PROJECTION") if recorded else "BROKEN"
+                    if recorded and newest and payload["status"] == "PROPOSED" and not (evidence_current and evidence_fresh):
+                        state = "STALE_EVIDENCE"
+                    latest.update({
+                        "state": state,
+                        "recorded": recorded,
+                        "evidence_current": evidence_current,
+                        "audit_receipt_binding": audit_binding,
+                        "evidence_fresh": evidence_fresh,
+                        "is_latest_recorded_plan": newest,
+                        "artifact_sha256": sha256_bytes(content),
+                        "receipt_id": binding["receipt_id"],
+                        "receipt_hash": binding["receipt_hash"],
+                        "signature_status": binding["signature_status"],
+                    })
+                    if recorded and newest:
+                        latest["model"] = payload["model"]
+                        latest["policy"] = payload["policy"]
+                        if state == "RECORDED":
+                            latest["proposals"] = (payload.get("draft") or {}).get("proposals", [])
+                        latest["evidence_snapshot"] = payload["evidence_snapshot"]
+        except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError, sqlite3.Error) as exc:
+            latest.update({
+                "state": "BROKEN", "recorded": False, "proposals": [],
+                "validation": {"status": "FAIL", "valid": False, "errors": [sanitize_error(exc)]},
+            })
+    return {
+        "schema_version": "szl.frontier-steward.status/v1",
+        "runtime": steward_runtime_status(),
+        "latest_plan": latest,
+        "mutation_policy": "PROPOSAL_ONLY",
+    }
+
+
+def steward_context(db_path: Path) -> dict[str, Any]:
+    """Build a bounded model context from the latest governed database state."""
+
+    status = load_status(db_path)
+    connection = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=30)
+    connection.row_factory = sqlite3.Row
+    try:
+        audit = connection.execute("SELECT * FROM audit_runs WHERE audit_id = ?", (status.get("audit_id"),)).fetchone()
+        status["audit_receipt_binding"] = audit_receipt_binding(connection, audit)
+    finally:
+        connection.close()
+    data = {
+        "status": status,
+        "assets": load_assets(db_path, limit=250),
+        "proposals": load_proposals(db_path, limit=100),
+        "operating_fabric": load_operating_fabric(db_path),
+    }
+    # The existing loaders use separate read connections. Detect a committed
+    # audit transition across those reads and refuse to send a mixed snapshot.
+    end_status = load_status(db_path)
+    signature_fields = ("audit_id", "receipt_hash", "completed_at", "status", "asset_count", "proposal_count", "source_reports", "scope")
+    if any(status.get(key) != end_status.get(key) for key in signature_fields):
+        status["audit_receipt_binding"] = {"valid": False, "state": "SNAPSHOT_CHANGED_DURING_CAPTURE"}
+    return data
+
+
+def command_steward_plan(
+    db_path: Path,
+    *,
+    mission: str,
+    provider: str,
+    model: str | None,
+    timeout: int,
+    output_path: Path,
+    allow_local_agent: bool = False,
+) -> dict[str, Any]:
+    output_path = output_path.resolve()
+    db_path = db_path.resolve()
+    protected_paths = {db_path, *(Path(str(db_path) + suffix) for suffix in ("-wal", "-shm", "-journal"))}
+    if output_path in protected_paths or output_path.suffix.lower() != ".json":
+        raise ValueError("Steward output must be JSON and cannot alias database or sidecars")
+    if output_path.exists():
+        _, existing = read_steward_artifact(output_path)
+        if existing.get("schema_version") != "szl.frontier-steward.plan/v1":
+            raise ValueError("Steward output cannot overwrite an unrelated artifact")
+    context = steward_context(db_path)
+    plan = compile_steward_plan(
+        mission=mission,
+        context=context,
+        provider=provider,
+        model_id=model,
+        cwd=ROOT,
+        timeout_seconds=timeout,
+        allow_local_agent=allow_local_agent,
+    )
+    validation = validate_steward_plan(plan)
+    if not validation["valid"]:
+        raise ValueError(
+            "compiled Frontier Steward plan failed validation: "
+            + "; ".join(validation["errors"])
+        )
+    content = (pretty_json(plan) + "\n").encode("utf-8")
+    if len(content) > MAX_RESPONSE_BYTES:
+        raise ValueError("compiled Steward artifact exceeds bounded size")
+    artifact_sha256 = sha256_bytes(content)
+    artifact_path = output_path.parent / "steward-plans" / (plan["plan_id"] + ".json")
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    with artifact_path.open("xb") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+    audit_id = plan["evidence_snapshot"].get("audit_id")
+    connection = connect_db(db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        if not verify_receipt_chain(db_path, read_only=True)["chain_valid"]:
+            raise ValueError("cannot append Steward plan to a broken receipt chain")
+        receipt = append_receipt(
+            connection,
+            audit_id=audit_id,
+            kind=(
+                "frontier_steward_refusal"
+                if plan["status"] == "DENIED"
+                else "frontier_steward_blocked" if plan["status"] == "BLOCKED"
+                else "frontier_steward_plan"
+            ),
+            payload={
+                "schema_version": "szl.frontier-steward.plan-write/v1",
+                "plan_id": plan["plan_id"],
+                "proposal_digest": plan["proposal_digest"],
+                "artifact_sha256": artifact_sha256,
+                "artifact_path": str(artifact_path),
+                "output_path": str(output_path),
+                "status": plan["status"],
+                "provider": plan["model"].get("adapter"),
+                "model_identity_state": plan["model"].get("identity_state"),
+                "execution_mode": plan["execution"]["mode"],
+            },
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    # Publish only after the write receipt commits. Readback rejects older
+    # projections if competing writers finish out of order.
+    temporary = output_path.with_name(f".{output_path.name}.{secrets.token_hex(8)}.tmp")
+    try:
+        with temporary.open("xb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(output_path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+    readback = load_steward_status(output_path, db_path)["latest_plan"]
+    proof = {
+        key: readback.get(key) for key in (
+            "state", "recorded", "plan_id", "is_latest_recorded_plan",
+            "receipt_id", "artifact_sha256", "evidence_current", "evidence_fresh",
+        )
+    }
+    proof["matches_written_plan"] = readback.get("plan_id") == plan["plan_id"]
+    proof["current_recorded_projection"] = bool(
+        proof["matches_written_plan"] and proof["recorded"]
+        and proof["is_latest_recorded_plan"] and proof["state"] == "RECORDED"
+    )
+    return {
+        "status": plan["status"],
+        "plan_id": plan["plan_id"],
+        "proposal_digest": plan["proposal_digest"],
+        "output": str(output_path),
+        "immutable_artifact": str(artifact_path),
+        "artifact_sha256": artifact_sha256,
+        "proposal_count": len((plan.get("draft") or {}).get("proposals") or []),
+        "model": plan["model"],
+        "policy": plan["policy"],
+        "execution": plan["execution"],
+        "validation": validation,
+        "receipt": receipt,
+        "readback": proof,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -4489,6 +4906,39 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(pretty_json(payload))
             return 0
+        if args.command == "steward-schema":
+            payload = (
+                steward_draft_schema()
+                if args.kind == "draft"
+                else steward_plan_schema()
+            )
+            if args.output:
+                write_json_atomic(args.output.resolve(), payload)
+                print(
+                    pretty_json(
+                        {
+                            "status": "WRITTEN",
+                            "kind": args.kind,
+                            "output": str(args.output.resolve()),
+                        }
+                    )
+                )
+            else:
+                print(pretty_json(payload))
+            return 0
+        if args.command == "steward-status":
+            payload = load_steward_status(args.plan.resolve(), args.db.resolve())
+            if args.model:
+                payload["runtime"] = steward_runtime_status(resolved_model=args.model)
+            print(pretty_json(payload))
+            return 0
+        if args.command == "steward-verify":
+            plan_path = args.plan.resolve()
+            _, payload = read_steward_artifact(plan_path)
+            result = validate_steward_plan(payload)
+            result["path"] = str(plan_path)
+            print(pretty_json(result))
+            return 0 if result["valid"] else 4
         db_path = args.db.resolve()
         if args.command == "audit":
             if args.timeout <= 0:
@@ -4558,8 +5008,25 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(pretty_json(result))
             return 0
+        if args.command == "steward-plan":
+            mission = args.mission
+            if args.mission_file:
+                mission = args.mission_file.resolve().read_text(encoding="utf-8")
+            result = command_steward_plan(
+                db_path,
+                mission=mission,
+                provider=args.provider,
+                model=args.model,
+                timeout=args.timeout,
+                output_path=args.output.resolve(),
+                allow_local_agent=args.allow_local_agent,
+            )
+            print(pretty_json(result))
+            if result["status"] == "DENIED":
+                return 4
+            return 0 if result["status"] == "PROPOSED" and result["readback"]["current_recorded_projection"] else 3
         if args.command == "serve":
-            serve(db_path, args.host, args.port, args.allow_remote)
+            serve(db_path, args.host, args.port, args.allow_remote, args.steward_plan.resolve())
             return 0
         raise RuntimeError(f"Unhandled command: {args.command}")
     except KeyboardInterrupt:

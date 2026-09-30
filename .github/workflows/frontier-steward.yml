@@ -1,0 +1,68 @@
+name: Frontier Steward public observation
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontier-steward-public-observation
+  cancel-in-progress: false
+
+jobs:
+  observation:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out canonical source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Test local proposal and receipt contracts
+        run: python -m unittest discover -s ci -p 'test*steward*.py' -v
+      - name: Collect public read-only audit
+        env:
+          GH_TOKEN: ''
+          GITHUB_TOKEN: ''
+          HF_TOKEN: ''
+          HUGGING_FACE_HUB_TOKEN: ''
+        run: python SZL_ONE_OF_ONE_ESTATE_OS.py audit --timeout 15
+      - name: Compile and preserve deterministic outcome
+        run: |
+          python - <<'PY'
+          import json, pathlib, subprocess, sys
+          run = subprocess.run([sys.executable, 'SZL_ONE_OF_ONE_ESTATE_OS.py', 'steward-plan', '--provider', 'deterministic'])
+          if run.returncode not in (0, 3):
+              raise SystemExit(run.returncode)
+          payload = json.loads(pathlib.Path('outputs/frontier_steward_plan.json').read_text())
+          with open('outputs/workflow-state.json', 'w', encoding='utf-8') as handle:
+              json.dump({'plan_status': payload['status'], 'production_ready': False, 'scope': 'PUBLIC_READ_ONLY'}, handle)
+          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as handle:
+              handle.write('Plan outcome: ' + payload['status'] + '\n\nProduction readiness: NOT ESTABLISHED. Public observation only; no model inference, publication, or deployment.\n')
+          PY
+      - name: Verify recorded observation
+        run: |
+          python SZL_ONE_OF_ONE_ESTATE_OS.py steward-verify
+          python SZL_ONE_OF_ONE_ESTATE_OS.py verify-receipts
+          python - <<'PY'
+          from pathlib import Path
+          from SZL_ONE_OF_ONE_ESTATE_OS import load_steward_status
+          state = load_steward_status(Path('outputs/frontier_steward_plan.json'), Path('outputs/estate.db'))['latest_plan']
+          if state.get('state') != 'RECORDED' or state.get('recorded') is not True or state.get('is_latest_recorded_plan') is not True:
+              raise SystemExit('Recorded observation binding verification failed')
+          print('Recorded observation storage binding: PASS; production readiness is not established')
+          PY
+      - name: Retain public observation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: steward-public-${{ github.run_id }}-${{ github.run_attempt }}
+          path: outputs/
+          if-no-files-found: error
+          retention-days: 30

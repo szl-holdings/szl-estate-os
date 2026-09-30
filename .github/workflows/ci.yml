@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile control-plane and verification tools
-        run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py ci/*.py estate/*.py
+        run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py frontier_steward.py ci/*.py estate/*.py
       - name: Run deterministic Estate OS checks
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
       - name: Test readiness signature-state contract
@@ -42,3 +42,5 @@ jobs:
         run: python ci/test_provenance_policy.py -v
       - name: Test public housekeeping privacy and failure contracts
         run: python ci/test_estate_inventory.py -v
+      - name: Test Steward no-tool provider, absorbing policy, and recorded artifact contracts
+        run: python -m unittest discover -s ci -p 'test*steward*.py' -v

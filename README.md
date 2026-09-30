@@ -78,6 +78,10 @@ export             Export the latest SQLite projection to JSON
 verify-receipts    Verify payload hashes, chain links, and available signatures
 operating-report   Seven-lane controls, evidence, blockers, and action queue
 evidence-template  Template for current external-only control evidence
+steward-status     Model access and recorded Frontier Steward plan evidence
+steward-plan       No-tool structured inference or deterministic safe proposals
+steward-verify     Validate a plan's closed schema, policy, and content digest
+steward-schema     Emit the strict draft or compiled-plan schema
 serve              Dashboard, JSON API, health, readiness, and metrics
 ```
 
@@ -92,6 +96,30 @@ Useful audit options:
   --deep `
   --timeout 15
 ```
+
+### Frontier Steward
+
+The Python Steward adds a bounded reasoning layer without adding release
+authority. It prepares a limited estate snapshot, receives a strict structured
+draft, independently compiles it, and stores immutable plan bytes with a
+serialized hash-chain write receipt. The dashboard shows the readback only
+after verifying the bytes, plan digest, receipt binding, and receipt chain.
+
+```powershell
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py steward-plan --provider deterministic
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py steward-status
+& $python .\SZL_ONE_OF_ONE_ESTATE_OS.py steward-verify
+```
+
+Direct, no-tool Responses inference is the default model adapter. The selected
+Daybreak alias needs separately approved API access; a Codex subscription is
+not proof of that access. Missing access creates a recorded `BLOCKED` plan,
+never a hidden fallback. Deterministic proposals remain explicitly modeled,
+not model-generated research or verified novelty. The CLI adapter is available
+only through an explicit local-development opt-in and cannot establish secret
+isolation or production readiness.
+
+See [the setup, evidence contracts, and release runbook](docs/FRONTIER_STEWARD.md).
 
 ### Seven-lane operating fabric
 
