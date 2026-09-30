@@ -1,0 +1,574 @@
+{
+  "base_requirement_ids": [
+    "CON-001",
+    "CON-002",
+    "CON-003",
+    "CON-004",
+    "CON-005",
+    "CON-006",
+    "CON-007",
+    "CON-008",
+    "CON-009",
+    "CON-010",
+    "CON-011",
+    "CON-012",
+    "CON-013",
+    "FUT-001",
+    "FUT-002",
+    "FUT-003",
+    "FUT-004",
+    "FUT-005",
+    "FUT-006",
+    "FUT-007",
+    "FUT-008",
+    "FUT-009",
+    "FUT-010",
+    "FUT-011",
+    "FUT-012",
+    "FUT-013",
+    "FUT-014",
+    "FUT-015",
+    "FUT-016",
+    "FUT-017",
+    "FUT-018",
+    "FUT-019",
+    "FUT-020",
+    "FUT-021",
+    "HIST-001",
+    "HIST-002",
+    "HIST-003",
+    "HIST-004",
+    "HIST-005",
+    "HIST-006",
+    "HIST-007",
+    "OBS-001",
+    "OBS-002",
+    "OBS-003"
+  ],
+  "base_requirements_path": "estate_reports/thread_requirements.json",
+  "base_requirements_sha256": "07ee446171c475ac2d6ede2ee3093454dfb41852cccb4806bb7a7f1cd29da4ec",
+  "completion_criterion": "Only summary reconciliation complete; every desired-state acceptance remains open",
+  "estate_ready": false,
+  "implementation_status": "BACKLOG_ONLY",
+  "novelty": "NOT_ESTABLISHED",
+  "numerical_ground_truth": "UNVERIFIED",
+  "payload_execution": "NOT_RUN",
+  "phase2_ready": false,
+  "recorded_at_utc": "2026-09-30T13:54:50.542815+00:00",
+  "requirements": [
+    {
+      "acceptance_criterion": "Supply exact-revision canonical source/domain ownership/deployment evidence and separately observed accessible site behavior; preserve the dated partial browser observation.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-007",
+        "CON-001"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "UNKNOWN_DOMAIN_BINDING",
+      "desired_state": "Include szlholdings.com in site scope; current source binding and observed browser-error cause are UNKNOWN.",
+      "id": "DELTA-001",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "platform/domain",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Additional product/site domain"
+    },
+    {
+      "acceptance_criterion": "Agree and record the bounded quickstart scope/environment. An isolated owner run must record exact pins, actual elapsed duration <=60 seconds, and failure/skip counts. Over-target, failed or skipped outcomes remain explicitly unmet; presence of instructions is insufficient.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-002",
+        "FUT-001"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "OWNER_RUNTIME_RECEIPTS_REQUIRED",
+      "desired_state": "Provide repo-appropriate quickstarts, with setup/install/reproduction scope explicit.",
+      "id": "DELTA-002",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "repository maintainers",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Measured sixty-second quickstarts"
+    },
+    {
+      "acceptance_criterion": "Bind inspected files and actual required contract checks to exact heads; distinguish license declarations, runtime tests and human release approval.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-003",
+        "CON-009"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "PARTIAL_STATIC_COVERAGE",
+      "desired_state": "Each scoped package needs current license, security policy, CI and receipts.",
+      "id": "DELTA-003",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "repository/security owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "License/security/CI/receipt contracts"
+    },
+    {
+      "acceptance_criterion": "Resolve links to immutable source/artifacts and display proof scope, timestamp, unknowns and evidence tier without promotion from HTTP success.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-007",
+        "FUT-008",
+        "CON-006"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "NAVIGATION_NOT_IMPLEMENTED_HERE",
+      "desired_state": "Link product views to source, methodology and exact proof/receipt artifacts.",
+      "id": "DELTA-004",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "product/proof owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Source-to-proof navigation"
+    },
+    {
+      "acceptance_criterion": "Proposal identity binds asset kind/full ID/revision/card digest; repeat planning creates no duplicate write or publication; claim and demo outcomes need independent receipts.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-002",
+        "FUT-004"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "EXISTING_OWNER_LANE_NO_PARALLEL_PUBLISHER",
+      "desired_state": "Prepare accurate card/demo improvements in the existing owner lane.",
+      "id": "DELTA-005",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "existing HF card/motion owner",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Idempotent HF card/demo proposals"
+    },
+    {
+      "acceptance_criterion": "Exact artifact revision/hash plus owner-approved eligibility/loadability/provenance evidence is required; model card license alone is insufficient.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-002",
+        "CON-006",
+        "CON-009"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "CURRENT_ELIGIBILITY_NOT_VERIFIED",
+      "desired_state": "Treat GGUF exceptions as governed loadability/rights evidence, not filename heuristics.",
+      "id": "DELTA-006",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "HF/model/security owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Explicit GGUF exceptions"
+    },
+    {
+      "acceptance_criterion": "A source-bound review identifies actual TCB, abuse/failure scope and mitigations; operational targeting/engagement enhancements remain excluded.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-009",
+        "CON-010"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "HUMAN_SECURITY_REVIEW_REQUIRED",
+      "desired_state": "Document assets, trust boundaries, benign threat scope and assumptions for each selected service/package.",
+      "id": "DELTA-007",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "security/package maintainers",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Scoped threat models"
+    },
+    {
+      "acceptance_criterion": "Keep integrity, signer trust, authorization, runtime honesty, completeness, scientific validity and deployment separate, with exact receipts or UNKNOWN.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-006",
+        "CON-008"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "REGISTER_PROPOSAL_NOT_IMPLEMENTED",
+      "desired_state": "Publish an explicit register of what each proof validates and leaves unestablished.",
+      "id": "DELTA-008",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "proof/science/security owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Proof-scope/TCB/not-covered register"
+    },
+    {
+      "acceptance_criterion": "Confirm ownership through authorized project evidence; a proposed role is not an assigned repair or permission to merge.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-007",
+        "FUT-020"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "OWNER_ACCEPTANCE_REQUIRED",
+      "desired_state": "Maintain explicit responsible owner roles for fixes and release decisions.",
+      "id": "DELTA-009",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "repository/queue owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Maintainer ownership"
+    },
+    {
+      "acceptance_criterion": "Review privacy, security, source pins, cost and release authorization before any separately authorized deployment.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-007",
+        "FUT-008",
+        "CON-009"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "UNIMPLEMENTED_DEPLOYMENT_PROPOSAL",
+      "desired_state": "Keep a public proof/service or sandbox as a separately scoped proposal.",
+      "id": "DELTA-010",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "platform/security owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Public-service proposal"
+    },
+    {
+      "acceptance_criterion": "Inert fixtures preserve UNKNOWN/NOT_RUN/fetch failures versus genuine denial or absence, exact heads and checked_at, draft/HOLD/green gates and incomplete coverage.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-005",
+        "CON-007"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "PROPOSAL_ONLY_NO_AUTOMATED_WRITE_EXECUTOR",
+      "desired_state": "Plan a truthful read-only evidence classifier without a write executor.",
+      "id": "DELTA-011",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "audit/queue owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Review-classifier proposal"
+    },
+    {
+      "acceptance_criterion": "Reject truncated digests, missing artifacts, stale/unbound receipts and duplicate action identities; preserve failure/partial inventory and explicit no-success-on-errors.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-004",
+        "CON-012"
+      ],
+      "basis": "CONSTRAINT",
+      "blocker": "OLD_GATES_NOT_EXECUTED",
+      "desired_state": "Require full digests/source scope and idempotent proposed actions; old short-hash/HTTP-string gates remain unexecuted.",
+      "id": "DELTA-012",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "audit/provenance owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Full-hash idempotent action planning"
+    },
+    {
+      "acceptance_criterion": "Record an approved method, hardware/environment, measured raw values, repeats/uncertainty and immutable receipts; no assumed measurement or benchmark promotion.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-008",
+        "FUT-013"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "EXPERIMENT_NOT_RUN",
+      "desired_state": "Actual energy/performance measurements are a separate experiment proposal.",
+      "id": "DELTA-013",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "measurement/science owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Energy measurements"
+    },
+    {
+      "acceptance_criterion": "Verify provenance, authorization and actual adoption/claim evidence before any outbound message, payment or publication.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-013",
+        "FUT-017",
+        "CON-009"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "UNEXECUTED_HUMAN_REVIEW_GATE",
+      "desired_state": "Bounties, adopter claims and publications remain separate reviewable proposals.",
+      "id": "DELTA-014",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "project/comms/security owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Bounty/adopter publication"
+    },
+    {
+      "acceptance_criterion": "A separate explicit scheduling/publication request and validated access/authorization are required; this brief creates no automation.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-004",
+        "CON-012"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "NOT_SCHEDULED_NOT_PUBLISHED",
+      "desired_state": "Hourly/weekly anchors and publication are unscheduled proposals.",
+      "id": "DELTA-015",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "provenance/comms owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Recurring anchors/publication"
+    },
+    {
+      "acceptance_criterion": "Verify dependency/source/deployment bindings and owner intent before any deletion/archive/migration; preserve existing data/history and queue rules.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-001",
+        "CON-007"
+      ],
+      "basis": "DESIRED_FUTURE_STATE",
+      "blocker": "NO_DELETION_ARCHIVE_OR_MIGRATION",
+      "desired_state": "Repository consolidation/deprecation is a separate proposal; archived descriptions are clues.",
+      "id": "DELTA-016",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "repository/queue owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Consolidation"
+    },
+    {
+      "acceptance_criterion": "Human owners review the concrete settings/authorization/proof scope before any separately authorized change; no credentials are requested or written here.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-009",
+        "CON-011"
+      ],
+      "basis": "CONSTRAINT",
+      "blocker": "HUMAN_ONLY_SEPARATE_AUTHORIZATION",
+      "desired_state": "Required-check changes, security settings and signer key provisioning remain separate unexecuted actions.",
+      "id": "DELTA-017",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "human security/maintainer owners",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Settings/key provisioning"
+    },
+    {
+      "acceptance_criterion": "Keep estate axiom/theorem prose and unreviewed referenced gate code outside GEH implementation; require the missing exact artifact through its existing owner lane.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-010",
+        "CON-011"
+      ],
+      "basis": "CONSTRAINT",
+      "blocker": "MISSING_GEHV6_D2_NOT_SUPPLIED_BY_ESTATE_BRIEFS",
+      "desired_state": "Preserve GEH local-only scope and its fixed three axioms; estate prose does not supply missing D2 or expand that scope.",
+      "id": "DELTA-018",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "existing GEH owner",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Fixed GEH local scope"
+    },
+    {
+      "acceptance_criterion": "Resolve primary-source attribution and exact empirical/proof scope before any publication; no duplicate announcement or release is created here.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "CON-008",
+        "FUT-013"
+      ],
+      "basis": "CONSTRAINT",
+      "blocker": "UNPUBLISHED_UNVERIFIED_DRAFT",
+      "desired_state": "Retain the duplicated announcement as one unpublished draft; largest/every-claim-signature/datapoint-origin/formula-attribution claims are unverified.",
+      "id": "DELTA-019",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "existing comms/science owner",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "OVERHAUL_V2",
+        "OVERHAUL_V6"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Single unpublished announcement"
+    },
+    {
+      "acceptance_criterion": "A synthetic same-basename model/dataset fixture retains kind/full ID/revision separately and grants no training/loadability/runtime eligibility from an alias.",
+      "acceptance_test_status": "NOT_RUN",
+      "automated_action_authorized": false,
+      "base_requirement_ids": [
+        "FUT-002",
+        "FUT-003",
+        "FUT-004",
+        "CON-006"
+      ],
+      "basis": "CONSTRAINT",
+      "blocker": "SOURCE_OWNER_REVALIDATION_REQUIRED",
+      "desired_state": "Keep informational model/dataset/Space aliases typed and retain model IDs and dataset IDs separately.",
+      "id": "DELTA-020",
+      "next_action": "Owner supplies exact current source/receipt and scoped review before implementation",
+      "owner_assignment_status": "PROPOSED_EXISTING_OWNER_ROUTE",
+      "owner_role": "existing HF frontier/payload owner",
+      "source_message_date": "2026-09-30",
+      "source_refs": [
+        "FRONTIER1_SUPPLIED_PIN"
+      ],
+      "status": "BACKLOG_UNIMPLEMENTED",
+      "title": "Typed informational aliases"
+    }
+  ],
+  "schema_version": "szl.estate.requirements-delta/v1",
+  "source_coverage": "Provided authorized static-review summaries; original attachment bytes not independently materialized/read by this worker",
+  "sources": {
+    "FRONTIER1_SUPPLIED_PIN": {
+      "candidate_execution": "NOT_RUN",
+      "commit": "1071a3fe96a010f011274d2f820ca5351d0b4eff",
+      "coverage_credit": 0,
+      "exact_checked_at": "UNKNOWN_UNSUPPLIED",
+      "local_original_bytes_verified": false,
+      "message_date": "2026-09-30",
+      "observations": [
+        "The supplied bounded branch review reports130repositories/28archived,22archived descriptions with Canonical:,23extracted edges with existing unarchived targets",
+        "The bounded supplied check indicates no issue-creation evidence; this is not a global write-history conclusion",
+        "Informational typed aliases preserve model/dataset namespaces separately; alias presence grants no eligibility",
+        "Current private asset visibility/timestamps/access intent remain unverified; private IDs/counts/content omitted here",
+        "GitHub open_issues_count includes pull requests and must not be treated as a pure issue count",
+        "Authentic external confirmation remains unestablished; deprecation banner was already correct in the supplied bounded review"
+      ],
+      "payload_wrapper_docs_receipts_owner": "existing assigned owner; no parallel edits",
+      "pull_request": 49,
+      "repository_label": "szl-hf-frontier",
+      "source_kind": "DELEGATED_PINNED_RECONCILIATION_SUMMARY"
+    },
+    "OVERHAUL_V2": {
+      "artifact_label": "SZL_TOTAL_OVERHAUL_PAYLOAD.md v2",
+      "exact_message_time": "UNKNOWN_UNSUPPLIED",
+      "local_original_bytes_verified": false,
+      "message_date": "2026-09-30",
+      "numerical_ground_truth": "UNVERIFIED",
+      "original_content_review_by_this_worker": "NOT_RUN",
+      "payload_execution": "NOT_RUN",
+      "source_kind": "DELEGATED_AUTHORIZED_STATIC_REVIEW_SUMMARY",
+      "supplied_line_count": 206,
+      "supplied_sha256": "0d8512cede2eaf563bacb8dbf435bf57688eb9cb3a68f98b8eea0aeca83aa7a5",
+      "supplied_size_bytes": 16052
+    },
+    "OVERHAUL_V6": {
+      "artifact_label": "Estate-overhaul V6 prose, exact filename not supplied here",
+      "exact_message_time": "UNKNOWN_UNSUPPLIED",
+      "local_original_bytes_verified": false,
+      "message_date": "2026-09-30",
+      "numerical_ground_truth": "UNVERIFIED",
+      "original_content_review_by_this_worker": "NOT_RUN",
+      "payload_execution": "NOT_RUN",
+      "source_kind": "DELEGATED_AUTHORIZED_STATIC_REVIEW_SUMMARY",
+      "supplied_sha256": "54ea662c8ece34c27118d0c110c91ab4790067b1784ee7da6efa08b0a49ea3cb",
+      "supplied_size_bytes": 13635
+    }
+  }
+}
