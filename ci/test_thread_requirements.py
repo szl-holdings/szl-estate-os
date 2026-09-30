@@ -14,7 +14,7 @@ MATRIX = ROOT / "estate_reports" / "thread_requirements.json"
 BASE = "eb060db015b2165ca777520e04dcd9c9c06ac9f4"
 EXPECTED_IDS = {
     *(f"OBS-{i:03}" for i in range(1, 4)),
-    *(f"HIST-{i:03}" for i in range(1, 6)),
+    *(f"HIST-{i:03}" for i in range(1, 8)),
     *(f"CON-{i:03}" for i in range(1, 14)),
     *(f"FUT-{i:03}" for i in range(1, 22)),
 }
@@ -42,7 +42,7 @@ def validate(document, markdown):
     require(set(document) == {
         "schema_version", "audited_at_utc", "scope", "canonical_repository",
         "stack", "readiness", "coverage_policy", "source_policy", "sources",
-        "summary", "requirements",
+        "summary", "requirements", "fixture_backlog",
     }, "document fields")
     require(document["schema_version"] == "szl.thread-requirements/v1", "schema")
     require(document["scope"] == "PHASE1_PROJECT_THREAD_INTENT_ONLY", "scope")
@@ -124,6 +124,7 @@ def validate(document, markdown):
         "requirements": len(records), "categories": dict(Counter(row["category"] for row in records)),
         "all_estate_completion": "NOT_ESTABLISHED",
         "future_acceptance_checks": sum(len(row["unmet_acceptance_tests"]) for row in records),
+        "synthetic_fixture_specs": len(document["fixture_backlog"]),
     }, "summary reconciliation")
     require(f"**{len(records)} rows**" in markdown and f"**{document['summary']['future_acceptance_checks']} unmet acceptance checks**" in markdown, "prose summary")
     rows = {row["id"]: row for row in records}
@@ -135,7 +136,7 @@ def validate(document, markdown):
     require(rows["HIST-001"]["details"]["independently_verified"] is False and rows["HIST-002"]["details"]["freshness"] == "HISTORICAL_UNVERIFIED", "historical gate promotion")
     require(rows["HIST-003"]["details"]["current_state"] == "UNKNOWN" and rows["HIST-003"]["details"]["time_precision"] == "DAY", "queue precision/currentness")
     require(rows["HIST-005"]["details"]["source_executed"] is False and rows["HIST-005"]["details"]["compiled_attachment_loaded"] is False and rows["HIST-005"]["details"]["embedded_claims"] == "HISTORICAL_UNVERIFIED", "attachment execution or claims promotion")
-    require(rows["HIST-005"]["details"]["attachment_review"] == "PENDING_INDEPENDENT_REVIEW", "unsupported attachment review completion")
+    require(rows["HIST-005"]["details"]["attachment_review"] == "STATIC_REPORT_READ", "unsupported attachment review completion")
     require(rows["HIST-005"]["details"]["conflicts_reported"] == ["DEFAULT_FIX_EVAL_WRITE_AND_COMPILE", "GH_ERROR_TO_EMPTY_LIST", "STALE_UNPINNED_MERGE_CLOSE_PLAN", "MISSING_HOLD_CHECK", "OLD_EMBEDDED_CLAIMS"], "legacy conflict suppressed")
     require(all(sources[key]["commit"] is None for key in ("backend-snapshot", "hf-snapshot")), "invented external origin commit")
     require(rows["CON-002"]["details"] == {"python_minimum": "3.11", "package_path": "tools/szl_estate", "typed_evidence_state": True, "output_formats": ["JSON", "CSV", "MARKDOWN_REPORT"], "deterministic_output": "SAME_INPUTS_AND_REFERENCE_TIME", "provenance_headings": 7}, "foundation contract omission")
@@ -149,6 +150,33 @@ def validate(document, markdown):
     require(rows["FUT-011"]["details"] == {"score_targets": [90, 100, 100], "metric_names": None, "measured_scores": None}, "invented Lighthouse result/profile")
     require(rows["FUT-012"]["details"] == {"target_month": "2026-11", "exact_date": None}, "invented demo date")
     require(rows["FUT-013"]["details"]["novelty"] == "NOT_ESTABLISHED" and rows["FUT-013"]["details"]["experiments_status"] == "PROPOSED_NOT_RUN", "research promotion")
+    require(rows["HIST-005"]["details"]["compiled_status"] == "OPAQUE_UNTRUSTED" and rows["HIST-005"]["details"]["bytecode_equivalence"] == "NOT_ESTABLISHED" and rows["HIST-005"]["details"]["behavioral_safety"] == "NOT_RUN", "bytecode or static-proof promotion")
+    finish = rows["HIST-006"]["details"]
+    require(finish["source_executed"] is False and finish["admin_policy_inherited"] is False and finish["credential_configuration_changed"] is False and finish["behavioral_safety"] == "NOT_RUN", "static report grants execution or admin policy")
+    require(finish["official_cli"] == {"source_commit": "fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd", "checks_paginate": True, "json_preserves_failed_checks": True, "installed_version": "UNKNOWN"}, "false gh checks premise")
+    require(sources["official-gh-checks"]["commit"] == finish["official_cli"]["source_commit"], "CLI primary-source binding")
+    pcm = rows["HIST-007"]["details"]
+    require(pcm["fragment_scope"] == "TRUNCATED_INSIDE_GATE1" and all(pcm[k] == "NOT_REVIEWED" for k in ("full_gates", "verify", "signing")), "truncated gate coverage promotion")
+    require(all(pcm[k] is False for k in ("source_executed", "calibration_or_gate_implementation_borrowed", "real_test_jsonl_consumed")), "fragment execution or borrowed controls")
+
+    backlog = document["fixture_backlog"]
+    expected_specs = {*(f"FINISH-N{i:02}" for i in range(1, 15)), *(f"PATCH-R{i:02}" for i in range(1, 13)), *(f"PCM-P{i:02}" for i in range(1, 11))}
+    spec_ids = [b["id"] for b in backlog]
+    require(set(spec_ids) == expected_specs and len(spec_ids) == len(expected_specs), "fixture backlog missing/duplicate")
+    prose_specs = [line for line in markdown.splitlines() if re.match(r"^\| (?:FINISH-N|PATCH-R|PCM-P)\d{2} \|", line)]
+    require(len(prose_specs) == len(backlog), "fixture prose coverage")
+    for b, line in zip(backlog, prose_specs):
+        require(set(b) == {"id", "requirement_id", "source_ids", "acceptance_specification", "status", "data_kind", "owner_role", "forbidden_execution"}, "fixture fields")
+        require(b["requirement_id"] in {"HIST-005", "HIST-006", "HIST-007"} and b["source_ids"] and set(b["source_ids"]) <= sources.keys(), "fixture provenance")
+        expected_origin = {"FINISH": ("HIST-006", ["finish11-static-review"]), "PATCH": ("HIST-005", ["payload-static-review"]), "PCM": ("HIST-007", ["pcm-v3-fragment"])}[b["id"].split("-")[0]]
+        require((b["requirement_id"], b["source_ids"]) == expected_origin, "fixture variant provenance conflation")
+        require(b["status"] == "NOT_RUN" and b["data_kind"] == "SYNTHETIC_SPEC_ONLY" and b["owner_role"] == "audit tooling owner", "fixture execution/completion promotion")
+        require(b["forbidden_execution"] == ["ORIGINAL_SOURCE_IMPORT", "ORIGINAL_BYTECODE_LOAD", "LIVE_MUTATIONS"], "fixture action boundary")
+        expected_cells = [b["id"], b["requirement_id"] + " / " + b["source_ids"][0], b["acceptance_specification"], b["status"]]
+        require([part.strip() for part in line.split("|")[1:-1]] == [v.replace("|", "/").replace("\n", " ") for v in expected_cells], "fixture prose drift")
+    require("**36 NOT_RUN synthetic fixture specifications**" in markdown, "fixture summary")
+    cap_spec = next(b for b in backlog if b["id"] == "FINISH-N09")
+    require("capped search/workflow" in cap_spec["acceptance_specification"] and "fully paginated check contexts can be complete beyond 100" in cap_spec["acceptance_specification"], "wrapper cap confused with CLI pagination")
     require(not PRIVATE_IDS.search(json.dumps(document) + markdown), "private identifier/secret leakage")
 
     # Bind the recorded setup numbers, authority and source identity to the stored
@@ -318,6 +346,66 @@ class ThreadRequirementsTests(unittest.TestCase):
     def test_error_to_empty_inventory_conflict_cannot_be_suppressed(self):
         self.row("HIST-005")["details"]["conflicts_reported"].remove("GH_ERROR_TO_EMPTY_LIST")
         self.rejects("legacy conflict suppressed")
+
+    def test_static_review_cannot_establish_bytecode_equivalence(self):
+        self.row("HIST-005")["details"]["bytecode_equivalence"] = "VERIFIED"
+        self.rejects("bytecode or static-proof promotion")
+
+    def test_finish_report_cannot_authorize_admin_policy(self):
+        self.row("HIST-006")["details"]["admin_policy_inherited"] = True
+        self.rejects("static report grants execution")
+
+    def test_official_check_pagination_cannot_be_denied(self):
+        self.row("HIST-006")["details"]["official_cli"]["checks_paginate"] = False
+        self.rejects("false gh checks premise")
+
+    def test_failed_json_checks_cannot_be_assumed_erased(self):
+        self.row("HIST-006")["details"]["official_cli"]["json_preserves_failed_checks"] = False
+        self.rejects("false gh checks premise")
+
+    def test_truncated_pcm_cannot_claim_all_gates_reviewed(self):
+        self.row("HIST-007")["details"]["full_gates"] = "REVIEWED"
+        self.rejects("truncated gate coverage")
+
+    def test_pcm_calibration_cannot_be_borrowed(self):
+        self.row("HIST-007")["details"]["calibration_or_gate_implementation_borrowed"] = True
+        self.rejects("fragment execution or borrowed controls")
+
+    def test_real_test_rows_cannot_be_consumed(self):
+        self.row("HIST-007")["details"]["real_test_jsonl_consumed"] = True
+        self.rejects("fragment execution or borrowed controls")
+
+    def test_synthetic_backlog_cannot_claim_pass(self):
+        self.document["fixture_backlog"][0]["status"] = "PASS"
+        self.rejects("fixture execution/completion promotion")
+
+    def test_missing_synthetic_spec_rejected(self):
+        self.document["fixture_backlog"].pop()
+        self.document["summary"]["synthetic_fixture_specs"] -= 1
+        self.rejects("fixture backlog missing/duplicate")
+
+    def test_backlog_cannot_allow_payload_loading(self):
+        self.document["fixture_backlog"][0]["forbidden_execution"].remove("ORIGINAL_BYTECODE_LOAD")
+        self.rejects("fixture action boundary")
+
+    def test_markdown_backlog_cannot_claim_execution(self):
+        line = next(line for line in self.markdown.splitlines() if line.startswith("| FINISH-N01 |"))
+        self.markdown = self.markdown.replace(line, line.replace("NOT_RUN", "PASS"))
+        self.rejects("fixture prose drift")
+
+    def test_wrapper_cap_cannot_be_applied_to_all_cli_checks(self):
+        b = next(b for b in self.document["fixture_backlog"] if b["id"] == "FINISH-N09")
+        old = b["acceptance_specification"]
+        b["acceptance_specification"] = "More than 100 gh pr checks results always remain incomplete."
+        self.markdown = self.markdown.replace(old, b["acceptance_specification"])
+        self.rejects("wrapper cap confused with CLI pagination")
+
+    def test_finish_behavior_cannot_be_rebound_to_patcher(self):
+        b = self.document["fixture_backlog"][0]
+        old = b["requirement_id"] + " / " + b["source_ids"][0]
+        b["requirement_id"], b["source_ids"] = "HIST-005", ["payload-static-review"]
+        self.markdown = self.markdown.replace(old, "HIST-005 / payload-static-review", 1)
+        self.rejects("fixture variant provenance conflation")
 
     def test_human_gate_cannot_be_disabled(self):
         self.row("CON-009")["details"]["human_only"] = False

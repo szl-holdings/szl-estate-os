@@ -1,6 +1,6 @@
 {
   "schema_version": "szl.thread-requirements/v1",
-  "audited_at_utc": "2026-09-30T08:26:57Z",
+  "audited_at_utc": "2026-09-30T08:45:36Z",
   "scope": "PHASE1_PROJECT_THREAD_INTENT_ONLY",
   "canonical_repository": "szl-holdings/szl-estate-os",
   "stack": {
@@ -151,19 +151,60 @@
       "date_precision": "DAY",
       "commit": null,
       "sha256": null,
-      "coverage": "Reported Python metadata: 30695 bytes / 445 lines. Preliminary independent review reports default writes/compilation, error-to-empty inventory, stale unpinned merge/close planning, absent HOLD check and old embedded claims. Final attachment review pending; original bytes not consumed or executed by this audit. Compiled attachment never loaded."
+      "coverage": "Reported Python metadata: 30695 bytes / 445 lines. Preliminary independent review reports default writes/compilation, error-to-empty inventory, stale unpinned merge/close planning, absent HOLD check and old embedded claims. This preliminary report is preserved; the later static-review report is now read separately. Original bytes not consumed or executed by this audit. Compiled attachment never loaded."
+    },
+    {
+      "id": "payload-static-review",
+      "kind": "READ_STATIC_REVIEW_REPORT",
+      "artifact": "SZL_New_Payload_Static_Review.txt",
+      "date": "2026-09-30T08:27:36.059114Z",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Full 157-line report read through authorized Library; 15882 bytes reported. Timestamp is artifact publication metadata; review date has day precision. Report supplies original source/bytecode hashes; original bytes not consumed here. Report version/content-byte digest unavailable. No payload execution, compilation, unmarshalling or decompilation."
+    },
+    {
+      "id": "finish11-static-review",
+      "kind": "READ_STATIC_REVIEW_REPORT",
+      "artifact": "SZL_FINISH_11_Static_Delta_Review.txt",
+      "date": "2026-09-30T08:34:39.953404Z",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Full 157-line report read through authorized Library; 16172 bytes reported. Timestamp is artifact publication metadata; review date has day precision. Reports exact standalone/Markdown code-block byte equality and static hazards; original bytes not consumed here. Report version/content-byte digest unavailable. No original execution or policy inheritance."
+    },
+    {
+      "id": "official-gh-checks",
+      "kind": "PRIMARY_SOURCE_READ",
+      "artifact": "https://raw.githubusercontent.com/cli/cli/fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd/pkg/cmd/pr/checks/checks.go",
+      "date": "2026-09-30T08:40:58Z",
+      "date_precision": "SECOND",
+      "commit": "fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd",
+      "sha256": null,
+      "coverage": "Official source resolved/read at this observation: status contexts paginate via endCursor; JSON exporter returns the collected checks before ordinary failed/pending exit handling. This does not establish the installed gh version or excuse a wrapper's real read/error loss."
+    },
+    {
+      "id": "pcm-v3-fragment",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Supplied PCM payload v3 fragment review (complete filename unavailable)",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Engineering review reports truncation inside gate 1. Full 12 gates, verify and signing NOT_REVIEWED. Visible defects only; complete source was requested elsewhere. No source/calibration/gate implementation or real test.jsonl consumed."
     }
   ],
   "summary": {
-    "requirements": 42,
+    "requirements": 44,
     "categories": {
-      "observed_fact": 3,
-      "unverified_historical_claim": 5,
       "constraint": 13,
-      "desired_future_state": 21
+      "desired_future_state": 21,
+      "unverified_historical_claim": 7,
+      "observed_fact": 3
     },
     "all_estate_completion": "NOT_ESTABLISHED",
-    "future_acceptance_checks": 60
+    "future_acceptance_checks": 60,
+    "synthetic_fixture_specs": 36
   },
   "requirements": [
     {
@@ -1348,18 +1389,19 @@
       "statement": "A supplied preliminary review reports unsafe default mutation and stale embedded claims in szl_codex_payload(2).py; compiled bytecode is opaque untrusted input.",
       "source_ids": [
         "historical-payload",
-        "engineering-contract"
+        "engineering-contract",
+        "payload-static-review"
       ],
-      "coverage": "Reported only, dated September 30: default fix_eval writes and py_compile before apply; gh errors become empty lists; stale unpinned merge/close plan; no HOLD check; old embedded CLAIMS. These conflict with current explicit unknowns, no default mutation, no automatic closing, exact-head green-only queue decisions and HOLD preservation. Neither attachment was executed/loaded; no new orchestrator implemented.",
-      "acceptance_criterion": "Independent review binds exact readable source bytes/revision and reports conflicts before any permitted source-derived fixture use. Old claims stay historical/unverified unless exact fresh receipts support them; compiled bytecode is never loaded.",
+      "coverage": "Static report now read: default fix_eval writes and py_compile before apply; read errors disappear; stale branch-name merge/close plan, absent HOLD checks and old embedded CLAIMS. Source has no explicit admin bypass/force-push/undraft call; do not attribute FINISH11-only behavior to it. Compiling the target does not execute its top-level module. Reported source and opaque bytecode identities are separate; matching pyc size/timestamp does not prove equivalence/authenticity. Original attachments remain unexecuted/unloaded here.",
+      "acceptance_criterion": "Keep static source findings separate from behavior and authorization; original exact bytes/revisions and later permitted contract receipts must be bound before implementation claims. Old embedded claims remain historical/unverified; opaque bytecode is never loaded.",
       "owner": {
         "role": "payload review owner",
         "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
       },
       "blockers": [
-        "Final independent attachment review and source digest/revision unavailable; old embedded claims have no fresh exact receipts."
+        "Original source/revision not consumed in this audit; report byte digest/version unavailable; behavior and applicable gates NOT_RUN."
       ],
-      "next_action": "Consume the final sanitized review delta as historical requirements evidence; keep source execution and compiled loading prohibited.",
+      "next_action": "Track R01-R12 as synthetic NOT_RUN backlog under the current evidence/hold rules; never import the attachment.",
       "implementation_status": "HISTORICAL_UNVERIFIED",
       "claim_basis": "INFERENCE",
       "claim_maturity": "ROADMAP",
@@ -1369,7 +1411,7 @@
         "reported_source_lines": 445,
         "source_executed": false,
         "compiled_attachment_loaded": false,
-        "attachment_review": "PENDING_INDEPENDENT_REVIEW",
+        "attachment_review": "STATIC_REPORT_READ",
         "embedded_claims": "HISTORICAL_UNVERIFIED",
         "conflicts_reported": [
           "DEFAULT_FIX_EVAL_WRITE_AND_COMPILE",
@@ -1377,6 +1419,142 @@
           "STALE_UNPINNED_MERGE_CLOSE_PLAN",
           "MISSING_HOLD_CHECK",
           "OLD_EMBEDDED_CLAIMS"
+        ],
+        "reported_source_sha256": "e794490b43af608ac3fab86aa2fec07ab08ade0df59efe930f662cfb073e3ab7",
+        "reported_compiled_sha256": "853850a5e41e4ae3e49abd081d20bd6de5205d3a7a5277b01e75919fc8753270",
+        "reported_compiled_bytes": 43680,
+        "compiled_status": "OPAQUE_UNTRUSTED",
+        "bytecode_equivalence": "NOT_ESTABLISHED",
+        "behavioral_safety": "NOT_RUN",
+        "finding_ids": [
+          "D01",
+          "D02",
+          "D03",
+          "D04",
+          "D05",
+          "D06",
+          "D07",
+          "D08",
+          "D09",
+          "D10"
+        ],
+        "reported_findings": [
+          "DEFAULT_SOURCE_WRITE_AND_UNISOLATED_COMPILE",
+          "ACTIVE_UNBOUND_GENERATED_PLAN",
+          "HOLD_AND_OWNER_EVIDENCE_MISSING",
+          "STALE_ACTION_AND_BRANCH_DELETE_SIDE_EFFECT",
+          "ERROR_CAP_UNKNOWN_CHECK_STATE_LOSS",
+          "HF_METADATA_OVERCLAIMS",
+          "HISTORICAL_TEXT_AS_AUTHORITY",
+          "CSV_HTML_URL_RENDERING_BOUNDARIES",
+          "ORPHAN_POWERSHELL_TEXT_BOUNDARY",
+          "OVERWRITE_AND_LATE_SECRET_GUARD"
+        ]
+      }
+    },
+    {
+      "id": "HIST-006",
+      "category": "unverified_historical_claim",
+      "title": "FINISH11 static hazards and CLI correction",
+      "statement": "FINISH11 is a distinct unexecuted source whose reported Markdown block exactly matches standalone bytes; its static admin/default-write policies are not adopted.",
+      "source_ids": [
+        "finish11-static-review",
+        "official-gh-checks",
+        "engineering-contract"
+      ],
+      "coverage": "Report: default apply; dry-run still deletes/clones/edits and configures credential helper; missing logs/gate checks can admit admin merge; normal merges lack approved-head binding; queued zero-exit can close before actual merge. An admin helper has a real match-head guard but binds a newly fetched unreviewed head and does not authorize bypass. Official gh pr checks paginates and JSON preserves failing checks; genuine wrapper read/no-check errors and explicit search/workflow caps remain hazards.",
+      "acceptance_criterion": "Preserve current no-admin-bypass/no-default-mutation/no-autoclose/HOLD rules. Proposed N01-N14 use separately written synthetic data only; current official CLI semantics cannot be replaced by the disproven pagination/JSON premise.",
+      "owner": {
+        "role": "payload review and audit tooling owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Original/report byte origins not reverified here; no behavioral safety or installed CLI version established."
+      ],
+      "next_action": "Track N01-N14 as NOT_RUN specifications and review each against pinned source and current doctrine before implementation.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "reported_standalone_bytes": 29731,
+        "reported_standalone_lines": 638,
+        "reported_standalone_sha256": "857bec2ea3a5ed49d17dde17c1b40f07787e3f8c5efc1669a062a589b92861c8",
+        "reported_wrapper_bytes": 35904,
+        "reported_wrapper_lines": 710,
+        "reported_wrapper_sha256": "67ab32d9bea501754be845227a3db5ee21d879548f1564e2d5091cf76075f200",
+        "reported_embedded_source_identical": true,
+        "reported_markdown_source_lines": [
+          59,
+          696
+        ],
+        "source_executed": false,
+        "admin_policy_inherited": false,
+        "credential_configuration_changed": false,
+        "finding_ids": [
+          "F01",
+          "F02",
+          "F03",
+          "F04",
+          "F05",
+          "F06",
+          "F07",
+          "F08",
+          "F09",
+          "F10"
+        ],
+        "behavioral_safety": "NOT_RUN",
+        "official_cli": {
+          "source_commit": "fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd",
+          "checks_paginate": true,
+          "json_preserves_failed_checks": true,
+          "installed_version": "UNKNOWN"
+        }
+      }
+    },
+    {
+      "id": "HIST-007",
+      "category": "unverified_historical_claim",
+      "title": "Truncated PCM v3 coverage",
+      "statement": "PCM v3 is reported truncated inside gate 1; the full 12 gates, verification and signing remain NOT_REVIEWED.",
+      "source_ids": [
+        "pcm-v3-fragment",
+        "engineering-contract"
+      ],
+      "coverage": "Visible report only: HF single page; GitHub truncated tree ignored plus 300 cap; artifact extensions/receipt names substituted for validity; card license alone treated as eligibility; missing hashes silently omitted; read/hash race; family path traversal/second-resolution overwrite; duplicate JSON/names/IDs. No loadability, scientific validity, calibration or complete gate result established.",
+      "acceptance_criterion": "Require complete pinned source and full static review before using any gate/calibration logic; preserve pagination/truncation/missing/duplicate/TOCTOU failures and never read real test.jsonl in this lane.",
+      "owner": {
+        "role": "payload review and audit tooling owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Complete payload not provided; exact identity/revision/hash and all remaining gates unknown."
+      ],
+      "next_action": "Track P01-P10 as synthetic NOT_RUN backlog; consume the complete-file review when available without executing it.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "fragment_scope": "TRUNCATED_INSIDE_GATE1",
+        "full_gate_count_reported": 12,
+        "full_gates": "NOT_REVIEWED",
+        "verify": "NOT_REVIEWED",
+        "signing": "NOT_REVIEWED",
+        "source_executed": false,
+        "calibration_or_gate_implementation_borrowed": false,
+        "real_test_jsonl_consumed": false,
+        "visible_defects_reported": [
+          "HF_SINGLE_PAGE",
+          "GITHUB_TRUNCATED_TREE_AND_300_CAP",
+          "EXTENSION_AND_RECEIPT_NAME_NOT_VALIDITY",
+          "CARD_LICENSE_NOT_TRAINING_ELIGIBILITY",
+          "MISSING_HASH_SILENT_OMISSION",
+          "READ_BEFORE_HASH_TOCTOU",
+          "FAMILY_PATH_TRAVERSAL",
+          "SECOND_RESOLUTION_OVERWRITE",
+          "DUPLICATE_JSON_KEYS",
+          "DUPLICATE_NAMES_AND_IDS"
         ]
       }
     },
@@ -1480,6 +1658,584 @@
         "inventory_only": 7099,
         "unavailable": 7
       }
+    }
+  ],
+  "fixture_backlog": [
+    {
+      "id": "FINISH-N01",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Dry-run/unknown stages cause no credential helper, identity, checkout or write side effects.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N02",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Existing paths, symlinks, collisions and clone failures preserve old bytes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N03",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Missing logs/checks or true auth/transport/parse errors remain unknown/blocked; valid failed/pending check JSON retains its check state even if a wrapper returns nonzero. Trust denial remains blocking.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N04",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Same check names or baseline failures never establish a bypass exception.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N05",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Draft/HOLD/held IDs/base/review requirements block all actions and closure.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N06",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Changed head or pending/failure on reread invalidates prior approval.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N07",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Failed git/push or stale checks stop dependent work and require exact remote receipts.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N08",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Queue/OPEN/failed readback is not MERGED; never close dependencies from command exit alone.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N09",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Explicit capped search/workflow inventories without exhaustion evidence, partial visibility and quota errors remain incomplete; fully paginated check contexts can be complete beyond 100.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N10",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "YAML permissions and indirect writes require structural evidence and human gates.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N11",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Changed/transitive effects or repeated writes invalidate self-asserted declarations.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N12",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Dependency title/author heuristics and mixed pins cannot authorize merging.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N13",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Synthetic secrets/formulas/delimiters remain redacted inert report data.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N14",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "HF errors, stale PR claims and approximate counts preserve explicit unknowns.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R01",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Default inventory preserves sentinel source/backups/reports; execution adapters unreachable.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R02",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Read/JSON/cap/file/check failures remain unknown or incomplete, never clean zeros.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R03",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Holds/drafts/bases/spoofed owners and age/conflict never create automatic closures.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R04",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Unknown/empty checks and missing reviews are not passing executed evidence.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R05",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Changed head/base/HOLD invalidates proposals; no branch deletion bundled.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R06",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Timeout/nonzero/queue enrollment needs reconciled terminal outcomes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R07",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Unapproved regex rewrites never change literals/comments/multimodal calls.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R08",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Numeric-field markup, unsafe links/scripts and CSV formulas stay inert or rejected.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R09",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Ref names remain inert data; inventory emits no executable PowerShell plan.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R10",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Missing siblings/extensions/runtime errors cannot establish model purpose or readiness.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R11",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Collision/symlink/fake-secret errors preserve old evidence and safe diagnostics.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R12",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Pyc size/timestamp and historical GPU text cannot establish provenance or authorization.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P01",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Single HF page never grants complete coverage.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P02",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Truncated GitHub tree and 300 cap preserve unread/incomplete status.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P03",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Artifact extensions and receipt filenames never prove validity or loadability.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P04",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Card license alone never proves training eligibility or human release approval.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P05",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Missing artifacts/hashes remain explicit failures rather than silent omissions.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P06",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Read/hash source changes invalidate a receipt rather than certifying stale bytes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P07",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Family path traversal/symlink escapes are rejected without content reads.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P08",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Second-resolution output collisions preserve prior bytes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P09",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Duplicate JSON keys, names and IDs are rejected or explicitly unresolved.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P10",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Truncated gate1 never establishes all12 gates, verify/signing or borrowed calibration.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
     }
   ]
 }
