@@ -1,0 +1,42 @@
+{
+  "base_facts": {
+    "checked_at_utc": "2026-09-30T00:00:00Z",
+    "head_sha": "0123456789abcdef0123456789abcdef01234567",
+    "is_open": true,
+    "draft": false,
+    "hold": false,
+    "access_confirmed": true,
+    "mergeable": true,
+    "conflicting": false,
+    "protection_known": true,
+    "review_scope_known": true,
+    "reviews_satisfied": true,
+    "required_checks_known": true,
+    "docs_only": false,
+    "required_checks": [{"name": "focused-tests", "state": "PASS"}]
+  },
+  "cases": [
+    {"name": "explicit-required-evidence-green", "expected": "MERGE_NOW_GREEN", "overrides": {}},
+    {"name": "required-check-pending", "expected": "WAIT_CHECKS", "overrides": {"required_checks": [{"name": "focused-tests", "state": "WAIT"}]}},
+    {"name": "required-check-failed", "expected": "FIX_CHECKS", "overrides": {"required_checks": [{"name": "focused-tests", "state": "FAIL"}]}},
+    {"name": "confirmed-conflict", "expected": "CONFLICT_REBASE", "overrides": {"mergeable": false, "conflicting": true}},
+    {"name": "green-documentation-needs-review", "expected": "DOCS_ONLY", "overrides": {"docs_only": true}},
+    {"name": "draft-preserved-even-with-conflict", "expected": "DRAFT_PRESERVE", "overrides": {"draft": true, "mergeable": false, "conflicting": true}},
+    {"name": "hold-preserved-even-as-draft", "expected": "HOLD_PRESERVE", "overrides": {"hold": true, "draft": true}},
+    {"name": "remote-access-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"access_confirmed": null}},
+    {"name": "empty-required-checks", "expected": "NEEDS_OWNER_DECISION", "overrides": {"required_checks": []}},
+    {"name": "check-result-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"required_checks": [{"name": "focused-tests", "state": "UNKNOWN"}]}},
+    {"name": "protection-scope-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"protection_known": null}},
+    {"name": "review-scope-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"review_scope_known": null}},
+    {"name": "review-requirement-unsatisfied", "expected": "NEEDS_OWNER_DECISION", "overrides": {"reviews_satisfied": false}},
+    {"name": "required-check-scope-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"required_checks_known": null}},
+    {"name": "mergeability-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"mergeable": null}},
+    {"name": "draft-status-unknown", "expected": "NEEDS_OWNER_DECISION", "overrides": {"draft": null}},
+    {"name": "closed-pr", "expected": "NEEDS_OWNER_DECISION", "overrides": {"is_open": false}},
+    {"name": "documentation-with-failed-check", "expected": "FIX_CHECKS", "overrides": {"docs_only": true, "required_checks": [{"name": "focused-tests", "state": "FAIL"}]}},
+    {"name": "malformed-boolean-is-not-true", "expected": "NEEDS_OWNER_DECISION", "overrides": {"access_confirmed": 1}},
+    {"name": "missing-snapshot-time", "expected": "NEEDS_OWNER_DECISION", "overrides": {"checked_at_utc": null}},
+    {"name": "missing-immutable-head", "expected": "NEEDS_OWNER_DECISION", "overrides": {"head_sha": null}},
+    {"name": "not-mergeable-without-confirmed-conflict", "expected": "NEEDS_OWNER_DECISION", "overrides": {"mergeable": false, "conflicting": false}}
+  ]
+}

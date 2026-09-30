@@ -1,0 +1,36 @@
+{
+  "schema": "szl.estate-phase0-source/v1",
+  "checked_at_utc": "2026-09-30T05:43:04+00:00",
+  "canonical_repository": "szl-holdings/szl-estate-os",
+  "base_commit": "5b18121b5b04d23823d3ee7a2c5b0d24bea48c68",
+  "package_path": "tools/szl_estate",
+  "inputs": [
+    {
+      "library_file_id": "libfile_08cb638c15cc81918a4e80f484d3a47e",
+      "version": 2,
+      "file_name": "szl-holdings-audit-evidence-2026-09-30.zip",
+      "readable_bytes": 3134648,
+      "sha256": "f26d92aa8b7639d90c75c088c0974013bca0c3bc744c3a7ab073f6d20080b967",
+      "freshness": "HISTORICAL",
+      "counts": {
+        "repositories": 130,
+        "content_inspected": 542,
+        "unread_paths": 32206
+      },
+      "claim": "Frozen inventory and sampled content coverage; no full semantic or runtime readiness claim"
+    },
+    {
+      "library_file_id": "libfile_28af9956bbdc8191baae24855c408d1a",
+      "version": 1,
+      "file_name": "SZL_HuggingFace_Audit_2026-09-30.json",
+      "readable_bytes": 3881865,
+      "sha256": "31d777345ac57b5eba1c78ce341c8cb513d2f8fdfe021482b6dc99ff82b43ded",
+      "observed_at_utc": "2026-09-30T01:56:46.066247+00:00",
+      "freshness": "HISTORICAL",
+      "claim": "Historical HF inventory only; not current runtime proof"
+    }
+  ],
+  "materialization": "Consumer-local bytes; current Library helper unchanged, existing NTFS alternate-stream adapter applied and verified Library id/version metadata",
+  "boundary": "SHA256 establishes byte identity only; no cryptographic-origin or scientific-validity claim",
+  "recrawl_performed": false
+}

@@ -1,0 +1,10 @@
+# Optional provider/presentation/browser packages. Phase 0 uses stdlib only.
+# Official version and wheel evidence: evidence/dependency-evidence.json.
+requests==2.34.2
+httpx==0.28.1
+pydantic==2.13.5
+rich==15.0.0
+huggingface_hub==1.29.0
+beautifulsoup4==4.15.0
+playwright==1.63.0
+pytest==9.1.1

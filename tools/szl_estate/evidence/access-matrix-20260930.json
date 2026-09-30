@@ -1,0 +1,52 @@
+{
+  "schema": "szl.estate-phase0-access/v1",
+  "checked_at_utc": "2026-09-30T05:43:04+00:00",
+  "scope": "Narrow existing-interface reads and two root HEAD probes; snapshot, not continuous assurance",
+  "entries": [
+    {
+      "target": "github:szl-holdings",
+      "interface": "existing authorized GitHub CLI",
+      "read_status": "PASS",
+      "read_scope": "Identity, one organization metadata page, canonical repository contents and open PR list",
+      "full_scope_status": "INACCESSIBLE",
+      "write_status": "INACCESSIBLE",
+      "code": "FULL_SCOPE_NOT_VERIFIED"
+    },
+    {
+      "target": "hf:SZLHOLDINGS",
+      "interface": "existing authorized Hugging Face connector",
+      "read_status": "PASS",
+      "read_scope": "Identity/org membership and SZLHOLDINGS/a11oy Space metadata",
+      "full_scope_status": "INACCESSIBLE",
+      "write_status": "INACCESSIBLE",
+      "code": "FULL_SCOPE_NOT_VERIFIED"
+    },
+    {
+      "target": "domain:a-11-oy.com",
+      "interface": "public HTTPS HEAD",
+      "read_status": "PASS",
+      "http_status": 200,
+      "read_scope": "Root HEAD reachability only",
+      "full_scope_status": "INACCESSIBLE",
+      "write_status": "INACCESSIBLE",
+      "code": "RUNTIME_NOT_VERIFIED"
+    },
+    {
+      "target": "domain:a11oy.net",
+      "interface": "public HTTPS HEAD",
+      "read_status": "PASS",
+      "http_status": 200,
+      "read_scope": "Root HEAD reachability only",
+      "full_scope_status": "INACCESSIBLE",
+      "write_status": "INACCESSIBLE",
+      "code": "RUNTIME_NOT_VERIFIED"
+    }
+  ],
+  "estate_ready": false,
+  "limitations": [
+    "No privileged full-estate access claim",
+    "No authenticated write/read scope inferred from account membership",
+    "No route, runtime correctness, private completeness or deployment certification",
+    "No credentials, raw headers or private response bodies retained"
+  ]
+}
