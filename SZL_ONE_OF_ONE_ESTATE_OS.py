@@ -4551,6 +4551,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_STEWARD_PLAN,
     )
 
+    public_parser = subparsers.add_parser(
+        "steward-export-public",
+        help="Export only a recorded public-scope deterministic Steward observation",
+    )
+    add_db_argument(public_parser)
+    public_parser.add_argument("--plan", type=Path, default=DEFAULT_STEWARD_PLAN)
+    public_parser.add_argument("--source-revision", required=True)
+    public_parser.add_argument(
+        "--output", type=Path, default=DEFAULT_OUTPUT_DIR / "steward-public.json",
+    )
+
     steward_schema_parser = subparsers.add_parser(
         "steward-schema",
         help="Emit the model-draft or compiled-plan JSON Schema",
@@ -4892,6 +4903,180 @@ def command_steward_plan(
     }
 
 
+def verify_steward_export_source(revision: str) -> None:
+    """Bind a public transform to exact committed code, not a dirty checkout."""
+    import subprocess
+
+    if not isinstance(revision, str) or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
+        raise ValueError("Public export requires an exact source revision")
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+        timeout=15, check=True,
+    ).stdout.decode("ascii").strip()
+    if head != revision:
+        raise ValueError("Public export source revision does not match checkout")
+    for relative in (
+        "SZL_ONE_OF_ONE_ESTATE_OS.py", "steward_public.py", "frontier_steward.py",
+        "operating_fabric.py", "estate/provenance_policy.py",
+    ):
+        object_name = f"HEAD:{relative}"
+        size = int(subprocess.run(
+            ["git", "cat-file", "-s", object_name], cwd=ROOT,
+            capture_output=True, timeout=15, check=True,
+        ).stdout)
+        if not 0 < size <= MAX_RESPONSE_BYTES:
+            raise ValueError("Public export source exceeds bound")
+        committed = subprocess.run(
+            ["git", "show", object_name], cwd=ROOT, capture_output=True,
+            timeout=15, check=True,
+        ).stdout
+        with (ROOT / relative).open("rb") as handle:
+            working = handle.read(MAX_RESPONSE_BYTES + 1)
+        if committed != working:
+            raise ValueError("Public export requires exact committed source bytes")
+
+
+def command_steward_export_public(
+    db_path: Path, plan_path: Path, output_path: Path, source_revision: str,
+) -> dict[str, Any]:
+    """Transform verified public evidence; never expose the authenticated store."""
+    import stat
+    from steward_public import MAX_BYTES, build_public_projection, validate_public_projection
+
+    def reject_links(path: Path) -> None:
+        for component in (path, *path.parents):
+            try:
+                metadata = component.lstat()
+            except FileNotFoundError:
+                continue
+            if stat.S_ISLNK(metadata.st_mode) or getattr(metadata, "st_file_attributes", 0) & 0x400:
+                raise ValueError("Public export path cannot contain links")
+
+    verify_steward_export_source(source_revision)
+    db_path = db_path.resolve()
+    plan_path = plan_path.resolve()
+    candidate = output_path.absolute()
+    reject_links(candidate)
+    output_path = candidate.resolve()
+    protected = {db_path, plan_path, *(Path(str(db_path) + suffix) for suffix in ("-wal", "-shm", "-journal"))}
+    if output_path in protected or output_path.name != "steward-public.json":
+        raise ValueError("Public export requires its dedicated JSON path")
+    if output_path.exists():
+        with output_path.open("rb") as handle:
+            previous_bytes = handle.read(MAX_BYTES + 1)
+        if len(previous_bytes) > MAX_BYTES:
+            raise ValueError("Public export cannot overwrite an oversized artifact")
+        previous = strict_steward_json_loads(previous_bytes.decode("utf-8"))
+        if not validate_public_projection(previous)["valid"]:
+            raise ValueError("Public export cannot overwrite an unrelated artifact")
+
+    status = load_steward_status(plan_path, db_path)
+    projection = build_public_projection(status, producer_revision=source_revision)
+    checked = validate_public_projection(projection, expected_source_revision=source_revision)
+    if not checked["valid"] or checked["state"] != "CURRENT":
+        raise ValueError("Public export requires current public evidence")
+    content = (json.dumps(projection, sort_keys=True, ensure_ascii=False, allow_nan=False, separators=(",", ":")) + "\n").encode("utf-8")
+    if len(content) > MAX_BYTES:
+        raise ValueError("Public projection exceeds bounded size")
+    digest = sha256_bytes(content)
+    immutable = output_path.parent / "steward-public-artifacts" / f"{digest}.json"
+    reject_links(immutable)
+    immutable.parent.mkdir(parents=True, exist_ok=True)
+    with immutable.open("xb") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+    connection = connect_db(db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        current = load_steward_status(plan_path, db_path)["latest_plan"]
+        prior = status["latest_plan"]
+        if any(current.get(key) != prior.get(key) for key in (
+            "state", "recorded", "plan_id", "proposal_digest", "receipt_hash",
+            "evidence_current", "evidence_fresh", "is_latest_recorded_plan",
+        )) or current.get("receipt_chain") != prior.get("receipt_chain"):
+            raise ValueError("Steward observation changed during public export")
+        if not current.get("receipt_chain", {}).get("chain_valid"):
+            raise ValueError("Public export receipt chain is invalid")
+        receipt = append_receipt(
+            connection, audit_id=projection["audit"]["id"],
+            kind="frontier_steward_public_export",
+            payload={
+                "schema_version": "szl.frontier-steward.public-write/v1",
+                "scope": "PUBLIC_READ_ONLY", "source_revision": source_revision,
+                "plan_id": projection["plan"]["id"], "projection_sha256": digest,
+                "immutable_artifact": str(immutable), "output_path": str(output_path),
+                "production_ready": False,
+            },
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    temporary = output_path.with_name(f".{output_path.name}.{secrets.token_hex(8)}.tmp")
+    try:
+        with temporary.open("xb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(output_path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+    verify_steward_export_source(source_revision)
+    connection = connect_db(db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        reject_links(output_path)
+        reject_links(immutable)
+        with output_path.open("rb") as handle:
+            readback = handle.read(MAX_BYTES + 1)
+        with immutable.open("rb") as handle:
+            immutable_readback = handle.read(MAX_BYTES + 1)
+        latest_export = None
+        for row in connection.execute(
+            "SELECT receipt_id,payload_json FROM receipts WHERE kind='frontier_steward_public_export' ORDER BY sequence DESC LIMIT 1000",
+        ):
+            bound = strict_steward_json_loads(row["payload_json"])
+            if bound.get("output_path") == str(output_path):
+                latest_export = (row["receipt_id"], bound)
+                break
+        current = load_steward_status(plan_path, db_path)["latest_plan"]
+        checked = validate_public_projection(projection, expected_source_revision=source_revision)
+        if (readback != content or immutable_readback != content
+                or latest_export is None or latest_export[0] != receipt["receipt_id"]
+                or latest_export[1].get("projection_sha256") != digest
+                or latest_export[1].get("immutable_artifact") != str(immutable)
+                or latest_export[1].get("source_revision") != source_revision
+                or latest_export[1].get("plan_id") != projection["plan"]["id"]
+                or current.get("state") != "RECORDED"
+                or current.get("recorded") is not True
+                or current.get("is_latest_recorded_plan") is not True
+                or current.get("evidence_current") is not True
+                or current.get("plan_id") != projection["plan"]["id"]
+                or current.get("proposal_digest") != projection["plan"]["digest"]
+                or not checked["valid"] or checked["state"] != "CURRENT"
+                or not verify_receipt_chain(db_path, read_only=True)["chain_valid"]):
+            raise ValueError("Public export current-recorded readback failed")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    return {
+        "status": "EXPORTED_PUBLIC", "scope": "PUBLIC_READ_ONLY",
+        "source_revision": source_revision, "projection_sha256": digest,
+        "output": str(output_path), "immutable_artifact": str(immutable),
+        "receipt": receipt, "readback": "CURRENT_RECORDED_PUBLIC_EXPORT",
+        "production_ready": False,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -4939,6 +5124,12 @@ def main(argv: list[str] | None = None) -> int:
             result["path"] = str(plan_path)
             print(pretty_json(result))
             return 0 if result["valid"] else 4
+        if args.command == "steward-export-public":
+            result = command_steward_export_public(
+                args.db, args.plan, args.output, args.source_revision,
+            )
+            print(pretty_json(result))
+            return 0
         db_path = args.db.resolve()
         if args.command == "audit":
             if args.timeout <= 0:

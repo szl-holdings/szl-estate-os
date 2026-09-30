@@ -58,6 +58,11 @@ jobs:
               raise SystemExit('Recorded observation binding verification failed')
           print('Recorded observation storage binding: PASS; production readiness is not established')
           PY
+      - name: Export bounded public evidence from exact committed source
+        run: >-
+          python SZL_ONE_OF_ONE_ESTATE_OS.py steward-export-public
+          --source-revision "$GITHUB_SHA"
+          --output outputs/steward-public.json
       - name: Retain public observation evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
