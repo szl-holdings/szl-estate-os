@@ -1,0 +1,118 @@
+{
+  "payload": {
+    "access_matrix": [
+      {
+        "code": "NONE",
+        "digest": "2ce672246bf052760ecc9781a47424e15c5d339d0f742aeb4c4c6c27a17606cd",
+        "endpoint": "/user",
+        "http_status": 200,
+        "identity_id": 270976497,
+        "member_role": null,
+        "observed_at_utc": "2026-09-30T07:33:22Z",
+        "org": null,
+        "scope": "github:user",
+        "source": "gh_api",
+        "state": null,
+        "status": "PASS",
+        "username": "stephenlutar2-hash"
+      },
+      {
+        "code": "NONE",
+        "digest": "9d1fccd66427d41e197f42529e85f7998e74a8debe61edc0d25351a296e11b2a",
+        "endpoint": "/orgs/szl-holdings",
+        "http_status": 200,
+        "identity_id": 273360816,
+        "member_role": null,
+        "observed_at_utc": "2026-09-30T07:33:22Z",
+        "org": "szl-holdings",
+        "scope": "github:org:szl-holdings",
+        "source": "gh_api",
+        "state": null,
+        "status": "PASS",
+        "username": null
+      },
+      {
+        "code": "NONE",
+        "digest": "6d95f44e3b0f8255bcedd8bddbfddac279b942ef42ff3b43e815797f468544a2",
+        "endpoint": "/user/memberships/orgs/szl-holdings",
+        "http_status": 200,
+        "identity_id": null,
+        "member_role": "admin",
+        "observed_at_utc": "2026-09-30T07:33:22Z",
+        "org": "szl-holdings",
+        "scope": "github:membership:szl-holdings",
+        "source": "gh_api",
+        "state": "active",
+        "status": "PASS",
+        "username": "stephenlutar2-hash"
+      },
+      {
+        "code": "NONE",
+        "digest": "8f6f777fc397788f4709debf42fe921cc7d3648f25f60388699b1ee0f22f5f95",
+        "endpoint": "https://huggingface.co/api/whoami-v2",
+        "http_status": 200,
+        "identity_id": null,
+        "member_role": "admin",
+        "observed_at_utc": "2026-09-30T07:33:22Z",
+        "org": "SZLHOLDINGS",
+        "scope": "hf:whoami:SZLHOLDINGS",
+        "source": "hf_https",
+        "state": null,
+        "status": "PASS",
+        "username": "betterwithage"
+      }
+    ],
+    "checked_at_utc": "2026-09-30T07:33:23Z",
+    "checks": [
+      {
+        "checked_at_utc": "2026-09-30T07:33:13Z",
+        "code": "NONE",
+        "name": "python",
+        "status": "PASS"
+      },
+      {
+        "checked_at_utc": "2026-09-30T07:33:13Z",
+        "code": "NONE",
+        "name": "installed_package",
+        "status": "PASS"
+      },
+      {
+        "checked_at_utc": "2026-09-30T07:33:13Z",
+        "code": "NONE",
+        "name": "reviewed_source",
+        "status": "PASS"
+      },
+      {
+        "checked_at_utc": "2026-09-30T07:33:13Z",
+        "code": "NONE",
+        "name": "folders",
+        "status": "PASS"
+      },
+      {
+        "checked_at_utc": "2026-09-30T07:33:22Z",
+        "code": "NONE",
+        "name": "offline_tests",
+        "status": "PASS"
+      }
+    ],
+    "estate_ready": false,
+    "proof_scope": "PHASE0_SETUP_AND_NARROW_ACCOUNT_ACCESS",
+    "receipt_status": "NOT_RUN",
+    "replay_grants_live_readiness": false,
+    "schema": "szl.phase0-setup/v1",
+    "setup_ready": true,
+    "tests": {
+      "cases": 333,
+      "child_exit_code": 0,
+      "errors": 0,
+      "executed_definitions": 153,
+      "expected_definitions": 153,
+      "failures": 0,
+      "junit_sha256": "4084670aa7bee42a2b7edacc3f70653c641f16c889dd67bbd8ed4cc9a3da72b2",
+      "skips": 0,
+      "source_fingerprint": "56030d9928306ee3e757f558a812a4a6eff5cd50f8f739f1157d05a4eb464723"
+    }
+  },
+  "schema_version": "szl.integrity-envelope/v1",
+  "sha256": "0a97c06fb60ff62809d50ff65f6029d54019e61ebcec2b33aeace16be2e7d5dc"
+}

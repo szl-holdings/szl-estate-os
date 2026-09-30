@@ -1,4 +1,4 @@
-"""Offline verification. Current remote scope is never inferred from snapshots."""
+"""Local estate reports and an opt-in narrow Phase 0 setup acceptance gate."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from .model import (
     EstateState, EvidenceValidationError, ProofOrigin, Provenance,
     REQUIRED_ESTATE_SCOPES, utc_timestamp,
 )
-from .storage import StorageError, write_reports
+from .storage import StorageError, guard_output_alias, write_reports
+from .setup import not_run_access, run_setup, write_setup_report
 
 UNOBSERVED_TIME = "1970-01-01T00:00:00Z"
 
@@ -73,14 +74,19 @@ def build_state(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Offline SZL estate evidence foundations")
+    parser = argparse.ArgumentParser(description="SZL estate evidence foundations and Phase 0 setup")
     sub = parser.add_subparsers(dest="command", required=True)
-    verify = sub.add_parser("verify", help="Verify bounded local summaries; never query providers")
+    verify = sub.add_parser("verify", help="Report bounded local summaries; optionally check narrow Phase 0 setup")
     verify.add_argument("--backend-bundle", type=Path)
     verify.add_argument("--hf-inventory", type=Path)
     verify.add_argument("--as-of", help="UTC report reference time; defaults to latest source time")
     verify.add_argument("--out", type=Path, default=Path("outputs/estate_phase0"))
+    verify.add_argument("--check-setup", action="store_true", help="Run reviewed tests and four narrow existing-auth identity/org/membership reads")
+    verify.add_argument("--package-root", type=Path, help="Reviewed tools/szl_estate checkout for source and test verification")
+    verify.add_argument("--access-receipt", type=Path, help="Optional receipt context; always freshly revalidate, never trust file assertions")
     args = parser.parse_args(argv)
+    if args.access_receipt and not args.check_setup:
+        parser.error("--access-receipt requires --check-setup and fresh access revalidation")
     summaries = []
     sources = [Path.cwd() / "estate_state.json"]
     if args.backend_bundle:
@@ -91,17 +97,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         summaries.append(load_hf_summary(args.hf_inventory))
     try:
         state = build_state(summaries, as_of=args.as_of)
+        if args.access_receipt:
+            sources.append(args.access_receipt)
+        if args.check_setup:
+            guard_output_alias(args.out / "phase0_state.json", sources)
+            if args.package_root and args.out.resolve().is_relative_to(args.package_root.resolve()):
+                raise EvidenceValidationError("SETUP_OUTPUT_MUST_BE_OUTSIDE_REVIEWED_PACKAGE")
         write_reports(args.out, state, source_paths=sources)
+        setup = run_setup(args.package_root, args.out, access_receipt=args.access_receipt) if args.check_setup else None
+        if setup is not None:
+            write_setup_report(args.out / "phase0_state.json", setup)
     except (EvidenceValidationError, StorageError):
-        print(json.dumps({"status": "FAIL", "code": "INVALID_INPUT_OR_OUTPUT", "estate_ready": False}, sort_keys=True))
+        print(json.dumps({"status": "FAIL", "code": "INVALID_INPUT_OR_OUTPUT", "setup_ready": False, "estate_ready": False}, sort_keys=True))
         return 2
-    status = "FAIL" if any(item.error_code for item in summaries) else "NOT_RUN"
+    bad_input = any(item.error_code for item in summaries)
+    setup_ready = bool(setup and setup.setup_ready)
+    status = "FAIL" if bad_input else "PASS" if setup_ready else "FAIL" if setup else "NOT_RUN"
     print(json.dumps({
-        "status": status, "estate_ready": state.estate_ready,
+        "status": status, "setup_ready": setup_ready, "estate_ready": state.estate_ready,
         "historical_inputs": len(summaries), "generated_at_utc": state.generated_at_utc,
         "live_scope_verified": False,
+        "setup_checked_at_utc": setup.checked_at_utc if setup else None,
+        "access_matrix": [row.to_dict() for row in setup.access] if setup else [row.to_dict() for row in not_run_access()],
+        "setup_checks": [check.to_dict() for check in setup.checks] if setup else [],
+        "receipt_status": setup.receipt_status.value if setup else "NOT_RUN",
     }, sort_keys=True))
-    return 1
+    return 0 if setup_ready and not bad_input else 1
 
 
 if __name__ == "__main__":

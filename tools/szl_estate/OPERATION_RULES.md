@@ -11,8 +11,9 @@ estate_state.json have separate owners and contracts.
 ## 2. Scope and boundaries
 
 Phase 0 provides setup, typed evidence, offline verification, bounded cache,
-parsers, classifier fixtures and reports. It has no write executor, provider
-credential handling, migrations, deployment or operational integration.
+parsers, classifier fixtures and reports. Its separate setup gate uses existing
+authorization only for narrow identity/org/membership reads. It has no write
+executor, credential changes, migrations, deployment or operational integration.
 No operational weapons enhancement or finance, legal or defense imports into
 science. Existing research is separate; novelty remains NOT_ESTABLISHED.
 
@@ -50,10 +51,14 @@ cursor loops and partial errors without emitting successful collection states.
 ## 6. Validation and release evidence
 
 Install the independent src package before running python -m szl_estate verify.
-Verify uses local inputs only. Outputs are deterministic for the same inputs and
+Bare verify uses local inputs only. Outputs are deterministic for the same inputs and
 reference time, with explicit NOT_RUN scopes and UNKNOWN authorization when
-live coverage has not been attempted. Package validation passing does not satisfy
-the readiness exit: verify remains exit 1 until required scope is established.
+live estate coverage has not been attempted. Opt-in --check-setup separates
+setup_ready from estate_ready: only the actual Phase 0 package/folder/test and
+narrow account-access criteria can grant setup exit 0. Full estate coverage,
+domains, scientific validity and deployment are not prerequisites for Phase 0.
+Reject altered source, incomplete tests and forged/stale/partial receipt context;
+fresh authenticated narrow reads supply authority, not handwritten assertions.
 Each output file is
 replaced atomically; preserve its old bytes on an interrupted write and retain
 incomplete temporary files for recovery. A failure between report writes can
