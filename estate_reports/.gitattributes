@@ -1,0 +1,4 @@
+# Keep the new Phase 2 receipt projections byte-stable across checkouts.
+phase2_inventory_summary.json text eol=lf
+phase2_inventory_report.md text eol=lf
+phase2_repository_batch_plan.csv text eol=lf
