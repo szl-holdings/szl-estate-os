@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile control-plane and verification tools
-        run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py frontier_steward.py ci/*.py estate/*.py
+        run: python -m py_compile SZL_ONE_OF_ONE_ESTATE_OS.py frontier_steward.py steward_public.py ci/*.py estate/*.py
       - name: Run deterministic Estate OS checks
         run: python SZL_ONE_OF_ONE_ESTATE_OS.py self-test
       - name: Test readiness signature-state contract

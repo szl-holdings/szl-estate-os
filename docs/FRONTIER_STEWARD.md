@@ -113,6 +113,27 @@ Unsigned receipts prove local byte/chain consistency, not external identity or
 independent witness. Preserve outputs and the database for incident analysis;
 do not erase retained failures to restore a green label.
 
+## Public A11oy integration boundary
+
+`steward-export-public --source-revision <exact-current-Git-SHA>` creates the
+dedicated `outputs/steward-public.json` projection only from recorded,
+receipt-bound deterministic observations whose GitHub and Hugging Face scope
+is `PUBLIC_ONLY` and whose domain scope is `PUBLIC_NETWORK`. Authenticated,
+partial, unknown, model-produced, and unrecorded inputs are refused. The
+exporter compares its committed source bytes, retains an immutable artifact,
+and commits an export receipt before publishing the convenience projection.
+
+The standalone `steward_public.py` reader admits only the closed public schema,
+exact source revision and exact-byte SHA-256. Freshness is limited to two hours
+from the original audit, not the time of export; stale views hide proposals.
+This is unsigned integrity evidence and never a production-readiness witness.
+Only this public projection and its pinned reader may be admitted into A11oy's
+existing protected source and sole canonical publisher. The private database,
+full plan, local dashboard, inventories, paths and credentials are not part of
+that public deployment. Public requests neither export nor sign, invoke a
+model, execute tools, or mutate state. Approved live inference is a separate
+operator-controlled integration, not a public read side effect.
+
 `steward-verify` checks only schema, digest, and internal policy. Use
 `steward-status` for artifact/receipt/database binding. `PROPOSED` means a
 valid proposal, not authorization or operational readiness. Exit codes are
