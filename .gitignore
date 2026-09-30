@@ -10,3 +10,7 @@ outputs/
 *.sqlite
 *.sqlite3
 latest_audit.json
+work/runtime/
+maintenance/runs/
+maintenance/.pytest_cache/
+maintenance/.szl-apply.lock
