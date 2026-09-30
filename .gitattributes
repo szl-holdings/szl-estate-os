@@ -1,0 +1,8 @@
+# Source-byte equality is part of the public export contract. Keep the exact
+# guarded producer files portable across Windows and Linux checkouts; do not
+# silently accept newline-normalized bytes in the evidence verifier.
+SZL_ONE_OF_ONE_ESTATE_OS.py text eol=lf
+steward_public.py text eol=lf
+frontier_steward.py text eol=lf
+operating_fabric.py text eol=lf
+estate/provenance_policy.py text eol=lf
