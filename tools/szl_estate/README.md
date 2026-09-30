@@ -114,3 +114,11 @@ loading it does not grant a fresh setup pass.
 The [OSV query receipt](evidence/dependency-security-evidence.json) records no
 matching advisories returned for the eight installed build/test pins; this
 does not certify package security.
+
+The additive `python -m szl_estate inventory` command integrates the pinned
+historical coverage bundle and optional explicit local checkout metadata. See
+[the Phase 2 scope and output contract](INVENTORY_PHASE2.md). It performs no
+recrawl or source execution, preserves unknown dirty state and exits 1 when
+collection completes with Phase 2 controls still incomplete. Output must use
+a new owned directory outside the inspected checkouts; existing partial files
+are preserved. A proposed read batch never reduces the unread count.

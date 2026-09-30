@@ -84,7 +84,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     verify.add_argument("--check-setup", action="store_true", help="Run reviewed tests and four narrow existing-auth identity/org/membership reads")
     verify.add_argument("--package-root", type=Path, help="Reviewed tools/szl_estate checkout for source and test verification")
     verify.add_argument("--access-receipt", type=Path, help="Optional receipt context; always freshly revalidate, never trust file assertions")
+    inventory = sub.add_parser("inventory", help="Integrate frozen coverage and explicitly scoped local checkout metadata; no recrawl")
+    inventory.add_argument("--backend-bundle", type=Path, required=True)
+    inventory.add_argument("--expected-sha256", default="f26d92aa8b7639d90c75c088c0974013bca0c3bc744c3a7ab073f6d20080b967")
+    inventory.add_argument("--hf-inventory", type=Path)
+    inventory.add_argument("--checkout-root", type=Path, action="append", default=[], help="Explicit known checkout/workspace only; default no filesystem scan")
+    inventory.add_argument("--git-executable", type=Path, help="Explicit approved absolute Git executable for config-only remote metadata")
+    inventory.add_argument("--batch-size", type=int, default=64)
+    inventory.add_argument("--priority-repo", action="append", default=[], help="Proposed org/repo priority, not a quality score or master designation")
+    inventory.add_argument("--master-repo", action="append", default=[], help="Explicit owner-designated org/repo; no implicit masters")
+    inventory.add_argument("--out", type=Path, required=True, help="New owned output directory outside all inspected checkouts")
     args = parser.parse_args(argv)
+    if args.command == "inventory":
+        from .inventory_cli import run_inventory
+        return run_inventory(args)
     if args.access_receipt and not args.check_setup:
         parser.error("--access-receipt requires --check-setup and fresh access revalidation")
     summaries = []
