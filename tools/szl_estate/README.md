@@ -122,3 +122,8 @@ recrawl or source execution, preserves unknown dirty state and exits 1 when
 collection completes with Phase 2 controls still incomplete. Output must use
 a new owned directory outside the inspected checkouts; existing partial files
 are preserved. A proposed read batch never reduces the unread count.
+
+The additive pinned source reader and typed byte/static receipts are described
+in [CONTENT_REVIEW.md](CONTENT_REVIEW.md). Its explicit bounded GitHub GETs read
+candidate code only as data. Static findings, runtime NOT_RUN and whole-estate
+readiness remain separate; source bodies stay outside repository reports.
