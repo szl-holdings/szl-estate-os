@@ -1,0 +1,2241 @@
+{
+  "schema_version": "szl.thread-requirements/v1",
+  "audited_at_utc": "2026-09-30T08:45:36Z",
+  "scope": "PHASE1_PROJECT_THREAD_INTENT_ONLY",
+  "canonical_repository": "szl-holdings/szl-estate-os",
+  "stack": {
+    "branch": "codex/estate-thread-audit-phase1",
+    "base_branch": "codex/estate-audit-phase0",
+    "base_commit": "eb060db015b2165ca777520e04dcd9c9c06ac9f4",
+    "base_pr": 51,
+    "base_target": "main",
+    "merge_authority": "PR_QUEUE_OWNER",
+    "draft_required": true
+  },
+  "readiness": {
+    "phase1_artifact_status": "DOCUMENTED_SCOPE_ONLY",
+    "phase0_setup": "OBSERVED_AS_OF_2026-09-30T07:33:23Z",
+    "estate_ready": false,
+    "full_scope": "NOT_RUN",
+    "deployment": "NOT_RUN",
+    "scientific_validity": "NOT_ESTABLISHED"
+  },
+  "coverage_policy": "All authorized asks are listed; implementation statuses require scope-specific receipts. Report/schema completeness grants no estate readiness.",
+  "source_policy": "Only authorized engineering context and existing evidence; private room/tool identifiers and unrelated personal context excluded.",
+  "sources": [
+    {
+      "id": "engineering-contract",
+      "kind": "AUTHORIZED_ENGINEERING_MESSAGE",
+      "artifact": "Engineering scope and doctrine, 2026-09-30",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Authorized project asks supplied for this audit; excludes unrelated personal context. Exact message time not supplied."
+    },
+    {
+      "id": "design-master",
+      "kind": "AUTHORIZED_ENGINEERING_MESSAGE",
+      "artifact": "Latest September 30 design master payload",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Latest design instruction replaces the earlier holographic direction; no UI implementation evidence supplied."
+    },
+    {
+      "id": "completion-request",
+      "kind": "AUTHORIZED_ENGINEERING_MESSAGE",
+      "artifact": "Completion-matrix instruction, 2026-09-30 07:57:45 UTC",
+      "date": "2026-09-30T07:57:45Z",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": null,
+      "coverage": "All project asks, unmet acceptance checks, ownership, next actions and exclusions must remain visible."
+    },
+    {
+      "id": "phase0-source",
+      "kind": "REPOSITORY_ARTIFACT",
+      "artifact": "tools/szl_estate/OPERATION_RULES.md",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": "eb060db015b2165ca777520e04dcd9c9c06ac9f4",
+      "sha256": null,
+      "coverage": "Reviewed Phase 0 contract and seven provenance headings; does not establish later-phase completion."
+    },
+    {
+      "id": "phase0-setup",
+      "kind": "TEST_AND_ACCESS_RECEIPT",
+      "artifact": "tools/szl_estate/evidence/phase0-setup-validation-20260930.json",
+      "date": "2026-09-30T07:33:23Z",
+      "date_precision": "SECOND",
+      "commit": "eb060db015b2165ca777520e04dcd9c9c06ac9f4",
+      "sha256": "71b6251883eff116365eb8ae87c6c47573630fec54477ad675ed15f17ff2897f",
+      "coverage": "Artifact-byte digest; internal integrity envelope also checked. 333 offline cases, 153 definitions, five setup checks and four narrow HTTP 200 account probes. No full estate or domain coverage."
+    },
+    {
+      "id": "backend-snapshot",
+      "kind": "MATERIALIZED_INVENTORY",
+      "artifact": "szl-holdings-audit-evidence-2026-09-30.zip (version 2)",
+      "date": "2026-09-30T03:07:06.747102Z",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": "f26d92aa8b7639d90c75c088c0974013bca0c3bc744c3a7ab073f6d20080b967",
+      "coverage": "Actual readable bytes: 3134648. Frozen inventory: 130 repositories, 542 inspected paths / 521 unique blobs across 120 repositories, 32206 unread paths; no recrawl or full semantic review. Origin source commit not provided; the stack base identifies the consuming code only."
+    },
+    {
+      "id": "hf-snapshot",
+      "kind": "MATERIALIZED_INVENTORY",
+      "artifact": "SZL_HuggingFace_Audit_2026-09-30.json (version 1)",
+      "date": "2026-09-30T01:56:46.066247+00:00",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": "31d777345ac57b5eba1c78ce341c8cb513d2f8fdfe021482b6dc99ff82b43ded",
+      "coverage": "Actual readable bytes: 3881865. Historical 120 assets: 49 models, 34 datasets, 23 Spaces, 14 kernels. Collections completeness and current runtimes untested. Origin source commit not provided; the stack base identifies the consuming code only."
+    },
+    {
+      "id": "historical-science",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Reported v4 science snapshot, September 30 engineering context",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Reported 112 archives, 110 tree-consistent archives, 115 entries, all noninstallable. Original exact science receipt not inspected in this phase."
+    },
+    {
+      "id": "historical-model-gate",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Reported Model 11/12 promotion status, September 30 engineering context",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Historical BLOCKED/NOT_PROMOTABLE claim; no fresh exact model/revision receipt supplied."
+    },
+    {
+      "id": "historical-queue",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Earlier September 30 PR-queue snapshot",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Reported 85 PRs: 63 drafts, 22 nondrafts, none admitted; observation clock time not supplied and may have advanced."
+    },
+    {
+      "id": "tooling-risks",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "September 30 engineering observations of tooling failures",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Reported shape/pagination/quota, signing/actions, partial disk writes, stale heads, mirror drift and source/runtime parity risks. Individual failure receipts not all inspected."
+    },
+    {
+      "id": "frontier-map",
+      "kind": "READ_ENGINEERING_MAP",
+      "artifact": "szl-frontier-bibliography-2026-09-30.json",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Existing map fully read: 18 primary sources, 7 exact-commit mappings across 6 repositories / 13 paths, 6 proposed experiments; 40817 bytes reported by provider. Concrete version/content digest unavailable; mapped upstream observations not independently reverified. Novelty NOT_ESTABLISHED."
+    },
+    {
+      "id": "historical-payload",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Supplied review report for szl_codex_payload(2).py and opaque compiled .pyc attachment",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Reported Python metadata: 30695 bytes / 445 lines. Preliminary independent review reports default writes/compilation, error-to-empty inventory, stale unpinned merge/close planning, absent HOLD check and old embedded claims. This preliminary report is preserved; the later static-review report is now read separately. Original bytes not consumed or executed by this audit. Compiled attachment never loaded."
+    },
+    {
+      "id": "payload-static-review",
+      "kind": "READ_STATIC_REVIEW_REPORT",
+      "artifact": "SZL_New_Payload_Static_Review.txt",
+      "date": "2026-09-30T08:27:36.059114Z",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Full 157-line report read through authorized Library; 15882 bytes reported. Timestamp is artifact publication metadata; review date has day precision. Report supplies original source/bytecode hashes; original bytes not consumed here. Report version/content-byte digest unavailable. No payload execution, compilation, unmarshalling or decompilation."
+    },
+    {
+      "id": "finish11-static-review",
+      "kind": "READ_STATIC_REVIEW_REPORT",
+      "artifact": "SZL_FINISH_11_Static_Delta_Review.txt",
+      "date": "2026-09-30T08:34:39.953404Z",
+      "date_precision": "SECOND",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Full 157-line report read through authorized Library; 16172 bytes reported. Timestamp is artifact publication metadata; review date has day precision. Reports exact standalone/Markdown code-block byte equality and static hazards; original bytes not consumed here. Report version/content-byte digest unavailable. No original execution or policy inheritance."
+    },
+    {
+      "id": "official-gh-checks",
+      "kind": "PRIMARY_SOURCE_READ",
+      "artifact": "https://raw.githubusercontent.com/cli/cli/fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd/pkg/cmd/pr/checks/checks.go",
+      "date": "2026-09-30T08:40:58Z",
+      "date_precision": "SECOND",
+      "commit": "fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd",
+      "sha256": null,
+      "coverage": "Official source resolved/read at this observation: status contexts paginate via endCursor; JSON exporter returns the collected checks before ordinary failed/pending exit handling. This does not establish the installed gh version or excuse a wrapper's real read/error loss."
+    },
+    {
+      "id": "pcm-v3-fragment",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Supplied PCM payload v3 fragment review (complete filename unavailable)",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Engineering review reports truncation inside gate 1. Full 12 gates, verify and signing NOT_REVIEWED. Visible defects only; complete source was requested elsewhere. No source/calibration/gate implementation or real test.jsonl consumed."
+    }
+  ],
+  "summary": {
+    "requirements": 44,
+    "categories": {
+      "constraint": 13,
+      "desired_future_state": 21,
+      "unverified_historical_claim": 7,
+      "observed_fact": 3
+    },
+    "all_estate_completion": "NOT_ESTABLISHED",
+    "future_acceptance_checks": 60,
+    "synthetic_fixture_specs": 36
+  },
+  "requirements": [
+    {
+      "id": "CON-001",
+      "category": "constraint",
+      "title": "Canonical estate and domain roles",
+      "statement": "GitHub szl-holdings is the source of truth; HF SZLHOLDINGS contains models/datasets/Spaces/collections/kernels; a-11-oy.com is the product and a11oy.net the proof origin.",
+      "source_ids": [
+        "engineering-contract"
+      ],
+      "coverage": "Authoritative intended roles; does not certify synchronization, DNS, content or runtime.",
+      "acceptance_criterion": "Trace every public artifact to its canonical GitHub revision and intended HF/domain role.",
+      "owner": {
+        "role": "estate architecture owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Cross-origin source/runtime parity untested."
+      ],
+      "next_action": "Create the later-phase asset-to-source coverage map.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {}
+    },
+    {
+      "id": "CON-002",
+      "category": "constraint",
+      "title": "Python package and governed source",
+      "statement": "Use Python 3.11+ and reusable tools/szl_estate with receipts and explicit unknowns, preserving existing repository conventions. Keep typed evidence/state and deterministic JSON/CSV/Markdown report output for identical inputs/reference time, plus setup folders/tests and the existing seven provenance headings.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Phase 0 package setup is observed in OBS-001; later adapters and behavioral audits are NOT_RUN.",
+      "acceptance_criterion": "Installed python -m szl_estate verify works without source-path assumptions and preserves setup_ready separately from estate_ready. Typed model fields and JSON/CSV/report bytes are stable for identical input/time; folder/import/receipt checks run at the actual source revision.",
+      "owner": {
+        "role": "audit tooling owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Extend only within a separately bounded later-phase scope.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "python_minimum": "3.11",
+        "package_path": "tools/szl_estate",
+        "typed_evidence_state": true,
+        "output_formats": [
+          "JSON",
+          "CSV",
+          "MARKDOWN_REPORT"
+        ],
+        "deterministic_output": "SAME_INPUTS_AND_REFERENCE_TIME",
+        "provenance_headings": 7
+      }
+    },
+    {
+      "id": "CON-003",
+      "category": "constraint",
+      "title": "Immutable dependency and execution pins",
+      "statement": "Pin dependencies, actions, images and models exactly with primary-source evidence. Requested Python set: requests, httpx, pydantic, rich, huggingface_hub, beautifulsoup4, playwright and pytest; assess conventions and official exact-version evidence before isolated installation.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Phase 0 dependency and workflow pins exist; all-estate image/model/action coverage not established.",
+      "acceptance_criterion": "Every executed dependency/action/image/model resolves to an exact version, commit or digest with dated official-source evidence; mutable tags alone fail. The requested eight packages are accounted for; no Playwright browser download or new security terms/permissions are implied.",
+      "owner": {
+        "role": "build and supply-chain owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Complete estate pin coverage NOT_RUN."
+      ],
+      "next_action": "Inventory existing pins from frozen source evidence before proposing changes.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "requested_dependencies": [
+          "requests",
+          "httpx",
+          "pydantic",
+          "rich",
+          "huggingface_hub",
+          "beautifulsoup4",
+          "playwright",
+          "pytest"
+        ],
+        "official_evidence_artifacts": [
+          "tools/szl_estate/evidence/dependency-evidence.json",
+          "tools/szl_estate/evidence/dependency-dev-evidence.json",
+          "tools/szl_estate/evidence/dependency-security-evidence.json"
+        ],
+        "broader_pin_coverage": "NOT_RUN"
+      }
+    },
+    {
+      "id": "CON-004",
+      "category": "constraint",
+      "title": "Bounded redacted resumable evidence",
+      "statement": "Keep raw-response projections/cache and estate_state.json resumable, bounded, redacted and provenance-bearing. Preserve comments as int/list/totalCount variants, list/object page distinctions, bounded quota backoff and cursor-loop/partial-failure receipts.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Phase 0 cache/report contracts exercised offline; no blanket safety claim for existing tools.",
+      "acceptance_criterion": "Reject excess sizes, secrets, private/raw unknown bodies, cursor loops, malformed list/object pages, mismatched totals, quota exhaustion and partial errors; preserve interrupted files.",
+      "owner": {
+        "role": "audit tooling owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Estate-wide adoption unmeasured."
+      ],
+      "next_action": "Reuse reviewed cache/parsers and record later collection bounds and failures.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "comments_variants": [
+          "int",
+          "list",
+          "totalCount"
+        ],
+        "page_shapes": [
+          "list",
+          "object"
+        ],
+        "error_implies_success": false
+      }
+    },
+    {
+      "id": "CON-005",
+      "category": "constraint",
+      "title": "Truthful access and readiness states",
+      "statement": "Use NOT_RUN for unattempted checks, UNKNOWN for unestablished facts and INACCESSIBLE only for attempted access failures; errors cannot become PASS.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source",
+        "phase0-setup"
+      ],
+      "coverage": "Phase 0 narrow access is a historical passing observation; full-scope auth and coverage remain unmeasured.",
+      "acceptance_criterion": "Bind source/time/status/role/HTTP evidence; unknown or unexposed HTTP remains unknown, forged/stale/partial receipt context cannot grant fresh readiness.",
+      "owner": {
+        "role": "audit tooling owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Preserve separate setup, full-estate and report-completeness gates.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {}
+    },
+    {
+      "id": "CON-006",
+      "category": "constraint",
+      "title": "Independent evidence dimensions",
+      "statement": "Keep claim maturity separate from factual basis and from integrity, scientific validity, authorization, proof scope and deployment.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "SHA256 proves byte identity, not origin or truth; static inspection is not behavioral safety.",
+      "acceptance_criterion": "Reports independently label SHIPPING/DEMONSTRATED/INTERNALLY_TESTED/ROADMAP and FACT/INFERENCE/PROPOSAL without promoting unrelated dimensions.",
+      "owner": {
+        "role": "evidence and science owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Require explicit dimension-specific receipts for each future claim.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "maturity_values": [
+          "SHIPPING",
+          "DEMONSTRATED",
+          "INTERNALLY_TESTED",
+          "ROADMAP"
+        ],
+        "basis_values": [
+          "FACT",
+          "INFERENCE",
+          "PROPOSAL"
+        ],
+        "independent_dimensions": [
+          "cryptographic_integrity",
+          "scientific_validity",
+          "authorization",
+          "proof_scope",
+          "deployment"
+        ]
+      }
+    },
+    {
+      "id": "CON-007",
+      "category": "constraint",
+      "title": "Normal green merge and queue ownership",
+      "statement": "Only the queue owner handles eligible normal green merges; red, pending, draft and HOLD PRs stay preserved. Automatic PR closing is not authorized.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Classifier fixtures only in Phase 0; no merge executor or queue admission in this audit.",
+      "acceptance_criterion": "Exact current head, required successful checks, conflict resolution and owner admission are evidenced; no rule bypass, force push or history rewrite.",
+      "owner": {
+        "role": "PR queue owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Every future merge needs its own exact-head admission receipt."
+      ],
+      "next_action": "Keep both audit PRs draft and leave merge decisions to the queue.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "pr_states": [
+          "MERGE_NOW_GREEN",
+          "WAIT_CHECKS",
+          "FIX_CHECKS",
+          "CONFLICT_REBASE",
+          "DOCS_ONLY",
+          "DRAFT_PRESERVE",
+          "HOLD_PRESERVE",
+          "NEEDS_OWNER_DECISION"
+        ],
+        "prohibited": [
+          "RED_MERGE",
+          "PENDING_MERGE",
+          "DRAFT_MERGE",
+          "HOLD_MERGE",
+          "RULE_BYPASS",
+          "FORCE_PUSH",
+          "HISTORY_REWRITE",
+          "AUTO_CLOSE"
+        ]
+      }
+    },
+    {
+      "id": "CON-008",
+      "category": "constraint",
+      "title": "No invented benchmarks or promotion override",
+      "statement": "Never invent benchmark results, novelty or evaluation receipts, or override promotion decisions.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Frontier novelty remains NOT_ESTABLISHED; requested experiments are roadmap, not results.",
+      "acceptance_criterion": "Every measured result cites exact inputs/revisions/environment/method/output and gate authority; unsupported claims remain unknown.",
+      "owner": {
+        "role": "evaluation and promotion owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Future experiment receipts absent."
+      ],
+      "next_action": "Define experiment acceptance before execution.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "novelty": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "id": "CON-009",
+      "category": "constraint",
+      "title": "Human release gates",
+      "statement": "Human biosafety, clinical, custom-license and security release gates remain mandatory.",
+      "source_ids": [
+        "engineering-contract"
+      ],
+      "coverage": "This report evaluates no human safety, clinical suitability, legal permission or security release decision.",
+      "acceptance_criterion": "Named authorized humans record each applicable gate decision with scope, evidence, date and conditions before release.",
+      "owner": {
+        "role": "human safety, clinical, licensing and security approvers",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Named approvers, criteria and exact release scope unassigned."
+      ],
+      "next_action": "Assign gate owners and collect their existing criteria before any release.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "human_only": true,
+        "gates": [
+          "BIOSAFETY",
+          "CLINICAL",
+          "CUSTOM_LICENSE",
+          "SECURITY_RELEASE"
+        ]
+      }
+    },
+    {
+      "id": "CON-010",
+      "category": "constraint",
+      "title": "Excluded operational and cross-domain work",
+      "statement": "Exclude operational weapons, targeting and engagement enhancement, and finance/legal/defense imports into science; generic defensive cyber, health and provenance remain in allowed scope.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Exclusion applies to all planned lanes; no operational integrations authorized.",
+      "acceptance_criterion": "Reject prohibited work during scope review; allow only bounded benign work with applicable human gates.",
+      "owner": {
+        "role": "project scope owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Check each later-phase task against the exclusion before execution.",
+      "implementation_status": "EXCLUDED_SCOPE",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {}
+    },
+    {
+      "id": "CON-011",
+      "category": "constraint",
+      "title": "Isolated execution and credentials",
+      "statement": "Do not execute skills without isolated gates; do not introduce provider keys, paid GPU work, unknown repository code, bulk browsers/containers or operational changes.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-source"
+      ],
+      "coverage": "Phase 1 uses reviewed standard-library consistency tests and existing authorized evidence only.",
+      "acceptance_criterion": "Record isolation/resources/source review and task authorization before executing any new skill or workload; keep secrets outside reports.",
+      "owner": {
+        "role": "execution lane owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Use small offline tests and schedule later workloads explicitly.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {}
+    },
+    {
+      "id": "CON-012",
+      "category": "constraint",
+      "title": "Timestamp and privacy discipline",
+      "statement": "Snapshots retain observation time; project reports exclude unrelated personal/email/internal-assistant context and private room/tool identifiers.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Only supplied engineering scope and sanitized artifact references are included; no connector or conversation identifiers required.",
+      "acceptance_criterion": "Every row has source date, coverage, acceptance, owner/blocker and next action; historical state is never represented as current.",
+      "owner": {
+        "role": "audit report owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Validate cross-artifact traceability and leak rejection before publication.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {}
+    },
+    {
+      "id": "CON-013",
+      "category": "constraint",
+      "title": "Phase 0 and Phase 1 gates",
+      "statement": "Phase 0 acceptance is setup/package/folders/tests plus narrow GH/HF access; Phase 1 acceptance is the traceable intent audit, not full estate implementation.",
+      "source_ids": [
+        "engineering-contract",
+        "phase0-setup",
+        "completion-request"
+      ],
+      "coverage": "Stored setup success and this report cannot satisfy later coverage, runtime, science or deployment gates.",
+      "acceptance_criterion": "Keep setup_ready, phase1_audit_ready and estate_ready distinct; Phase 1 passes only its schema, source, coverage and review checks.",
+      "owner": {
+        "role": "audit report owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Report the small draft's exit separately from every remaining acceptance test.",
+      "implementation_status": "REQUIRED",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {}
+    },
+    {
+      "id": "FUT-001",
+      "category": "desired_future_state",
+      "title": "All repository and file coverage",
+      "statement": "Audit every in-scope repository/file with explicit coverage and disposition.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Backend snapshot partial: 32206 unread paths; visibility beyond frozen inventory unknown.",
+      "acceptance_criterion": "Each scoped path has immutable revision, read status, relevant findings and owner; exhausted pagination/counts reconcile and unread/unknown remain visible.",
+      "owner": {
+        "role": "estate audit owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Full scope inventory and bounded execution plan not yet agreed."
+      ],
+      "next_action": "Partition existing unread paths into reviewable batches.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Complete repository visibility reconciliation",
+        "Read/classify every scoped path",
+        "Behavioral tests where required"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-002",
+      "category": "desired_future_state",
+      "title": "HF models",
+      "statement": "Audit all SZLHOLDINGS models with exact source/revision, cards, licenses, provenance and promotion evidence.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "49 models in historical snapshot; current revision/runtime/promotion status NOT_RUN.",
+      "acceptance_criterion": "Each model has pinned revision and applicable static/runtime/evaluation/promotion receipts, or an explicit blocker; no promotion inferred.",
+      "owner": {
+        "role": "HF model owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Fresh exact model receipts missing."
+      ],
+      "next_action": "Prioritize frozen model evidence and gate ownership.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Complete current model coverage",
+        "Card/license/source parity",
+        "Exact permitted behavioral and promotion receipts"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-003",
+      "category": "desired_future_state",
+      "title": "HF datasets",
+      "statement": "Audit all SZLHOLDINGS datasets with schema, lineage, rights and reproducible bounded validation.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "34 historical datasets; current content and permissions unverified.",
+      "acceptance_criterion": "Each dataset has exact revision, lineage/license, bounded schema/content checks and applicable human gate evidence.",
+      "owner": {
+        "role": "HF dataset owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Dataset-specific criteria and rights owners unassigned."
+      ],
+      "next_action": "Map frozen dataset evidence to explicit criteria.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Complete dataset coverage",
+        "Schema/lineage/license checks",
+        "Sensitive-data and human gate review where applicable"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-004",
+      "category": "desired_future_state",
+      "title": "HF Spaces",
+      "statement": "Audit all SZLHOLDINGS Spaces for source/runtime parity, benign behavior and deployment receipts.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "23 historical Spaces; no current runtime proof.",
+      "acceptance_criterion": "Each Space maps to exact source/environment, reachable behavior and all relevant benign paths with reproducible results.",
+      "owner": {
+        "role": "HF Space owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Current Space runtimes and bounded behavior plan NOT_RUN."
+      ],
+      "next_action": "Define permitted smoke paths before running them.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Complete Space coverage",
+        "Source/runtime parity",
+        "Benign interaction and release tests"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-005",
+      "category": "desired_future_state",
+      "title": "HF collections",
+      "statement": "Audit collections and membership without assuming that the 120-asset snapshot covers them.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Collection count, membership and current visibility UNKNOWN.",
+      "acceptance_criterion": "Exhaust a bounded authorized collection inventory, reconcile memberships and exact referenced assets, and record errors explicitly.",
+      "owner": {
+        "role": "HF collections owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "No collection completeness receipt supplied."
+      ],
+      "next_action": "Identify existing collection evidence and supported read scope.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Collection inventory reconciliation",
+        "Membership/link correctness"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-006",
+      "category": "desired_future_state",
+      "title": "HF kernels",
+      "statement": "Audit the kernel lane separately from models/datasets/Spaces/collections.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "14 kernels in historical snapshot; executable behavior and current revisions NOT_RUN.",
+      "acceptance_criterion": "Each kernel has exact source/revision, execution gates, dependency pins and permitted bounded behavior receipt, or a blocker.",
+      "owner": {
+        "role": "HF kernel owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Kernel-specific gates and exact runtimes not supplied."
+      ],
+      "next_action": "Classify historical kernel evidence without executing bundled code.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Complete kernel coverage",
+        "Pinned source/dependencies",
+        "Isolated permitted behavior"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-007",
+      "category": "desired_future_state",
+      "title": "Product domain and all benign tabs",
+      "statement": "Audit a-11-oy.com as the product, including all benign tabs and navigation paths.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Prior reachability checks do not establish application behavior; tab/route inventory UNKNOWN.",
+      "acceptance_criterion": "Enumerate agreed benign routes/tabs and exercise navigation, content, errors and applicable source/runtime parity at exact revision.",
+      "owner": {
+        "role": "product owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Tab/route list and acceptance fixtures not supplied."
+      ],
+      "next_action": "Obtain the canonical benign route inventory and UI baseline.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "All benign tabs/routes",
+        "Functional navigation and error paths",
+        "Canonical source/runtime parity"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-008",
+      "category": "desired_future_state",
+      "title": "Proof-origin domain",
+      "statement": "Audit a11oy.net as the proof origin with source-linked, bounded evidence publication.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Domain role is a constraint, not proof-origin integrity or current behavior evidence.",
+      "acceptance_criterion": "Every proof links exact source, scope, timestamp, digest and independent validity/authorization/deployment dimensions; links and benign behavior pass.",
+      "owner": {
+        "role": "proof-origin owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Publication inventory and exact live revision unknown."
+      ],
+      "next_action": "Map existing proofs to canonical receipts before live checks.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Complete proof inventory",
+        "Receipt/source linkage",
+        "Benign runtime and publication checks"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-009",
+      "category": "desired_future_state",
+      "title": "Latest restrained premium design",
+      "statement": "Use the September 30 restrained premium design: one accent, light/dark themes, 4px spacing and accessible mobile.",
+      "source_ids": [
+        "design-master",
+        "completion-request"
+      ],
+      "coverage": "Supersedes earlier holographic direction; implementation/design tokens unverified.",
+      "acceptance_criterion": "Approved tokens and visual receipts demonstrate one accent, both themes and 4px spacing rules on scoped product surfaces.",
+      "owner": {
+        "role": "product design owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Exact tokens, component inventory and approved visual baseline absent."
+      ],
+      "next_action": "Freeze the latest design tokens and scoped reference screenshots.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "One-accent token audit",
+        "Light/dark contrast and states",
+        "4px spacing verification"
+      ],
+      "details": {
+        "supersedes": "EARLIER_HOLOGRAPHIC_DIRECTION",
+        "accent_count": 1,
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "spacing_unit_px": 4
+      }
+    },
+    {
+      "id": "FUT-010",
+      "category": "desired_future_state",
+      "title": "Responsive and accessible mobile",
+      "statement": "Validate widths 375, 390, 768, 1280 and 1920 with 44px targets and accessible interaction.",
+      "source_ids": [
+        "design-master",
+        "completion-request"
+      ],
+      "coverage": "No responsive/keyboard/touch/contrast behavior receipt supplied.",
+      "acceptance_criterion": "Record results at each exact width for all scoped benign surfaces; check target sizing, keyboard/focus, content fit and accessible states under an agreed profile.",
+      "owner": {
+        "role": "product accessibility owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Viewport heights/DPR, target sizing exceptions and accessibility profile need owner definition."
+      ],
+      "next_action": "Define the reproducible viewport and interaction profiles.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "375/390/768/1280/1920 viewport checks",
+        "44px interactive-target checks",
+        "Keyboard/focus/contrast and mobile behavior"
+      ],
+      "details": {
+        "viewport_widths_px": [
+          375,
+          390,
+          768,
+          1280,
+          1920
+        ],
+        "target_size_px": 44,
+        "profile_status": "UNKNOWN"
+      }
+    },
+    {
+      "id": "FUT-011",
+      "category": "desired_future_state",
+      "title": "Measured Lighthouse target",
+      "statement": "Measure the requested Lighthouse 90/100/100 target; never assume achieved scores.",
+      "source_ids": [
+        "design-master",
+        "completion-request"
+      ],
+      "coverage": "No run receipts; score metric mapping and execution profile not supplied.",
+      "acceptance_criterion": "Agree metric labels/profile first, then record exact URL/revision/tool version/device/network/date and measured scores meeting 90/100/100.",
+      "owner": {
+        "role": "product performance owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Metric labels, Lighthouse version/profile and measured results UNKNOWN."
+      ],
+      "next_action": "Assign score names and a reproducible measurement profile before running.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Named metric/profile agreement",
+        "Exact pinned Lighthouse receipts",
+        "Measured 90/100/100 threshold compliance"
+      ],
+      "details": {
+        "score_targets": [
+          90,
+          100,
+          100
+        ],
+        "metric_names": null,
+        "measured_scores": null
+      }
+    },
+    {
+      "id": "FUT-012",
+      "category": "desired_future_state",
+      "title": "November investor demonstration",
+      "statement": "Target an investor demonstration in November 2026; exact date not provided.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Planning target only; demo build, scenarios and acceptance unestablished.",
+      "acceptance_criterion": "Owner agrees exact date, scoped benign scenarios and evidence-backed demo readiness; every incomplete lane remains visible.",
+      "owner": {
+        "role": "demo/project owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Exact day, scenario scope and acceptance owners unassigned."
+      ],
+      "next_action": "Choose a demo date and minimum demonstrated scope.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Exact date and scenario decision",
+        "Evidence-backed demo rehearsal",
+        "Applicable release gates"
+      ],
+      "details": {
+        "target_month": "2026-11",
+        "exact_date": null
+      }
+    },
+    {
+      "id": "FUT-013",
+      "category": "desired_future_state",
+      "title": "Frontier research and novelty",
+      "statement": "Maintain frontier source mappings and proposed experiments without asserting novelty or successful experiments.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request",
+        "frontier-map"
+      ],
+      "coverage": "Existing map read: 18 primary sources, 7 pinned mappings across 6 repositories / 13 paths and 6 proposed experiments. Upstream mapped observations not independently reverified; map content digest/version unavailable.",
+      "acceptance_criterion": "Each research assertion has a primary source/date/pin and proof scope; experiments need reproducible receipts; novelty stays NOT_ESTABLISHED absent evidence.",
+      "owner": {
+        "role": "frontier research owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Map content digest/version and experiment outputs unavailable; upstream mapping validity not independently checked."
+      ],
+      "next_action": "Bind a concrete map version/digest before bounded source-mapping review.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Source/pin mapping validation",
+        "Experiment acceptance and receipts",
+        "Independent scientific-validity review"
+      ],
+      "details": {
+        "reported_primary_sources": 18,
+        "reported_pinned_mappings": 7,
+        "mapped_repositories": 6,
+        "mapped_paths": 13,
+        "proposed_experiments": 6,
+        "novelty": "NOT_ESTABLISHED",
+        "experiments_status": "PROPOSED_NOT_RUN",
+        "mapped_engineering_observations": [
+          "Receipt framing/signing and in-toto bridge; interoperability untested",
+          "MCP revision and signed versus placeholder receipts; deployed authorization unknown",
+          "Formal receipt-state partitions; entailment/runtime correspondence unestablished",
+          "Benchmark comparison/measurement wrappers; dataset binding/runtime outcomes untested",
+          "Calibration/abstention validation; statistical assumptions and label truth uncertified"
+        ]
+      }
+    },
+    {
+      "id": "FUT-014",
+      "category": "desired_future_state",
+      "title": "Qwen VL text-only lane",
+      "statement": "Qwen VL text-only work is requested scope, not a completed evaluation or promotion.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Exact model/revision, text-only task, license and evaluation receipt absent.",
+      "acceptance_criterion": "Define pinned model, text-only inputs, benign acceptance and permitted execution before reporting outcomes.",
+      "owner": {
+        "role": "model evaluation owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Model identity/revision and evaluation specification unknown."
+      ],
+      "next_action": "Locate existing lane specification and owner.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Pinned model/task agreement",
+        "Permitted text-only evaluation receipt"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-015",
+      "category": "desired_future_state",
+      "title": "Forge build/evaluation lane",
+      "statement": "Forge build and evaluation remain requested work.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Exact build target, environment and successful receipts not supplied.",
+      "acceptance_criterion": "Pinned source/dependencies/environment build reproducibly and pass agreed bounded evaluations with actual results.",
+      "owner": {
+        "role": "forge build owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Canonical target and criteria unknown."
+      ],
+      "next_action": "Identify existing build/evaluation instructions without executing unknown code.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Canonical target and pins",
+        "Reproducible build receipt",
+        "Bounded evaluation receipt"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-016",
+      "category": "desired_future_state",
+      "title": "Hatun MCP lane",
+      "statement": "Hatun MCP integration is desired scope, with no completion established here.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Endpoint, implementation, permissions and benign acceptance tests unspecified.",
+      "acceptance_criterion": "Owner defines pinned implementation and isolated benign contract checks with explicit authorization and evidence.",
+      "owner": {
+        "role": "MCP integration owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Canonical implementation and supported contract unknown."
+      ],
+      "next_action": "Locate the source and existing gate specification.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Source/authorization contract",
+        "Isolated benign MCP tests"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-017",
+      "category": "desired_future_state",
+      "title": "Papers and DOI lane",
+      "statement": "Paper/DOI work remains requested scope.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Exact manuscripts, DOI targets, publication rights and completed receipts not supplied.",
+      "acceptance_criterion": "Each paper has source-backed claims, exact manuscript revision, applicable human approval and verified publication/DOI receipt before claiming published.",
+      "owner": {
+        "role": "research publication owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Targets, rights and approval status unknown."
+      ],
+      "next_action": "List canonical manuscripts and existing publication evidence.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Manuscript/source audit",
+        "Human publication approval",
+        "Verified DOI/publication receipt"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-018",
+      "category": "desired_future_state",
+      "title": "F1-F7 and Oroboro lane",
+      "statement": "F1–F7/Oroboro are desired project scope, not completed work.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Canonical lane definitions, exact targets and acceptance receipts unavailable.",
+      "acceptance_criterion": "Identify F1 through F7 and Oroboro individually, with immutable sources, owners, benign criteria and actual receipts before completion claims.",
+      "owner": {
+        "role": "frontier project owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Per-lane definitions, owners and evidence unknown."
+      ],
+      "next_action": "Resolve the canonical lane definitions from existing engineering artifacts.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "F1-F7/Oroboro definitions",
+        "Per-lane bounded acceptance receipts"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-019",
+      "category": "desired_future_state",
+      "title": "Registry v4 phases",
+      "statement": "Continue registry v4 phases under their separate owner with exact archive/entry and source/mirror evidence.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "HIST-001 only supplies unverified snapshot counts; ordered phase definitions and current heads unknown.",
+      "acceptance_criterion": "Owner names each v4 phase and exact revision/receipt; tree consistency, installability, scientific validity and runtime behavior have separate gates.",
+      "owner": {
+        "role": "science registry owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Phase definitions, exact receipt and current revisions missing; no overlapping registry edits authorized here."
+      ],
+      "next_action": "Consume the registry owner's dated phase receipts and map unmet gates.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Ordered phase definitions",
+        "Exact archive/entry receipt",
+        "Generator/mirror and source/runtime parity",
+        "Installability and permitted behavioral checks"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-020",
+      "category": "desired_future_state",
+      "title": "PR queue completion",
+      "statement": "Complete eligible PR work through the existing queue, preserving drafts/HOLDs and normal merge requirements.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "HIST-003 is historical; current queue completion is UNKNOWN and no merges occur in this audit.",
+      "acceptance_criterion": "Each current PR has exact head, required checks, conflict status, agreed classifier and owner decision; only admitted green nondrafts merge normally.",
+      "owner": {
+        "role": "PR queue owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Current exact-head queue receipt outside this audit."
+      ],
+      "next_action": "Use queue-owned snapshots; keep this stacked PR draft.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Current queue/head/check receipt",
+        "Owner admission",
+        "Normal merge eligibility evidence"
+      ],
+      "details": {}
+    },
+    {
+      "id": "FUT-021",
+      "category": "desired_future_state",
+      "title": "Disk and execution stability",
+      "statement": "Maintain sufficient disk/RAM and recover interrupted writes before sustained audit/test workloads.",
+      "source_ids": [
+        "engineering-contract",
+        "completion-request"
+      ],
+      "coverage": "Machine recovered from full disk; a single free-space reading is not sustained stability proof.",
+      "acceptance_criterion": "Fresh resource checks precede writes/tests, incomplete files survive, and bounded execution receipts show no disk exhaustion or silent partial success.",
+      "owner": {
+        "role": "execution lane owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Sustained capacity and later workload needs unmeasured."
+      ],
+      "next_action": "Check resources at each bounded lane start and preserve interrupted artifacts.",
+      "implementation_status": "NOT_RUN",
+      "claim_basis": "PROPOSAL",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [
+        "Fresh disk/RAM preflight",
+        "Interrupted-write recovery checks",
+        "Bounded sustained workload receipt"
+      ],
+      "details": {}
+    },
+    {
+      "id": "HIST-001",
+      "category": "unverified_historical_claim",
+      "title": "v4 science archive status",
+      "statement": "Reported v4 science counts are 112 archives, 110 tree-consistent archives and 115 entries, all noninstallable.",
+      "source_ids": [
+        "historical-science"
+      ],
+      "coverage": "Different denominators: archives and registry entries. Exact original receipt/revision not inspected; no scientific or installation readiness established.",
+      "acceptance_criterion": "Retrieve the exact dated registry/archive receipt and revisions before confirming these claims; keep installability and tree consistency separate.",
+      "owner": {
+        "role": "science registry owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Exact receipt and revision unavailable in inspected evidence."
+      ],
+      "next_action": "Identify the canonical v4 receipt and phase definitions with its owner.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "archives_reported": 112,
+        "tree_consistent_reported": 110,
+        "entries_reported": 115,
+        "installability_reported": "ALL_NONINSTALLABLE",
+        "independently_verified": false
+      }
+    },
+    {
+      "id": "HIST-002",
+      "category": "unverified_historical_claim",
+      "title": "Model 11/12 promotion gate",
+      "statement": "BLOCKED/NOT_PROMOTABLE is a dated, unverified historical claim for Model 11/12.",
+      "source_ids": [
+        "historical-model-gate"
+      ],
+      "coverage": "No exact model IDs, pinned revisions, gate receipt or fresh check supplied.",
+      "acceptance_criterion": "Confirm each model and immutable revision against a fresh exact gate receipt; never override or infer promotion eligibility.",
+      "owner": {
+        "role": "model promotion owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Exact model identity, revisions and receipts missing."
+      ],
+      "next_action": "Request the existing promotion receipts rather than running inference or changing gates.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "reported_status": "BLOCKED/NOT_PROMOTABLE",
+        "freshness": "HISTORICAL_UNVERIFIED"
+      }
+    },
+    {
+      "id": "HIST-003",
+      "category": "unverified_historical_claim",
+      "title": "Prior PR queue snapshot",
+      "statement": "An earlier report counted 85 open PRs, 63 draft and 22 nondraft, with none admitted.",
+      "source_ids": [
+        "historical-queue"
+      ],
+      "coverage": "Reported September 30 only; checked_at has day precision and exact observation time is unknown. This is not the current queue.",
+      "acceptance_criterion": "Queue owner supplies a timestamped exact-head snapshot before any merge classification or decision.",
+      "owner": {
+        "role": "PR queue owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Snapshot clock time and current PR heads unknown."
+      ],
+      "next_action": "Consume the queue owner's next receipt; do not duplicate their merge work.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "checked_at": "2026-09-30",
+        "time_precision": "DAY",
+        "open_reported": 85,
+        "draft_reported": 63,
+        "nondraft_reported": 22,
+        "admitted_reported": 0,
+        "current_state": "UNKNOWN"
+      }
+    },
+    {
+      "id": "HIST-004",
+      "category": "unverified_historical_claim",
+      "title": "Observed tooling risk reports",
+      "statement": "Engineering context reports JSON shape, pagination/quota, signing/actions, disk partial-write, stale-head, mirror-drift and source/runtime-parity risks.",
+      "source_ids": [
+        "tooling-risks",
+        "phase0-source"
+      ],
+      "coverage": "Reported risk history; Phase 0 parser/cache contracts are narrower evidence than proof that all estate instances were repaired.",
+      "acceptance_criterion": "Associate each risk with its exact source/revision/failure receipt and a targeted regression before calling it resolved.",
+      "owner": {
+        "role": "tooling and release owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Per-risk current receipts and affected asset coverage incomplete."
+      ],
+      "next_action": "Prioritize targeted evidence reuse and regressions after owner assignment.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "risks": [
+          "PS_JSON_SHAPE",
+          "PAGINATION_RATE_QUOTA",
+          "SIGNED_COMMITS_ACTIONS",
+          "FULL_DISK_PARTIAL_WRITES",
+          "STALE_PR_HEADS",
+          "GENERATOR_MIRROR_DRIFT",
+          "SOURCE_RUNTIME_PARITY"
+        ]
+      }
+    },
+    {
+      "id": "HIST-005",
+      "category": "unverified_historical_claim",
+      "title": "New payload conflicts and opaque bytecode",
+      "statement": "A supplied preliminary review reports unsafe default mutation and stale embedded claims in szl_codex_payload(2).py; compiled bytecode is opaque untrusted input.",
+      "source_ids": [
+        "historical-payload",
+        "engineering-contract",
+        "payload-static-review"
+      ],
+      "coverage": "Static report now read: default fix_eval writes and py_compile before apply; read errors disappear; stale branch-name merge/close plan, absent HOLD checks and old embedded CLAIMS. Source has no explicit admin bypass/force-push/undraft call; do not attribute FINISH11-only behavior to it. Compiling the target does not execute its top-level module. Reported source and opaque bytecode identities are separate; matching pyc size/timestamp does not prove equivalence/authenticity. Original attachments remain unexecuted/unloaded here.",
+      "acceptance_criterion": "Keep static source findings separate from behavior and authorization; original exact bytes/revisions and later permitted contract receipts must be bound before implementation claims. Old embedded claims remain historical/unverified; opaque bytecode is never loaded.",
+      "owner": {
+        "role": "payload review owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Original source/revision not consumed in this audit; report byte digest/version unavailable; behavior and applicable gates NOT_RUN."
+      ],
+      "next_action": "Track R01-R12 as synthetic NOT_RUN backlog under the current evidence/hold rules; never import the attachment.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "reported_source_bytes": 30695,
+        "reported_source_lines": 445,
+        "source_executed": false,
+        "compiled_attachment_loaded": false,
+        "attachment_review": "STATIC_REPORT_READ",
+        "embedded_claims": "HISTORICAL_UNVERIFIED",
+        "conflicts_reported": [
+          "DEFAULT_FIX_EVAL_WRITE_AND_COMPILE",
+          "GH_ERROR_TO_EMPTY_LIST",
+          "STALE_UNPINNED_MERGE_CLOSE_PLAN",
+          "MISSING_HOLD_CHECK",
+          "OLD_EMBEDDED_CLAIMS"
+        ],
+        "reported_source_sha256": "e794490b43af608ac3fab86aa2fec07ab08ade0df59efe930f662cfb073e3ab7",
+        "reported_compiled_sha256": "853850a5e41e4ae3e49abd081d20bd6de5205d3a7a5277b01e75919fc8753270",
+        "reported_compiled_bytes": 43680,
+        "compiled_status": "OPAQUE_UNTRUSTED",
+        "bytecode_equivalence": "NOT_ESTABLISHED",
+        "behavioral_safety": "NOT_RUN",
+        "finding_ids": [
+          "D01",
+          "D02",
+          "D03",
+          "D04",
+          "D05",
+          "D06",
+          "D07",
+          "D08",
+          "D09",
+          "D10"
+        ],
+        "reported_findings": [
+          "DEFAULT_SOURCE_WRITE_AND_UNISOLATED_COMPILE",
+          "ACTIVE_UNBOUND_GENERATED_PLAN",
+          "HOLD_AND_OWNER_EVIDENCE_MISSING",
+          "STALE_ACTION_AND_BRANCH_DELETE_SIDE_EFFECT",
+          "ERROR_CAP_UNKNOWN_CHECK_STATE_LOSS",
+          "HF_METADATA_OVERCLAIMS",
+          "HISTORICAL_TEXT_AS_AUTHORITY",
+          "CSV_HTML_URL_RENDERING_BOUNDARIES",
+          "ORPHAN_POWERSHELL_TEXT_BOUNDARY",
+          "OVERWRITE_AND_LATE_SECRET_GUARD"
+        ]
+      }
+    },
+    {
+      "id": "HIST-006",
+      "category": "unverified_historical_claim",
+      "title": "FINISH11 static hazards and CLI correction",
+      "statement": "FINISH11 is a distinct unexecuted source whose reported Markdown block exactly matches standalone bytes; its static admin/default-write policies are not adopted.",
+      "source_ids": [
+        "finish11-static-review",
+        "official-gh-checks",
+        "engineering-contract"
+      ],
+      "coverage": "Report: default apply; dry-run still deletes/clones/edits and configures credential helper; missing logs/gate checks can admit admin merge; normal merges lack approved-head binding; queued zero-exit can close before actual merge. An admin helper has a real match-head guard but binds a newly fetched unreviewed head and does not authorize bypass. Official gh pr checks paginates and JSON preserves failing checks; genuine wrapper read/no-check errors and explicit search/workflow caps remain hazards.",
+      "acceptance_criterion": "Preserve current no-admin-bypass/no-default-mutation/no-autoclose/HOLD rules. Proposed N01-N14 use separately written synthetic data only; current official CLI semantics cannot be replaced by the disproven pagination/JSON premise.",
+      "owner": {
+        "role": "payload review and audit tooling owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Original/report byte origins not reverified here; no behavioral safety or installed CLI version established."
+      ],
+      "next_action": "Track N01-N14 as NOT_RUN specifications and review each against pinned source and current doctrine before implementation.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "reported_standalone_bytes": 29731,
+        "reported_standalone_lines": 638,
+        "reported_standalone_sha256": "857bec2ea3a5ed49d17dde17c1b40f07787e3f8c5efc1669a062a589b92861c8",
+        "reported_wrapper_bytes": 35904,
+        "reported_wrapper_lines": 710,
+        "reported_wrapper_sha256": "67ab32d9bea501754be845227a3db5ee21d879548f1564e2d5091cf76075f200",
+        "reported_embedded_source_identical": true,
+        "reported_markdown_source_lines": [
+          59,
+          696
+        ],
+        "source_executed": false,
+        "admin_policy_inherited": false,
+        "credential_configuration_changed": false,
+        "finding_ids": [
+          "F01",
+          "F02",
+          "F03",
+          "F04",
+          "F05",
+          "F06",
+          "F07",
+          "F08",
+          "F09",
+          "F10"
+        ],
+        "behavioral_safety": "NOT_RUN",
+        "official_cli": {
+          "source_commit": "fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd",
+          "checks_paginate": true,
+          "json_preserves_failed_checks": true,
+          "installed_version": "UNKNOWN"
+        }
+      }
+    },
+    {
+      "id": "HIST-007",
+      "category": "unverified_historical_claim",
+      "title": "Truncated PCM v3 coverage",
+      "statement": "PCM v3 is reported truncated inside gate 1; the full 12 gates, verification and signing remain NOT_REVIEWED.",
+      "source_ids": [
+        "pcm-v3-fragment",
+        "engineering-contract"
+      ],
+      "coverage": "Visible report only: HF single page; GitHub truncated tree ignored plus 300 cap; artifact extensions/receipt names substituted for validity; card license alone treated as eligibility; missing hashes silently omitted; read/hash race; family path traversal/second-resolution overwrite; duplicate JSON/names/IDs. No loadability, scientific validity, calibration or complete gate result established.",
+      "acceptance_criterion": "Require complete pinned source and full static review before using any gate/calibration logic; preserve pagination/truncation/missing/duplicate/TOCTOU failures and never read real test.jsonl in this lane.",
+      "owner": {
+        "role": "payload review and audit tooling owners",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Complete payload not provided; exact identity/revision/hash and all remaining gates unknown."
+      ],
+      "next_action": "Track P01-P10 as synthetic NOT_RUN backlog; consume the complete-file review when available without executing it.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "fragment_scope": "TRUNCATED_INSIDE_GATE1",
+        "full_gate_count_reported": 12,
+        "full_gates": "NOT_REVIEWED",
+        "verify": "NOT_REVIEWED",
+        "signing": "NOT_REVIEWED",
+        "source_executed": false,
+        "calibration_or_gate_implementation_borrowed": false,
+        "real_test_jsonl_consumed": false,
+        "visible_defects_reported": [
+          "HF_SINGLE_PAGE",
+          "GITHUB_TRUNCATED_TREE_AND_300_CAP",
+          "EXTENSION_AND_RECEIPT_NAME_NOT_VALIDITY",
+          "CARD_LICENSE_NOT_TRAINING_ELIGIBILITY",
+          "MISSING_HASH_SILENT_OMISSION",
+          "READ_BEFORE_HASH_TOCTOU",
+          "FAMILY_PATH_TRAVERSAL",
+          "SECOND_RESOLUTION_OVERWRITE",
+          "DUPLICATE_JSON_KEYS",
+          "DUPLICATE_NAMES_AND_IDS"
+        ]
+      }
+    },
+    {
+      "id": "OBS-001",
+      "category": "observed_fact",
+      "title": "Phase 0 setup and narrow access",
+      "statement": "The stored receipt reports setup_ready=true and estate_ready=false at its observation time.",
+      "source_ids": [
+        "phase0-setup",
+        "phase0-source"
+      ],
+      "coverage": "333 cases / 153 authored definitions; no failures, errors or skips. Five setup checks; GitHub /user, /orgs/szl-holdings, /user/memberships/orgs/szl-holdings and HF /api/whoami-v2 returned HTTP 200; GitHub active admin and HF org admin. Snapshot only.",
+      "acceptance_criterion": "Validate source-bound full test counts and all required narrow identity/org/membership probes; do not infer full estate access.",
+      "owner": {
+        "role": "audit tooling owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [],
+      "next_action": "Retain the receipt; rerun the narrow setup gate only when a fresh setup decision is needed.",
+      "implementation_status": "OBSERVED_AS_OF",
+      "claim_basis": "FACT",
+      "claim_maturity": "INTERNALLY_TESTED",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "setup_ready_as_of": true,
+        "estate_ready": false,
+        "cases": 333,
+        "definitions": 153,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "checked_at": "2026-09-30T07:33:23Z"
+      }
+    },
+    {
+      "id": "OBS-002",
+      "category": "observed_fact",
+      "title": "Backend snapshot coverage",
+      "statement": "Materialized backend evidence is readable and byte-identified, with partial content coverage.",
+      "source_ids": [
+        "backend-snapshot"
+      ],
+      "coverage": "130 repositories; 542 inspected paths / 521 unique blobs across 120 repositories; 32206 unread of 32748 tracked paths. Historical inventory, not semantic or runtime completeness.",
+      "acceptance_criterion": "Reconcile the frozen counts and hash before consuming the bundle; retain every unread path as unmet coverage.",
+      "owner": {
+        "role": "estate audit owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "32206 paths remain unread; inspected content is not a behavioral test."
+      ],
+      "next_action": "Build a bounded, resumable later-phase coverage plan from existing evidence.",
+      "implementation_status": "OBSERVED_AS_OF",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "repositories": 130,
+        "content_inspections": 542,
+        "unique_blobs": 521,
+        "repositories_with_content_inspected": 120,
+        "unread_paths": 32206,
+        "tracked_paths": 32748,
+        "readable_bytes": 3134648
+      }
+    },
+    {
+      "id": "OBS-003",
+      "category": "observed_fact",
+      "title": "HF historical snapshot coverage",
+      "statement": "The readable historical HF inventory contains 120 publicly listed assets.",
+      "source_ids": [
+        "hf-snapshot"
+      ],
+      "coverage": "49 models, 34 datasets, 23 Spaces, 14 kernels; 7346 listed paths, 118 cards / 122 other contracts inspected, 7099 inventory-only files and 7 unavailable. Collections, private completeness and present runtime behavior unestablished.",
+      "acceptance_criterion": "Preserve type-specific snapshot counts and observation time; require exact fresh receipts for runtime or completeness claims.",
+      "owner": {
+        "role": "HF asset owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Current behavior and collections coverage NOT_RUN; 7099 files inventory-only and 7 unavailable."
+      ],
+      "next_action": "Plan type-specific bounded inspections without recrawling in Phase 1.",
+      "implementation_status": "OBSERVED_AS_OF",
+      "claim_basis": "FACT",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "models": 49,
+        "datasets": 34,
+        "spaces": 23,
+        "kernels": 14,
+        "total": 120,
+        "collections": null,
+        "readable_bytes": 3881865,
+        "listed_paths": 7346,
+        "cards_inspected": 118,
+        "other_contracts_inspected": 122,
+        "inventory_only": 7099,
+        "unavailable": 7
+      }
+    }
+  ],
+  "fixture_backlog": [
+    {
+      "id": "FINISH-N01",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Dry-run/unknown stages cause no credential helper, identity, checkout or write side effects.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N02",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Existing paths, symlinks, collisions and clone failures preserve old bytes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N03",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Missing logs/checks or true auth/transport/parse errors remain unknown/blocked; valid failed/pending check JSON retains its check state even if a wrapper returns nonzero. Trust denial remains blocking.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N04",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Same check names or baseline failures never establish a bypass exception.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N05",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Draft/HOLD/held IDs/base/review requirements block all actions and closure.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N06",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Changed head or pending/failure on reread invalidates prior approval.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N07",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Failed git/push or stale checks stop dependent work and require exact remote receipts.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N08",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Queue/OPEN/failed readback is not MERGED; never close dependencies from command exit alone.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N09",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Explicit capped search/workflow inventories without exhaustion evidence, partial visibility and quota errors remain incomplete; fully paginated check contexts can be complete beyond 100.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N10",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "YAML permissions and indirect writes require structural evidence and human gates.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N11",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Changed/transitive effects or repeated writes invalidate self-asserted declarations.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N12",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Dependency title/author heuristics and mixed pins cannot authorize merging.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N13",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "Synthetic secrets/formulas/delimiters remain redacted inert report data.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "FINISH-N14",
+      "requirement_id": "HIST-006",
+      "source_ids": [
+        "finish11-static-review"
+      ],
+      "acceptance_specification": "HF errors, stale PR claims and approximate counts preserve explicit unknowns.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R01",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Default inventory preserves sentinel source/backups/reports; execution adapters unreachable.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R02",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Read/JSON/cap/file/check failures remain unknown or incomplete, never clean zeros.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R03",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Holds/drafts/bases/spoofed owners and age/conflict never create automatic closures.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R04",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Unknown/empty checks and missing reviews are not passing executed evidence.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R05",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Changed head/base/HOLD invalidates proposals; no branch deletion bundled.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R06",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Timeout/nonzero/queue enrollment needs reconciled terminal outcomes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R07",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Unapproved regex rewrites never change literals/comments/multimodal calls.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R08",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Numeric-field markup, unsafe links/scripts and CSV formulas stay inert or rejected.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R09",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Ref names remain inert data; inventory emits no executable PowerShell plan.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R10",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Missing siblings/extensions/runtime errors cannot establish model purpose or readiness.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R11",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Collision/symlink/fake-secret errors preserve old evidence and safe diagnostics.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PATCH-R12",
+      "requirement_id": "HIST-005",
+      "source_ids": [
+        "payload-static-review"
+      ],
+      "acceptance_specification": "Pyc size/timestamp and historical GPU text cannot establish provenance or authorization.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P01",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Single HF page never grants complete coverage.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P02",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Truncated GitHub tree and 300 cap preserve unread/incomplete status.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P03",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Artifact extensions and receipt filenames never prove validity or loadability.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P04",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Card license alone never proves training eligibility or human release approval.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P05",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Missing artifacts/hashes remain explicit failures rather than silent omissions.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P06",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Read/hash source changes invalidate a receipt rather than certifying stale bytes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P07",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Family path traversal/symlink escapes are rejected without content reads.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P08",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Second-resolution output collisions preserve prior bytes.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P09",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Duplicate JSON keys, names and IDs are rejected or explicitly unresolved.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    },
+    {
+      "id": "PCM-P10",
+      "requirement_id": "HIST-007",
+      "source_ids": [
+        "pcm-v3-fragment"
+      ],
+      "acceptance_specification": "Truncated gate1 never establishes all12 gates, verify/signing or borrowed calibration.",
+      "status": "NOT_RUN",
+      "data_kind": "SYNTHETIC_SPEC_ONLY",
+      "owner_role": "audit tooling owner",
+      "forbidden_execution": [
+        "ORIGINAL_SOURCE_IMPORT",
+        "ORIGINAL_BYTECODE_LOAD",
+        "LIVE_MUTATIONS"
+      ]
+    }
+  ]
+}
