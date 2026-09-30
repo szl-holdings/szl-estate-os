@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "szl-estate-audit"
+version = "0.1.0"
+description = "SZL estate audit foundations with a narrow Phase 0 setup gate"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = []
+
+[project.optional-dependencies]
+providers = [
+  "requests==2.34.2",
+  "httpx==0.28.1",
+  "huggingface_hub==1.29.0",
+]
+presentation = [
+  "pydantic==2.13.5",
+  "rich==15.0.0",
+  "beautifulsoup4==4.15.0",
+]
+browser = ["playwright==1.63.0"]
+test = ["pytest==9.1.1"]
+
+[project.scripts]
+szl-estate = "szl_estate.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["szl_estate*"]
+
+[tool.setuptools.package-data]
+szl_estate = ["verification_manifest.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

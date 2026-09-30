@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "official_pypi_version_metadata",
+  "evidence_label": "FACT",
+  "validation_scope": "Package metadata and a non-yanked relevant wheel only; no packages installed, resolver run, imports tested, or browsers downloaded.",
+  "python_requirement": ">=3.11",
+  "selection_policy": "Preserve canonical szl-estate-os maintenance pins for the requested five test-environment dependency packages.",
+  "runtime_validation_status": "NOT_RUN",
+  "dependency_resolution_status": "NOT_RUN",
+  "requested_extras": [],
+  "optional_requirements_omitted": "base_requires_dist omits dependencies guarded by extra == markers; environment markers remain explicit.",
+  "packages": [
+    {
+      "requested_name": "iniconfig",
+      "normalized_name": "iniconfig",
+      "pin": "iniconfig==2.3.0",
+      "version": "2.3.0",
+      "requires_python": ">=3.10",
+      "metadata_url": "https://pypi.org/pypi/iniconfig/2.3.0/json",
+      "release_page_url": "https://pypi.org/project/iniconfig/2.3.0/",
+      "retrieved_at_utc": "2026-09-30T01:46:46.19111-04:00",
+      "release_upload_time_utc": "2025-10-18T21:55:41.639305Z",
+      "base_requires_dist": [],
+      "wheel": {
+        "filename": "iniconfig-2.3.0-py3-none-any.whl",
+        "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+        "size_bytes": 7484,
+        "requires_python": ">=3.10",
+        "yanked": false,
+        "download_url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl"
+      }
+    },
+    {
+      "requested_name": "packaging",
+      "normalized_name": "packaging",
+      "pin": "packaging==26.3",
+      "version": "26.3",
+      "requires_python": ">=3.9",
+      "metadata_url": "https://pypi.org/pypi/packaging/26.3/json",
+      "release_page_url": "https://pypi.org/project/packaging/26.3/",
+      "retrieved_at_utc": "2026-09-30T01:46:46.2329073-04:00",
+      "release_upload_time_utc": "2026-08-04T18:15:27.159957Z",
+      "base_requires_dist": [],
+      "wheel": {
+        "filename": "packaging-26.3-py3-none-any.whl",
+        "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "size_bytes": 129956,
+        "requires_python": ">=3.9",
+        "yanked": false,
+        "download_url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+      }
+    },
+    {
+      "requested_name": "pluggy",
+      "normalized_name": "pluggy",
+      "pin": "pluggy==1.6.0",
+      "version": "1.6.0",
+      "requires_python": ">=3.9",
+      "metadata_url": "https://pypi.org/pypi/pluggy/1.6.0/json",
+      "release_page_url": "https://pypi.org/project/pluggy/1.6.0/",
+      "retrieved_at_utc": "2026-09-30T01:46:46.2692503-04:00",
+      "release_upload_time_utc": "2025-05-15T12:30:06.134003Z",
+      "base_requires_dist": [],
+      "wheel": {
+        "filename": "pluggy-1.6.0-py3-none-any.whl",
+        "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+        "size_bytes": 20538,
+        "requires_python": ">=3.9",
+        "yanked": false,
+        "download_url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl"
+      }
+    },
+    {
+      "requested_name": "Pygments",
+      "normalized_name": "Pygments",
+      "pin": "Pygments==2.21.0",
+      "version": "2.21.0",
+      "requires_python": ">=3.9",
+      "metadata_url": "https://pypi.org/pypi/Pygments/2.21.0/json",
+      "release_page_url": "https://pypi.org/project/Pygments/2.21.0/",
+      "retrieved_at_utc": "2026-09-30T01:46:46.3018862-04:00",
+      "release_upload_time_utc": "2026-08-17T08:02:44.912148Z",
+      "base_requires_dist": [],
+      "wheel": {
+        "filename": "pygments-2.21.0-py3-none-any.whl",
+        "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+        "size_bytes": 1250147,
+        "requires_python": ">=3.9",
+        "yanked": false,
+        "download_url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl"
+      }
+    },
+    {
+      "requested_name": "colorama",
+      "normalized_name": "colorama",
+      "pin": "colorama==0.4.6",
+      "version": "0.4.6",
+      "requires_python": "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7",
+      "metadata_url": "https://pypi.org/pypi/colorama/0.4.6/json",
+      "release_page_url": "https://pypi.org/project/colorama/0.4.6/",
+      "retrieved_at_utc": "2026-09-30T01:46:46.3450205-04:00",
+      "release_upload_time_utc": "2022-10-25T02:36:20.889702Z",
+      "base_requires_dist": [],
+      "wheel": {
+        "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+        "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+        "size_bytes": 25335,
+        "requires_python": "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7",
+        "yanked": false,
+        "download_url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl"
+      }
+    }
+  ],
+  "closure_assessment": {
+    "evidence_label": "INFERENCE",
+    "target_python": "3.11",
+    "extras_selected": [],
+    "pytest_pin": "pytest==9.1.1",
+    "pytest_metadata_url": "https://pypi.org/pypi/pytest/9.1.1/json",
+    "metadata_constraint_result": "SATISFIED",
+    "scope": "Base pytest dependency closure for a Python 3.11 test environment; pytest[dev] extra is not selected.",
+    "constraints": [
+      {
+        "requirement": "iniconfig>=1.0.1",
+        "selected_pin": "iniconfig==2.3.0",
+        "satisfied": true
+      },
+      {
+        "requirement": "packaging>=22",
+        "selected_pin": "packaging==26.3",
+        "satisfied": true
+      },
+      {
+        "requirement": "pluggy<2,>=1.5",
+        "selected_pin": "pluggy==1.6.0",
+        "satisfied": true
+      },
+      {
+        "requirement": "pygments>=2.7.2",
+        "selected_pin": "Pygments==2.21.0",
+        "satisfied": true
+      },
+      {
+        "requirement": "colorama>=0.4; sys_platform == win32",
+        "selected_pin": "colorama==0.4.6",
+        "satisfied": true,
+        "applies": "Windows only"
+      }
+    ],
+    "excluded_markers": [
+      "exceptiongroup>=1; python_version < 3.11",
+      "tomli>=1; python_version < 3.11"
+    ],
+    "build_pins_from_existing_evidence": [
+      "setuptools==84.0.0",
+      "wheel==0.48.0"
+    ],
+    "wheel_build_dependency": "packaging>=24.0 is satisfied by packaging==26.3",
+    "limitations": "Static comparison of official metadata only. No resolver, installation, imports, or test execution performed."
+  }
+}
