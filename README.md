@@ -1,5 +1,11 @@
 # SZL One-of-One Estate OS
 
+The separately invoked [maintenance runner](maintenance/README.md) contains the
+reviewed Python implementation of the attached GitHub/Hugging Face/Cloudflare
+maintenance build. Its default mode audits; its explicit apply mode has a closed
+operation allowlist. Estate OS commands below retain their read-only proposal
+contract.
+
 This turns the supplied `SZL_ONE_OF_ONE_ESTATE_OS` model into an operational,
 dependency-free control plane. It inventories the live public estate, applies
 evidence-aware scores, clusters probable duplicates, records gated fate
