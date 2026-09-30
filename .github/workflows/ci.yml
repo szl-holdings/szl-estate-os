@@ -59,6 +59,8 @@ jobs:
         run: python ci/test_huggingface_controls.py -v
       - name: Test immutable provenance policy
         run: python ci/test_provenance_policy.py -v
+      - name: Validate Phase 1 thread audit traceability
+        run: python ci/test_thread_requirements.py -v
       - name: Test public housekeeping privacy and failure contracts
         run: python ci/test_estate_inventory.py -v
       - name: Test Steward no-tool provider, absorbing policy, and recorded artifact contracts
