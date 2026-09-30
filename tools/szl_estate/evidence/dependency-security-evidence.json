@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "official_osv_exact_version_query",
+  "evidence_label": "FACT",
+  "queried_at_utc": "2026-09-30T06:13:18.4265440+00:00",
+  "query_endpoint": "https://api.osv.dev/v1/querybatch",
+  "api_documentation_url": "https://google.github.io/osv.dev/post-v1-querybatch/",
+  "query_method": "POST",
+  "http_status": 200,
+  "request_body": {
+    "queries": [
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "setuptools"
+        },
+        "version": "84.0.0"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "wheel"
+        },
+        "version": "0.48.0"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "pytest"
+        },
+        "version": "9.1.1"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "iniconfig"
+        },
+        "version": "2.3.0"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "packaging"
+        },
+        "version": "26.3"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "pluggy"
+        },
+        "version": "1.6.0"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "Pygments"
+        },
+        "version": "2.21.0"
+      },
+      {
+        "package": {
+          "ecosystem": "PyPI",
+          "name": "colorama"
+        },
+        "version": "0.4.6"
+      }
+    ]
+  },
+  "response_body": {
+    "results": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "response_body_utf8_sha256": "8aae3a3ad412749da492a6354f42d562767be8de4a8ef26071e143a7f7c0e20c",
+  "response_body_bytes": 37,
+  "response_body_truncated": false,
+  "package_count": 8,
+  "packages": [
+    {
+      "package_name": "setuptools",
+      "ecosystem": "PyPI",
+      "version": "84.0.0",
+      "pin": "setuptools==84.0.0",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "wheel",
+      "ecosystem": "PyPI",
+      "version": "0.48.0",
+      "pin": "wheel==0.48.0",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "pytest",
+      "ecosystem": "PyPI",
+      "version": "9.1.1",
+      "pin": "pytest==9.1.1",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "iniconfig",
+      "ecosystem": "PyPI",
+      "version": "2.3.0",
+      "pin": "iniconfig==2.3.0",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "packaging",
+      "ecosystem": "PyPI",
+      "version": "26.3",
+      "pin": "packaging==26.3",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "pluggy",
+      "ecosystem": "PyPI",
+      "version": "1.6.0",
+      "pin": "pluggy==1.6.0",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "Pygments",
+      "ecosystem": "PyPI",
+      "version": "2.21.0",
+      "pin": "Pygments==2.21.0",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    },
+    {
+      "package_name": "colorama",
+      "ecosystem": "PyPI",
+      "version": "0.4.6",
+      "pin": "colorama==0.4.6",
+      "status": "NO_MATCHING_ADVISORIES_RETURNED",
+      "matching_advisory_ids": [],
+      "pagination_complete": true
+    }
+  ],
+  "limitations": [
+    "Results describe advisories returned by OSV for these exact PyPI names and versions at query time.",
+    "No returned advisory is not a security certification; OSV database coverage and publication timing can limit results.",
+    "This check covers only the eight listed test and build package versions. No provider stack, installed-system scan, or artifact integrity verification was performed.",
+    "A pagination cursor or query error prevents a complete no-match conclusion."
+  ],
+  "installed_packages_changed": false
+}

@@ -54,3 +54,12 @@ Playwright are reserved optional tooling; no new adapters are claimed.
 [evidence/access-matrix-20260930.json](evidence/access-matrix-20260930.json) is a
 dated, narrow access receipt. Authentication success and root HTTP 200 responses
 do not establish full remote scope, service correctness or estate readiness.
+
+Local Python 3.11 validation executed all 122 authored test definitions as
+268 parametrized cases: 268 passed, zero failures, errors or skips. The installed
+module works from an unrelated directory. Two historical-evidence replays
+produced identical JSON, CSV and report bytes and returned exit 1 with
+INACCESSIBLE full scope. See [the dated validation receipt](evidence/local-validation-20260930.json).
+The [OSV query receipt](evidence/dependency-security-evidence.json) records no
+matching advisories returned for the eight installed build/test pins; this
+does not certify package security.

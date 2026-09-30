@@ -1,0 +1,76 @@
+{
+  "schema": "szl.estate-phase0-local-validation/v1",
+  "checked_at_utc": "2026-09-30T06:15:25Z",
+  "source_commit": "31e6f77f3032776b240542c9d3572176b924ba77",
+  "source_tree": "963ca839b261694cef68035f96698b35527566e9",
+  "source_tree_path": "tools/szl_estate/src/szl_estate",
+  "tests_tree": "e0667df78fb3b011858c2430e3e372c331add360",
+  "tests_tree_path": "tools/szl_estate/tests",
+  "scope": "Reviewed Phase 0 local foundations and installed CLI only",
+  "claim_maturity": "INTERNALLY_TESTED",
+  "claim_basis": "FACT",
+  "independent_dimensions": {
+    "cryptographic_integrity": "UNKNOWN",
+    "scientific_validity": "UNKNOWN",
+    "authorization": "NARROW_EXISTING_GITHUB_PERMISSION_OBSERVED",
+    "proof_scope": "LOCAL_OFFLINE_PHASE0_FOUNDATIONS",
+    "deployment": "UNKNOWN"
+  },
+  "environment": {
+    "python": "3.11.9",
+    "isolated_venv": true,
+    "packages": {
+      "szl-estate-audit": "0.1.0",
+      "setuptools": "84.0.0",
+      "wheel": "0.48.0",
+      "pytest": "9.1.1",
+      "iniconfig": "2.3.0",
+      "packaging": "26.3",
+      "pluggy": "1.6.0",
+      "Pygments": "2.21.0",
+      "colorama": "0.4.6"
+    },
+    "provider_stack_installed": false,
+    "browser_binaries_installed": false,
+    "pip_check": "PASS"
+  },
+  "tests": {
+    "status": "PASS",
+    "authored_definitions": 122,
+    "executed_definitions": 122,
+    "executed_cases": 268,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "duration_seconds": 2.66,
+    "junit_sha256": "46acf43e07bede46784acfc780dd34e9e07db60ae61c9bc4461dc52c17ead9ab",
+    "installed_module_from_unrelated_directory": "PASS"
+  },
+  "historical_cli_replay": {
+    "status": "INACCESSIBLE",
+    "exit_code": 1,
+    "estate_ready": false,
+    "live_scope_verified": false,
+    "historical_inputs": 2,
+    "replays": 2,
+    "identical_bytes": true,
+    "as_of_utc": "2026-09-30T06:05:34Z",
+    "output_sha256": {
+      "estate_state.json": "5b3b02cee4337988d389bf199ede7174ea14b0ca255f6021d421fde5d3b3e21d",
+      "evidence.csv": "b810116316be70223c392693c6cff2a8ae9901bc67423795af9eee8b109e6c00",
+      "report.md": "3bb124a8a34413907fa124ff512c3ae02146aa4f83626c886eb82a8dcd05d452"
+    }
+  },
+  "review": {
+    "independent_read_only_diff": "NO_BLOCKING_ISSUE",
+    "whitespace_check": "PASS",
+    "existing_product_registry_root_state_changes": 0
+  },
+  "limitations": [
+    "No whole-estate readiness claim",
+    "Offline integrity and metadata do not certify remote truth or scientific validity",
+    "Optional provider/browser dependencies are pinned but not installed or tested",
+    "OSV query covers eight installed build/test packages at the recorded query time, not a security certification",
+    "Per-file atomic output writes require replay after any inter-file failure"
+  ]
+}
