@@ -14,7 +14,7 @@ MATRIX = ROOT / "estate_reports" / "thread_requirements.json"
 BASE = "eb060db015b2165ca777520e04dcd9c9c06ac9f4"
 EXPECTED_IDS = {
     *(f"OBS-{i:03}" for i in range(1, 4)),
-    *(f"HIST-{i:03}" for i in range(1, 5)),
+    *(f"HIST-{i:03}" for i in range(1, 6)),
     *(f"CON-{i:03}" for i in range(1, 14)),
     *(f"FUT-{i:03}" for i in range(1, 22)),
 }
@@ -98,6 +98,7 @@ def validate(document, markdown):
         }, "row fields")
         category = row["category"]
         require(category in CATEGORIES, "category")
+        require(category == {"OBS": "observed_fact", "HIST": "unverified_historical_claim", "CON": "constraint", "FUT": "desired_future_state"}[row["id"].split("-")[0]], "evidence-category promotion")
         require(row["implementation_status"] == CATEGORIES[category] or
                 (row["id"] == "CON-010" and row["implementation_status"] == "EXCLUDED_SCOPE"), "unsupported completion/access state")
         require(row["source_ids"] and len(row["source_ids"]) == len(set(row["source_ids"])) and set(row["source_ids"]) <= sources.keys(), "source reference")
@@ -133,11 +134,15 @@ def validate(document, markdown):
     require(sum(hf[k] for k in ("cards_inspected", "other_contracts_inspected", "inventory_only", "unavailable")) == hf["listed_paths"] == 7346, "HF file coverage arithmetic")
     require(rows["HIST-001"]["details"]["independently_verified"] is False and rows["HIST-002"]["details"]["freshness"] == "HISTORICAL_UNVERIFIED", "historical gate promotion")
     require(rows["HIST-003"]["details"]["current_state"] == "UNKNOWN" and rows["HIST-003"]["details"]["time_precision"] == "DAY", "queue precision/currentness")
+    require(rows["HIST-005"]["details"]["source_executed"] is False and rows["HIST-005"]["details"]["compiled_attachment_loaded"] is False and rows["HIST-005"]["details"]["embedded_claims"] == "HISTORICAL_UNVERIFIED", "attachment execution or claims promotion")
+    require(rows["HIST-005"]["details"]["attachment_review"] == "PENDING_INDEPENDENT_REVIEW", "unsupported attachment review completion")
+    require(rows["HIST-005"]["details"]["conflicts_reported"] == ["DEFAULT_FIX_EVAL_WRITE_AND_COMPILE", "GH_ERROR_TO_EMPTY_LIST", "STALE_UNPINNED_MERGE_CLOSE_PLAN", "MISSING_HOLD_CHECK", "OLD_EMBEDDED_CLAIMS"], "legacy conflict suppressed")
     require(all(sources[key]["commit"] is None for key in ("backend-snapshot", "hf-snapshot")), "invented external origin commit")
     require(rows["CON-002"]["details"] == {"python_minimum": "3.11", "package_path": "tools/szl_estate", "typed_evidence_state": True, "output_formats": ["JSON", "CSV", "MARKDOWN_REPORT"], "deterministic_output": "SAME_INPUTS_AND_REFERENCE_TIME", "provenance_headings": 7}, "foundation contract omission")
     require(rows["CON-003"]["details"]["requested_dependencies"] == ["requests", "httpx", "pydantic", "rich", "huggingface_hub", "beautifulsoup4", "playwright", "pytest"], "requested dependency omission")
     require(rows["CON-004"]["details"] == {"comments_variants": ["int", "list", "totalCount"], "page_shapes": ["list", "object"], "error_implies_success": False}, "parser contract omission")
     require(rows["CON-007"]["details"]["pr_states"] == ["MERGE_NOW_GREEN", "WAIT_CHECKS", "FIX_CHECKS", "CONFLICT_REBASE", "DOCS_ONLY", "DRAFT_PRESERVE", "HOLD_PRESERVE", "NEEDS_OWNER_DECISION"], "PR doctrine")
+    require("AUTO_CLOSE" in rows["CON-007"]["details"]["prohibited"], "automatic closing prohibition omitted")
     require(rows["CON-009"]["details"] == {"human_only": True, "gates": ["BIOSAFETY", "CLINICAL", "CUSTOM_LICENSE", "SECURITY_RELEASE"]}, "human gate bypass")
     require(rows["FUT-009"]["details"] == {"supersedes": "EARLIER_HOLOGRAPHIC_DIRECTION", "accent_count": 1, "themes": ["light", "dark"], "spacing_unit_px": 4}, "design precedence")
     require(rows["FUT-010"]["details"]["viewport_widths_px"] == [375, 390, 768, 1280, 1920] and rows["FUT-010"]["details"]["target_size_px"] == 44, "mobile target drift")
@@ -285,6 +290,34 @@ class ThreadRequirementsTests(unittest.TestCase):
     def test_pr_classifier_doctrine_preserved(self):
         self.row("CON-007")["details"]["pr_states"].remove("HOLD_PRESERVE")
         self.rejects("PR doctrine")
+
+    def test_automatic_closing_prohibition_cannot_be_omitted(self):
+        self.row("CON-007")["details"]["prohibited"].remove("AUTO_CLOSE")
+        self.rejects("automatic closing")
+
+    def test_attachment_claims_cannot_be_promoted(self):
+        self.row("HIST-005")["details"]["embedded_claims"] = "VERIFIED"
+        self.rejects("attachment execution or claims promotion")
+
+    def test_reported_attachment_cannot_become_observed_fact(self):
+        self.row("HIST-005")["category"] = "observed_fact"
+        self.rejects("evidence-category promotion")
+
+    def test_source_attachment_execution_cannot_be_asserted(self):
+        self.row("HIST-005")["details"]["source_executed"] = True
+        self.rejects("attachment execution or claims promotion")
+
+    def test_opaque_compiled_loading_cannot_be_asserted(self):
+        self.row("HIST-005")["details"]["compiled_attachment_loaded"] = True
+        self.rejects("attachment execution or claims promotion")
+
+    def test_unreceipted_attachment_review_cannot_be_completed(self):
+        self.row("HIST-005")["details"]["attachment_review"] = "COMPLETED"
+        self.rejects("unsupported attachment review completion")
+
+    def test_error_to_empty_inventory_conflict_cannot_be_suppressed(self):
+        self.row("HIST-005")["details"]["conflicts_reported"].remove("GH_ERROR_TO_EMPTY_LIST")
+        self.rejects("legacy conflict suppressed")
 
     def test_human_gate_cannot_be_disabled(self):
         self.row("CON-009")["details"]["human_only"] = False

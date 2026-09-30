@@ -1,6 +1,6 @@
 {
   "schema_version": "szl.thread-requirements/v1",
-  "audited_at_utc": "2026-09-30T08:09:47Z",
+  "audited_at_utc": "2026-09-30T08:26:57Z",
   "scope": "PHASE1_PROJECT_THREAD_INTENT_ONLY",
   "canonical_repository": "szl-holdings/szl-estate-os",
   "stack": {
@@ -142,13 +142,23 @@
       "commit": null,
       "sha256": null,
       "coverage": "Existing map fully read: 18 primary sources, 7 exact-commit mappings across 6 repositories / 13 paths, 6 proposed experiments; 40817 bytes reported by provider. Concrete version/content digest unavailable; mapped upstream observations not independently reverified. Novelty NOT_ESTABLISHED."
+    },
+    {
+      "id": "historical-payload",
+      "kind": "AUTHORIZED_HISTORICAL_REPORT",
+      "artifact": "Supplied review report for szl_codex_payload(2).py and opaque compiled .pyc attachment",
+      "date": "2026-09-30",
+      "date_precision": "DAY",
+      "commit": null,
+      "sha256": null,
+      "coverage": "Reported Python metadata: 30695 bytes / 445 lines. Preliminary independent review reports default writes/compilation, error-to-empty inventory, stale unpinned merge/close planning, absent HOLD check and old embedded claims. Final attachment review pending; original bytes not consumed or executed by this audit. Compiled attachment never loaded."
     }
   ],
   "summary": {
-    "requirements": 41,
+    "requirements": 42,
     "categories": {
       "observed_fact": 3,
-      "unverified_historical_claim": 4,
+      "unverified_historical_claim": 5,
       "constraint": 13,
       "desired_future_state": 21
     },
@@ -362,7 +372,7 @@
       "id": "CON-007",
       "category": "constraint",
       "title": "Normal green merge and queue ownership",
-      "statement": "Only the queue owner handles eligible normal green merges; red, pending, draft and HOLD PRs stay preserved.",
+      "statement": "Only the queue owner handles eligible normal green merges; red, pending, draft and HOLD PRs stay preserved. Automatic PR closing is not authorized.",
       "source_ids": [
         "engineering-contract",
         "phase0-source"
@@ -399,7 +409,8 @@
           "HOLD_MERGE",
           "RULE_BYPASS",
           "FORCE_PUSH",
-          "HISTORY_REWRITE"
+          "HISTORY_REWRITE",
+          "AUTO_CLOSE"
         ]
       }
     },
@@ -1327,6 +1338,45 @@
           "STALE_PR_HEADS",
           "GENERATOR_MIRROR_DRIFT",
           "SOURCE_RUNTIME_PARITY"
+        ]
+      }
+    },
+    {
+      "id": "HIST-005",
+      "category": "unverified_historical_claim",
+      "title": "New payload conflicts and opaque bytecode",
+      "statement": "A supplied preliminary review reports unsafe default mutation and stale embedded claims in szl_codex_payload(2).py; compiled bytecode is opaque untrusted input.",
+      "source_ids": [
+        "historical-payload",
+        "engineering-contract"
+      ],
+      "coverage": "Reported only, dated September 30: default fix_eval writes and py_compile before apply; gh errors become empty lists; stale unpinned merge/close plan; no HOLD check; old embedded CLAIMS. These conflict with current explicit unknowns, no default mutation, no automatic closing, exact-head green-only queue decisions and HOLD preservation. Neither attachment was executed/loaded; no new orchestrator implemented.",
+      "acceptance_criterion": "Independent review binds exact readable source bytes/revision and reports conflicts before any permitted source-derived fixture use. Old claims stay historical/unverified unless exact fresh receipts support them; compiled bytecode is never loaded.",
+      "owner": {
+        "role": "payload review owner",
+        "assignment": "ROLE_ONLY_PERSON_UNASSIGNED"
+      },
+      "blockers": [
+        "Final independent attachment review and source digest/revision unavailable; old embedded claims have no fresh exact receipts."
+      ],
+      "next_action": "Consume the final sanitized review delta as historical requirements evidence; keep source execution and compiled loading prohibited.",
+      "implementation_status": "HISTORICAL_UNVERIFIED",
+      "claim_basis": "INFERENCE",
+      "claim_maturity": "ROADMAP",
+      "unmet_acceptance_tests": [],
+      "details": {
+        "reported_source_bytes": 30695,
+        "reported_source_lines": 445,
+        "source_executed": false,
+        "compiled_attachment_loaded": false,
+        "attachment_review": "PENDING_INDEPENDENT_REVIEW",
+        "embedded_claims": "HISTORICAL_UNVERIFIED",
+        "conflicts_reported": [
+          "DEFAULT_FIX_EVAL_WRITE_AND_COMPILE",
+          "GH_ERROR_TO_EMPTY_LIST",
+          "STALE_UNPINNED_MERGE_CLOSE_PLAN",
+          "MISSING_HOLD_CHECK",
+          "OLD_EMBEDDED_CLAIMS"
         ]
       }
     },
