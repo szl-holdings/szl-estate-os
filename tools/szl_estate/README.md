@@ -29,9 +29,11 @@ python -m szl_estate verify --backend-bundle /path/to/szl-holdings-audit-evidenc
 ```
 
 The command writes estate_state.json, evidence.csv and report.md. It returns
-nonzero while estate scope is inaccessible, unknown, partial or failed; that
-is an expected honest result for historical inputs. Without inputs it records
-INACCESSIBLE rather than reporting an empty successful audit. Identical inputs
+exit 1 while full-scope readiness remains unverified, including unmeasured,
+inaccessible, unknown, partial or failed scopes. Without live adapters, the four
+required scopes are NOT_RUN with OFFLINE_NOT_MEASURED and authorization UNKNOWN.
+INACCESSIBLE describes an attempted access failure, not an unexecuted audit.
+The package and tests can pass while the readiness exit remains blocked. Identical inputs
 and `--as-of` yield identical bytes. Input digests and source times are retained;
 no automatic provider authentication, secret collection or live probing occurs.
 Without source times, 1970-01-01 is an explicit unobserved sentinel; it is not
@@ -54,12 +56,21 @@ Playwright are reserved optional tooling; no new adapters are claimed.
 [evidence/access-matrix-20260930.json](evidence/access-matrix-20260930.json) is a
 dated, narrow access receipt. Authentication success and root HTTP 200 responses
 do not establish full remote scope, service correctness or estate readiness.
+[The bounded access diagnosis](evidence/access-diagnosis-20260930.json) supersedes
+its untested-scope interpretation with NOT_RUN coverage and UNKNOWN authorization,
+and records the exact available endpoint/tool statuses and smallest remediation.
 
 Local Python 3.11 validation executed all 122 authored test definitions as
 268 parametrized cases: 268 passed, zero failures, errors or skips. The installed
 module works from an unrelated directory. Two historical-evidence replays
 produced identical JSON, CSV and report bytes and returned exit 1 with
-INACCESSIBLE full scope. See [the dated validation receipt](evidence/local-validation-20260930.json).
+INACCESSIBLE full scope in the original source revision. That recorded output is
+preserved in [the dated validation receipt](evidence/local-validation-20260930.json);
+the classification correction distinguishes NOT_RUN from attempted denial.
+[The correction validation](evidence/classification-validation-20260930.json)
+executes all 122 definitions as 271 passing cases, with no failures, errors or
+skips. Installed CLI replays remain byte-identical and return NOT_RUN, exit 1:
+package validation passes while the full-scope readiness exit remains blocked.
 The [OSV query receipt](evidence/dependency-security-evidence.json) records no
 matching advisories returned for the eight installed build/test pins; this
 does not certify package security.

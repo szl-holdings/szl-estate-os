@@ -39,8 +39,8 @@ def build_state(
         )
         records.append(EvidenceRecord(
             evidence_id=f"unassessed-{index}", scope=scope,
-            status=EvidenceStatus.INACCESSIBLE, provenance=provenance,
-            code=EvidenceCode.ACCESS_UNVERIFIED,
+            status=EvidenceStatus.NOT_RUN, provenance=provenance,
+            code=EvidenceCode.OFFLINE_NOT_MEASURED,
         ))
     for index, summary in enumerate(summaries):
         github = summary.kind == "github_inventory"
@@ -95,7 +95,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (EvidenceValidationError, StorageError):
         print(json.dumps({"status": "FAIL", "code": "INVALID_INPUT_OR_OUTPUT", "estate_ready": False}, sort_keys=True))
         return 2
-    status = "FAIL" if any(item.error_code for item in summaries) else "INACCESSIBLE"
+    status = "FAIL" if any(item.error_code for item in summaries) else "NOT_RUN"
     print(json.dumps({
         "status": status, "estate_ready": state.estate_ready,
         "historical_inputs": len(summaries), "generated_at_utc": state.generated_at_utc,

@@ -26,6 +26,7 @@ class EvidenceStatus(str, Enum):
     INACCESSIBLE = "INACCESSIBLE"
     PARTIAL = "PARTIAL"
     UNKNOWN = "UNKNOWN"
+    NOT_RUN = "NOT_RUN"
 
 
 class ClaimMaturity(str, Enum):
@@ -129,7 +130,7 @@ def _fields(value: Any, required: set[str], optional: set[str] | None = None) ->
 class EvidenceDimensions:
     cryptographic_integrity: EvidenceStatus = EvidenceStatus.UNKNOWN
     scientific_validity: EvidenceStatus = EvidenceStatus.UNKNOWN
-    authorization: EvidenceStatus = EvidenceStatus.INACCESSIBLE
+    authorization: EvidenceStatus = EvidenceStatus.UNKNOWN
     deployment: EvidenceStatus = EvidenceStatus.UNKNOWN
     proof_scope: tuple[str, ...] = ()
 

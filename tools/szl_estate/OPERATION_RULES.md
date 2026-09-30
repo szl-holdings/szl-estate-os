@@ -20,8 +20,10 @@ science. Existing research is separate; novelty remains NOT_ESTABLISHED.
 
 Every record identifies source, reference, observation UTC, scope, digest,
 freshness and proof origin. A snapshot includes checked_at_utc and retains its
-original observation time on replay. Missing access and auth failures are
-INACCESSIBLE. Hash equality establishes byte consistency only; it establishes
+original observation time on replay. Unexecuted checks are NOT_RUN, unestablished
+facts are UNKNOWN, and attempted access failures are INACCESSIBLE with their
+observed response code. An HTTP 403 alone does not establish why access failed.
+Hash equality establishes byte consistency only; it establishes
 neither signed origin nor truth. Historical inventory is never current runtime
 proof. All unknowns and partial failures remain visible.
 
@@ -49,7 +51,10 @@ cursor loops and partial errors without emitting successful collection states.
 
 Install the independent src package before running python -m szl_estate verify.
 Verify uses local inputs only. Outputs are deterministic for the same inputs and
-reference time, with explicit INACCESSIBLE estate scopes. Each output file is
+reference time, with explicit NOT_RUN scopes and UNKNOWN authorization when
+live coverage has not been attempted. Package validation passing does not satisfy
+the readiness exit: verify remains exit 1 until required scope is established.
+Each output file is
 replaced atomically; preserve its old bytes on an interrupted write and retain
 incomplete temporary files for recovery. A failure between report writes can
 leave mixed generations; the command fails and the whole run must be replayed.

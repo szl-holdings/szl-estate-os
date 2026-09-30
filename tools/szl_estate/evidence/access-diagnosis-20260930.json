@@ -1,0 +1,60 @@
+{
+  "schema": "szl.estate-phase0-access-diagnosis/v1",
+  "checked_at_utc": "2026-09-30T06:44:24Z",
+  "scope": "Bounded read-only diagnosis using existing authorization; no estate recrawl",
+  "supersedes_interpretation_of": "access-matrix-20260930.json",
+  "correction": "The earlier full-scope INACCESSIBLE labels represented untested coverage, not observed denial. Preserve that dated receipt and its actual old CLI output; use NOT_RUN for unexecuted coverage and UNKNOWN for unestablished authorization.",
+  "entries": [
+    {
+      "target": "github:szl-holdings:full",
+      "observations": [
+        {"endpoint": "https://api.github.com/user/memberships/orgs/szl-holdings", "method": "GET", "http_status": 200, "read_status": "PASS", "facts": {"role": "admin", "state": "active"}},
+        {"endpoint": "https://api.github.com/repos/szl-holdings/szl-estate-os", "method": "GET", "http_status": 200, "read_status": "PASS", "facts": {"permissions": {"admin": true, "maintain": true, "push": true, "pull": true, "triage": true}}}
+      ],
+      "full_scope_coverage": "NOT_RUN",
+      "full_scope_authorization": "UNKNOWN",
+      "reason": "Membership and canonical repository permissions are observed; full organization inventory/private coverage was not attempted. The offline verifier has no live adapter and does not ingest this manual receipt.",
+      "smallest_remediation": "Correct the classification without changing permissions. A full-scope readiness exit requires separately authorized live coverage evidence; do not infer it from this membership or one repository."
+    },
+    {
+      "target": "hf:SZLHOLDINGS:full",
+      "observations": [
+        {"callable_tool": "mcp__codex_apps__hugging_face_hf_whoami", "provider_endpoint": null, "http_status": null, "tool_status": "COMPLETED_WITHOUT_TOOL_ERROR", "read_status": "PASS", "facts": {"organization": "SZLHOLDINGS", "role": "admin", "permission_scope_labels": "UNKNOWN"}},
+        {"callable_tool": "mcp__codex_apps__hugging_face_hub_repo_details", "target": "space:SZLHOLDINGS/a11oy", "include_readme": false, "provider_endpoint": null, "http_status": null, "tool_status": "COMPLETED_WITHOUT_TOOL_ERROR", "read_status": "PARTIAL", "facts": {"target_reference_returned": true, "private_revision_and_runtime_metadata": "UNKNOWN"}}
+      ],
+      "full_scope_coverage": "NOT_RUN",
+      "full_scope_authorization": "UNKNOWN",
+      "reason": "Connector calls expose membership and a Space reference, but not provider HTTP status or complete token/private-asset coverage. No denial was observed and no HTTP200 is inferred.",
+      "smallest_remediation": "Retain the exposed membership facts and explicit HTTP/scope unknowns. Full-scope coverage needs separate scheduled evidence, not new credentials on the basis of this receipt."
+    },
+    {
+      "target": "domain:a-11-oy.com",
+      "observations": [
+        {"endpoint": "https://a-11-oy.com/", "method": "HEAD", "interface": "curl.exe default request profile", "http_status": 200, "read_status": "PASS", "reason": "ROOT_REACHABLE_ONLY"},
+        {"endpoint": "https://a-11-oy.com/", "method": "HEAD", "interface": "Python urllib default request profile", "http_status": 403, "read_status": "INACCESSIBLE", "reason": "HTTP_FORBIDDEN_CAUSE_UNKNOWN"}
+      ],
+      "full_scope_coverage": "NOT_RUN",
+      "full_scope_authorization": "UNKNOWN",
+      "reason": "Root HEAD status differs by client request profile. No response bodies or access-control details were inspected, so the denial cause is unknown; routes, runtime behavior and deployment were not tested.",
+      "smallest_remediation": "Retain both scoped observations and use the already successful curl profile for any separately authorized bounded reachability check. Do not change credentials or promote root reachability to estate readiness."
+    },
+    {
+      "target": "domain:a11oy.net",
+      "observations": [
+        {"endpoint": "https://a11oy.net/", "method": "HEAD", "interface": "curl.exe default request profile", "http_status": 200, "read_status": "PASS", "reason": "ROOT_REACHABLE_ONLY"},
+        {"endpoint": "https://a11oy.net/", "method": "HEAD", "interface": "Python urllib default request profile", "http_status": 403, "read_status": "INACCESSIBLE", "reason": "HTTP_FORBIDDEN_CAUSE_UNKNOWN"}
+      ],
+      "full_scope_coverage": "NOT_RUN",
+      "full_scope_authorization": "UNKNOWN",
+      "reason": "Root HEAD status differs by client request profile. No response bodies or access-control details were inspected, so the denial cause is unknown; routes, runtime behavior and deployment were not tested.",
+      "smallest_remediation": "Retain both scoped observations and use the already successful curl profile for any separately authorized bounded reachability check. Do not change credentials or promote root reachability to estate readiness."
+    }
+  ],
+  "classification_bug": {"old_unassessed_status": "INACCESSIBLE", "new_unassessed_status": "NOT_RUN", "new_unassessed_code": "OFFLINE_NOT_MEASURED", "old_default_authorization": "INACCESSIBLE", "new_default_authorization": "UNKNOWN"},
+  "package_validation": "PASS",
+  "readiness_exit": "BLOCKED",
+  "readiness_exit_code": 1,
+  "estate_ready": false,
+  "new_credentials_or_permissions": false,
+  "phase1_implementation": false
+}

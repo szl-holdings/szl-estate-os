@@ -21,10 +21,16 @@ class CliTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as captured:
                 result = main(["verify", "--out", str(target)])
             self.assertEqual(result, 1)
-            self.assertEqual(json.loads(captured.getvalue())["status"], "INACCESSIBLE")
+            self.assertEqual(json.loads(captured.getvalue())["status"], "NOT_RUN")
             state = load_state(target / "estate_state.json")
             self.assertFalse(state.estate_ready)
             self.assertEqual(len(state.evidence), 4)
+            for record in state.evidence:
+                self.assertEqual(record.status.value, "NOT_RUN")
+                self.assertEqual(record.code.value, "OFFLINE_NOT_MEASURED")
+                self.assertEqual(record.dimensions.authorization.value, "UNKNOWN")
+                self.assertIsNone(record.checked_at_utc)
+                self.assertEqual(record.provenance.origin.value, "UNKNOWN")
             first = {p.name: p.read_bytes() for p in target.iterdir()}
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["verify", "--out", str(target)]), 1)
@@ -37,7 +43,7 @@ class CliTests(unittest.TestCase):
                 cwd=directory, capture_output=True, text=True, timeout=15,
             )
             self.assertEqual(completed.returncode, 1, completed.stderr)
-            self.assertEqual(json.loads(completed.stdout)["status"], "INACCESSIBLE")
+            self.assertEqual(json.loads(completed.stdout)["status"], "NOT_RUN")
             self.assertTrue((Path(directory) / "outputs/estate_phase0/estate_state.json").is_file())
 
     def test_missing_input_does_not_create_a_success(self):

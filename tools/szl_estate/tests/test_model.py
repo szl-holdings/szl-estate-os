@@ -48,7 +48,7 @@ def test_empty_or_subset_never_proves_whole_estate():
 def test_readiness_requires_exact_complete_current_live_scopes_and_all_dimensions():
     records = tuple(record(scope) for scope in REQUIRED_ESTATE_SCOPES)
     assert state(*records).estate_ready  # synthetic fixture of the full conjunction
-    for status in (EvidenceStatus.FAIL, EvidenceStatus.UNKNOWN, EvidenceStatus.PARTIAL, EvidenceStatus.INACCESSIBLE):
+    for status in (EvidenceStatus.FAIL, EvidenceStatus.UNKNOWN, EvidenceStatus.PARTIAL, EvidenceStatus.INACCESSIBLE, EvidenceStatus.NOT_RUN):
         assert not state(replace(records[0], status=status), *records[1:]).estate_ready
     assert not state(replace(records[0], complete=False), *records[1:]).estate_ready
     assert not state(replace(records[0], code=EvidenceCode.REMOTE_ERROR), *records[1:]).estate_ready
@@ -84,7 +84,7 @@ def test_old_or_future_observation_not_promoted_by_fresh_check(observed):
 
 def test_claim_maturity_and_basis_do_not_promote_unknown_dimensions():
     evidence = record(dimensions=EvidenceDimensions(), claim_maturity=ClaimMaturity.SHIPPING, claim_basis=ClaimBasis.FACT)
-    assert evidence.dimensions.authorization is EvidenceStatus.INACCESSIBLE
+    assert evidence.dimensions.authorization is EvidenceStatus.UNKNOWN
     assert evidence.dimensions.cryptographic_integrity is EvidenceStatus.UNKNOWN
     assert not state(evidence).estate_ready
     changed = replace(evidence, claim_maturity=ClaimMaturity.ROADMAP, claim_basis=ClaimBasis.PROPOSAL)
@@ -134,12 +134,14 @@ def test_reports_are_order_independent_and_csv_guards_formula_cells():
     assert "cryptographic_integrity" in render_json(left)
 
 
-def test_state_roundtrip_and_digest_do_not_promote_proof(tmp_path):
-    evidence = record(dimensions=EvidenceDimensions())
+@pytest.mark.parametrize("status", [EvidenceStatus.PASS, EvidenceStatus.UNKNOWN, EvidenceStatus.NOT_RUN, EvidenceStatus.INACCESSIBLE])
+def test_state_roundtrip_and_digest_do_not_promote_proof(tmp_path, status):
+    evidence = record(status=status, dimensions=EvidenceDimensions())
     original = state(evidence)
     destination = tmp_path / "estate_state.json"
     save_state(destination, original)
     assert load_state(destination) == original
+    assert load_state(destination).evidence[0].status is status
     assert load_state(destination).evidence[0].dimensions.cryptographic_integrity is EvidenceStatus.UNKNOWN
     assert not load_state(destination).estate_ready
 

@@ -1,0 +1,54 @@
+{
+  "schema": "szl.phase0-classification-validation/v1",
+  "checked_at_utc": "2026-09-30T06:44:24Z",
+  "source_base_commit": "b8740b76bb76c2f42889eb2cc276ce7c1f8a323e",
+  "changed_source_sha256": {
+    "cli.py": "8160af46d78830d7fb0dcce0b1d1a8732b61da2bd45a486e93367dc8a801dc97",
+    "model.py": "eea3aa627d1aab0f90c6d86da98ca141d36d770231c4495c4407534d3c243ce6"
+  },
+  "authored_definitions": 122,
+  "executed_definitions": 122,
+  "executed_cases": 271,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "missing_definitions": [],
+  "junit_sha256": "567bd42db3ee3f35ce748f2ac3bea343ee2f826f41d92397e1c899af39b1afb9",
+  "replays": [
+    {
+      "exit_code": 1,
+      "summary": {
+        "estate_ready": false,
+        "generated_at_utc": "2026-09-30T06:05:34Z",
+        "historical_inputs": 2,
+        "live_scope_verified": false,
+        "status": "NOT_RUN"
+      },
+      "hashes": {
+        "estate_state.json": "14f21a45e0063b4db1b2dc3c84eed7c2ff70faeeb27872610819fe168880b990",
+        "evidence.csv": "072611cd8701a8fe9c6b2a009b7bc3f51b8f5b677d1fe47a5772cd0986287482",
+        "report.md": "506c279edef5896f411196b42ca2f87730692efab5330259fd665f1164295e4b"
+      }
+    },
+    {
+      "exit_code": 1,
+      "summary": {
+        "estate_ready": false,
+        "generated_at_utc": "2026-09-30T06:05:34Z",
+        "historical_inputs": 2,
+        "live_scope_verified": false,
+        "status": "NOT_RUN"
+      },
+      "hashes": {
+        "estate_state.json": "14f21a45e0063b4db1b2dc3c84eed7c2ff70faeeb27872610819fe168880b990",
+        "evidence.csv": "072611cd8701a8fe9c6b2a009b7bc3f51b8f5b677d1fe47a5772cd0986287482",
+        "report.md": "506c279edef5896f411196b42ca2f87730692efab5330259fd665f1164295e4b"
+      }
+    }
+  ],
+  "identical_output_bytes": true,
+  "package_validation": "PASS",
+  "readiness_exit": "BLOCKED",
+  "readiness_exit_code": 1,
+  "remaining_blocker": "Required live full-scope checks are NOT_RUN; Phase 0 has no live adapter"
+}
