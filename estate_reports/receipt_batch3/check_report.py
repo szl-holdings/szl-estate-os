@@ -194,6 +194,33 @@ class ReportChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             load('{"measurement":NaN}')
 
+    def test_18_frontier_checkpoint_preserves_history_and_partial_execution(self):
+        historical = self.d["sources"]["FRONTIER1_SUPPLIED_PIN"]
+        checkpoint = self.d["sources"]["FRONTIER1_REPAIR_CHECKPOINT"]
+        self.assertEqual(historical["commit"], "1071a3fe96a010f011274d2f820ca5351d0b4eff")
+        self.assertEqual(checkpoint["commit"], "a060b82bc63ac99d4048a2a9e5da0535a3d54e84")
+        self.assertEqual(checkpoint["predecessor_source_ref"], "FRONTIER1_SUPPLIED_PIN")
+        self.assertEqual(checkpoint["work_orders"], {
+            "WO1": "OWNER_PENDING", "WO2": "OWNER_PENDING",
+            "WO3": "UNAVAILABLE_IN_REPORTED_RUNNER", "WO4": "OBSERVATION_COMPLETE",
+            "WO5": "OWNER_PENDING", "WO6": "OWNER_PENDING", "WO7": "OBSERVATION_COMPLETE",
+        })
+        self.assertEqual(checkpoint["gpu_absence"], "UNKNOWN_NOT_ESTABLISHED")
+        self.assertEqual(checkpoint["publication_gate"], "CLOSED")
+        self.assertIs(checkpoint["all_work_orders_fully_executed"], False)
+        self.assertEqual(checkpoint["coverage_credit"], 0)
+        self.assertEqual(checkpoint["candidate_execution"], "NOT_RUN_BY_THIS_WORKER")
+        self.assertEqual(checkpoint["exact_checked_at"], "UNKNOWN_UNSUPPLIED")
+        self.assertEqual(checkpoint["validation"], {
+            "basis": "OWNER_REPORTED_CHECKPOINT", "ci_passed": 3,
+            "failure_error_counts": "UNKNOWN_UNSUPPLIED", "independently_rerun_by_this_worker": False,
+            "local_passed": 31, "local_skipped": 1, "skip_reason": "Windows link skip",
+        })
+        self.assertEqual(checkpoint["receipt_path"], "payloads/evidence/frontier1-runs/public-observation-20260930")
+        backlog = (ROOT / "requirements_delta.md").read_text()
+        for key, value in checkpoint["work_orders"].items():
+            self.assertIn(f"| {key} | {value} |", backlog)
+
 
 if __name__ == "__main__":
     result = unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromTestCase(ReportChecks))

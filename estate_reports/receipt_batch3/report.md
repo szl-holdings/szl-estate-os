@@ -289,7 +289,7 @@ files.csv and evidence.json retain35 exact source identities, original/cache dig
 
 ## 6. Validation and proof limits
 
-All 17 report consistency checks passed on Python 3.11, with zero failures, errors or skips. Candidate test definitions and proposed regressions remain NOT_RUN. Historical unchanged-tool validation at 5352659a023c20a34eacdb48e168064ea571e836 passed 564 package cases plus 18 subtests on Python 3.11/3.12, with zero failures/errors/skips; it was not rerun in this reports-only batch. Source acquisition and static reading establish neither authorized signer identity nor execution truth/completeness, scientific validity, measured performance, rights, training/loadability or deployment. Novelty remains NOT_ESTABLISHED. Human biosafety/clinical/custom-license/security gates remain required.
+All 18 report consistency checks passed on Python 3.11, with zero failures, errors or skips, including the additive Frontier 1 checkpoint/history/status check. Candidate test definitions and proposed regressions remain NOT_RUN. Historical unchanged-tool validation at 5352659a023c20a34eacdb48e168064ea571e836 passed 564 package cases plus 18 subtests on Python 3.11/3.12, with zero failures/errors/skips; it was not rerun in this reports-only batch. Source acquisition and static reading establish neither authorized signer identity nor execution truth/completeness, scientific validity, measured performance, rights, training/loadability or deployment. Novelty remains NOT_ESTABLISHED. Human biosafety/clinical/custom-license/security gates remain required.
 
 ## 7. Remaining acceptance and next three actions
 

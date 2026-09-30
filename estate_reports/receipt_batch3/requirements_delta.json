@@ -516,7 +516,8 @@
       "owner_role": "existing HF frontier/payload owner",
       "source_message_date": "2026-09-30",
       "source_refs": [
-        "FRONTIER1_SUPPLIED_PIN"
+        "FRONTIER1_SUPPLIED_PIN",
+        "FRONTIER1_REPAIR_CHECKPOINT"
       ],
       "status": "BACKLOG_UNIMPLEMENTED",
       "title": "Typed informational aliases"
@@ -525,6 +526,49 @@
   "schema_version": "szl.estate.requirements-delta/v1",
   "source_coverage": "Provided authorized static-review summaries; original attachment bytes not independently materialized/read by this worker",
   "sources": {
+    "FRONTIER1_REPAIR_CHECKPOINT": {
+      "all_work_orders_fully_executed": false,
+      "candidate_execution": "NOT_RUN_BY_THIS_WORKER",
+      "commit": "a060b82bc63ac99d4048a2a9e5da0535a3d54e84",
+      "coverage_credit": 0,
+      "exact_checked_at": "UNKNOWN_UNSUPPLIED",
+      "gpu_absence": "UNKNOWN_NOT_ESTABLISHED",
+      "local_original_bytes_verified": false,
+      "message_date": "2026-09-30",
+      "next_action": "Existing payload owner retains implementation; require current exact-head receipts for pending work orders before changing their status",
+      "observations": [
+        "The supplied checkpoint reports an offline planner and dated public-observation receipts at this pinned head",
+        "WO4 and WO7 are observation-complete only; this does not establish all work orders were executed",
+        "WO3 was unavailable in the reported runner; GPU absence is not established",
+        "Publication gate remains closed; this is not a pull-request closure claim"
+      ],
+      "payload_wrapper_docs_receipts_owner": "existing assigned owner; no parallel implementation",
+      "predecessor_source_ref": "FRONTIER1_SUPPLIED_PIN",
+      "publication_gate": "CLOSED",
+      "pull_request": 49,
+      "receipt_path": "payloads/evidence/frontier1-runs/public-observation-20260930",
+      "reconciled_at_utc": "2026-09-30T14:18:24+00:00",
+      "repository_label": "szl-hf-frontier",
+      "source_kind": "DELEGATED_PINNED_RECONCILIATION_SUMMARY",
+      "validation": {
+        "basis": "OWNER_REPORTED_CHECKPOINT",
+        "ci_passed": 3,
+        "failure_error_counts": "UNKNOWN_UNSUPPLIED",
+        "independently_rerun_by_this_worker": false,
+        "local_passed": 31,
+        "local_skipped": 1,
+        "skip_reason": "Windows link skip"
+      },
+      "work_orders": {
+        "WO1": "OWNER_PENDING",
+        "WO2": "OWNER_PENDING",
+        "WO3": "UNAVAILABLE_IN_REPORTED_RUNNER",
+        "WO4": "OBSERVATION_COMPLETE",
+        "WO5": "OWNER_PENDING",
+        "WO6": "OWNER_PENDING",
+        "WO7": "OBSERVATION_COMPLETE"
+      }
+    },
     "FRONTIER1_SUPPLIED_PIN": {
       "candidate_execution": "NOT_RUN",
       "commit": "1071a3fe96a010f011274d2f820ca5351d0b4eff",

@@ -169,3 +169,19 @@ Unmet acceptance: A synthetic same-basename model/dataset fixture retains kind/f
 
 
 Frontier 1 PR 49 at 1071a3fe96a010f011274d2f820ca5351d0b4eff is a supplied pinned reconciliation summary, not a new local scan. Its public canonical-edge observations and mixed issue/PR counter semantics are recorded without private asset IDs/counts/content. WO2 aliases remain informational and typed; private visibility/access intent/timestamps remain unverified, authentic external confirmation unestablished, and the supplied bounded review already found the deprecation banner correct. Existing payload/card owners retain their branches. These observations add zero coverage or write-execution credit.
+
+## Frontier 1 repair checkpoint: supplied 2026-09-30 snapshot
+
+The subsequent supplied checkpoint pins PR 49 at `a060b82bc63ac99d4048a2a9e5da0535a3d54e84` and reports an offline planner plus dated public-observation receipts at `payloads/evidence/frontier1-runs/public-observation-20260930`. The earlier `1071a3fe96a010f011274d2f820ca5351d0b4eff` snapshot remains historical evidence. Exact check time and original receipt bytes were not supplied or independently verified here; reconciliation time is separate from source observation time.
+
+| Work order | Supplied checkpoint status | Remaining boundary |
+|---|---|---|
+| WO1 | OWNER_PENDING | Existing owner receipt required |
+| WO2 | OWNER_PENDING | Informational aliases do not establish execution or eligibility |
+| WO3 | UNAVAILABLE_IN_REPORTED_RUNNER | GPU absence is UNKNOWN; no universal hardware claim |
+| WO4 | OBSERVATION_COMPLETE | Public observation only |
+| WO5 | OWNER_PENDING | Private visibility/access intent/timestamps remain unverified |
+| WO6 | OWNER_PENDING | Authentic external confirmation remains unestablished |
+| WO7 | OBSERVATION_COMPLETE | Public observation only |
+
+The **publication gate is CLOSED**; this does not describe the PR's open/closed state. Owner-reported validation is **3 CI passes, 31 local passes and 1 Windows link skip**. Failure/error counts were not supplied. This worker did not rerun those tests or execute the planner, and these results add zero source-review coverage. The existing payload owner retains implementation; all-work-orders execution, estate readiness and publication authorization remain unestablished. Pending work orders require current exact-head owner receipts before their status changes.
