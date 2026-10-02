@@ -3,56 +3,116 @@
   "reviewed_at": "2026-09-24T13:05:33.011931+00:00",
   "cards": {
     "SZLHOLDINGS/MiniEmbed-Nano": {
-      "revision": "01e82f36ff722528233f76daf899c18f8cb5aaa2",
+      "revision": "70557d12b91ca556939e559e540b70fb3c2c9e5b",
       "disposition": "preserve",
       "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/MiniEmbed-Nano/blob/01e82f36ff722528233f76daf899c18f8cb5aaa2/README.md"
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/MiniEmbed-Nano/blob/70557d12b91ca556939e559e540b70fb3c2c9e5b/README.md",
+      "reviewed_at": "2026-10-02T01:37:51.777489+00:00",
+      "review_evidence": "review_evidence/hf-card-review-20261001.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+        "path": "hf/MiniEmbed-Nano/README.md",
+        "readme_sha256": "6d39ae004414372df7190ddeb7cc1af47d37a0dc7649132468a8b34b21942074"
+      }
     },
     "SZLHOLDINGS/Moons-Nano": {
-      "revision": "77d002f9314dc0c86cd0f14e63fff60364929652",
+      "revision": "4631d0fb54ad90423c3ae76f812ff4d0e80fbfdf",
       "disposition": "preserve",
       "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/Moons-Nano/blob/77d002f9314dc0c86cd0f14e63fff60364929652/README.md"
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/Moons-Nano/blob/4631d0fb54ad90423c3ae76f812ff4d0e80fbfdf/README.md",
+      "reviewed_at": "2026-10-02T01:37:52.370422+00:00",
+      "review_evidence": "review_evidence/hf-card-review-20261001.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+        "path": "hf/Moons-Nano/README.md",
+        "readme_sha256": "edae7af6588c44373933965c7b791b885522ade5bf30b3ee0506568d3f9f9648"
+      }
     },
     "SZLHOLDINGS/ReceiptAgent-Nano": {
-      "revision": "463df555fee339b776b938846238327100f573ab",
+      "revision": "c139299d88d25d34d2ae53b95399b872d9f47a73",
       "disposition": "preserve",
       "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/ReceiptAgent-Nano/blob/463df555fee339b776b938846238327100f573ab/README.md",
-      "reviewed_at": "2026-09-30T02:10:10.212466+00:00",
-      "review_evidence": "hf-card-drift-review-20260929.json"
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/ReceiptAgent-Nano/blob/c139299d88d25d34d2ae53b95399b872d9f47a73/README.md",
+      "reviewed_at": "2026-10-02T01:37:52.888106+00:00",
+      "review_evidence": "review_evidence/hf-card-review-20261001.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+        "path": "hf/ReceiptAgent-Nano/README.md",
+        "readme_sha256": "d8b4729fd95a393659b467c1ea1dde8a42bb06604fcac54aaf552e700dd59c3b"
+      }
     },
     "SZLHOLDINGS/TinyKhipu-Nano": {
-      "revision": "d890010f874ecafd3f2f1ef4066d84b810ba775e",
+      "revision": "b89f5c50ef09d21c695e7a97e73161572daabc39",
       "disposition": "preserve",
       "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/TinyKhipu-Nano/blob/d890010f874ecafd3f2f1ef4066d84b810ba775e/README.md",
-      "reviewed_at": "2026-09-30T02:10:10.212466+00:00",
-      "review_evidence": "hf-card-drift-review-20260929.json"
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/TinyKhipu-Nano/blob/b89f5c50ef09d21c695e7a97e73161572daabc39/README.md",
+      "reviewed_at": "2026-10-02T01:37:53.582807+00:00",
+      "review_evidence": "review_evidence/hf-card-review-20261001.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+        "path": "hf/TinyKhipu-Nano/README.md",
+        "readme_sha256": "afcb7a0d4f1ee7223fdaa3101bb2b4c0a0649b1d997e63c82355c66b0d1fa4a5"
+      }
     },
     "SZLHOLDINGS/chakana": {
-      "revision": "7a93ff0a18873f834e2f9c508561538d2c030838",
+      "revision": "75cdc38ad264b2d326a0881ce8a3faddd3f5ddf1",
       "disposition": "preserve",
-      "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/chakana/blob/7a93ff0a18873f834e2f9c508561538d2c030838/README.md"
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/chakana/blob/75cdc38ad264b2d326a0881ce8a3faddd3f5ddf1/README.md",
+      "reviewed_at": "2026-10-02T02:11:13.021399+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "path": "atelier/hf/chakana.md",
+        "readme_sha256": "817851947e4f79a87990e20ba0c84e91d6a1c3edd4f8d6607654547e0a74615d"
+      }
     },
     "SZLHOLDINGS/qantu": {
-      "revision": "5308d6654f80c8031e3279fa21ae095f7a71ca43",
+      "revision": "34630a2bd52c6723cbc83faea713e37fd957a9c9",
       "disposition": "preserve",
-      "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/qantu/blob/5308d6654f80c8031e3279fa21ae095f7a71ca43/README.md"
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/qantu/blob/34630a2bd52c6723cbc83faea713e37fd957a9c9/README.md",
+      "reviewed_at": "2026-10-02T02:11:21.640674+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "path": "atelier/hf/qantu.md",
+        "readme_sha256": "83d4a1ac110791bdee9fdfcdb91a7b8c44834850c340da1403e3460443dbe8c0"
+      }
     },
     "SZLHOLDINGS/tinku": {
-      "revision": "01af5759375c64277b7f8ab5a6aaf93f5d856632",
+      "revision": "82e1d54044eebc5de8426042863a469b94ec9f76",
       "disposition": "preserve",
-      "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/tinku/blob/01af5759375c64277b7f8ab5a6aaf93f5d856632/README.md"
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/tinku/blob/82e1d54044eebc5de8426042863a469b94ec9f76/README.md",
+      "reviewed_at": "2026-10-02T02:11:28.642305+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "path": "atelier/hf/tinku.md",
+        "readme_sha256": "f8dc03f9cbba2308507e0936587c933eaf976292f81994ff1a0ee2b716bd7a12"
+      }
     },
     "SZLHOLDINGS/waman": {
-      "revision": "ede350c01780331bb665362342e7a4750df1e09f",
+      "revision": "6090fc395c5d5ecc5be8f4e27b17ebc9fb607fe8",
       "disposition": "preserve",
-      "reason": "Current card already identifies this as a test fixture or software reference; preserve existing limitations and training evidence.",
-      "evidence_url": "https://huggingface.co/SZLHOLDINGS/waman/blob/ede350c01780331bb665362342e7a4750df1e09f/README.md"
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/waman/blob/6090fc395c5d5ecc5be8f4e27b17ebc9fb607fe8/README.md",
+      "reviewed_at": "2026-10-02T02:11:32.295066+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_review": {
+        "repository": "szl-holdings/szl-khipu",
+        "revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "path": "atelier/hf/waman.md",
+        "readme_sha256": "c263ca7a2877e89893b07e41f79863b6bc915fa05ab153f3a93e097f102146f3"
+      }
     },
     "SZLHOLDINGS/oac-clinical-transport-health-v1": {
       "revision": "8a6cd25ed8121af4e99118cd874bb89f50cff981",

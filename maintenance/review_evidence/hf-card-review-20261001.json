@@ -1,0 +1,142 @@
+{
+  "schema": "szl.reviewed-card-policy-decision.v1",
+  "observed_at": "2026-10-02T01:37:53.582807+00:00",
+  "status": "FOUR_REVIEWED_SOURCE_BOUND_NANO_CARDS",
+  "approved": [
+    {
+      "repo_id": "SZLHOLDINGS/MiniEmbed-Nano",
+      "prior_revision": "01e82f36ff722528233f76daf899c18f8cb5aaa2",
+      "current_revision": "70557d12b91ca556939e559e540b70fb3c2c9e5b",
+      "readme_sha256": "6d39ae004414372df7190ddeb7cc1af47d37a0dc7649132468a8b34b21942074",
+      "changed_files": [
+        "README.md"
+      ],
+      "canonical_repository": "szl-holdings/szl-khipu",
+      "canonical_revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+      "canonical_path": "hf/MiniEmbed-Nano/README.md",
+      "canonical_copies": [
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier/hf/MiniEmbed-Nano.md",
+          "sha256": "6d39ae004414372df7190ddeb7cc1af47d37a0dc7649132468a8b34b21942074",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier/hf/MiniEmbed-Nano.md"
+        },
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier-space/cards/MiniEmbed-Nano.md",
+          "sha256": "6d39ae004414372df7190ddeb7cc1af47d37a0dc7649132468a8b34b21942074",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier-space/cards/MiniEmbed-Nano.md"
+        }
+      ],
+      "review": "Preserves metadata and artifact files; clarifies synthetic reports, unsigned receipts, missing training replay, and no hosted inference guarantee."
+    },
+    {
+      "repo_id": "SZLHOLDINGS/Moons-Nano",
+      "prior_revision": "77d002f9314dc0c86cd0f14e63fff60364929652",
+      "current_revision": "4631d0fb54ad90423c3ae76f812ff4d0e80fbfdf",
+      "readme_sha256": "edae7af6588c44373933965c7b791b885522ade5bf30b3ee0506568d3f9f9648",
+      "changed_files": [
+        "README.md"
+      ],
+      "canonical_repository": "szl-holdings/szl-khipu",
+      "canonical_revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+      "canonical_path": "hf/Moons-Nano/README.md",
+      "canonical_copies": [
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier/hf/Moons-Nano.md",
+          "sha256": "edae7af6588c44373933965c7b791b885522ade5bf30b3ee0506568d3f9f9648",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier/hf/Moons-Nano.md"
+        },
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier-space/cards/Moons-Nano.md",
+          "sha256": "edae7af6588c44373933965c7b791b885522ade5bf30b3ee0506568d3f9f9648",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier-space/cards/Moons-Nano.md"
+        }
+      ],
+      "review": "Preserves metadata and artifact files; clarifies synthetic reports, unsigned receipts, missing training replay, and no hosted inference guarantee."
+    },
+    {
+      "repo_id": "SZLHOLDINGS/ReceiptAgent-Nano",
+      "prior_revision": "463df555fee339b776b938846238327100f573ab",
+      "current_revision": "c139299d88d25d34d2ae53b95399b872d9f47a73",
+      "readme_sha256": "d8b4729fd95a393659b467c1ea1dde8a42bb06604fcac54aaf552e700dd59c3b",
+      "changed_files": [
+        "README.md"
+      ],
+      "canonical_repository": "szl-holdings/szl-khipu",
+      "canonical_revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+      "canonical_path": "hf/ReceiptAgent-Nano/README.md",
+      "canonical_copies": [
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier/hf/ReceiptAgent-Nano.md",
+          "sha256": "d8b4729fd95a393659b467c1ea1dde8a42bb06604fcac54aaf552e700dd59c3b",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier/hf/ReceiptAgent-Nano.md"
+        },
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier-space/cards/ReceiptAgent-Nano.md",
+          "sha256": "d8b4729fd95a393659b467c1ea1dde8a42bb06604fcac54aaf552e700dd59c3b",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier-space/cards/ReceiptAgent-Nano.md"
+        }
+      ],
+      "review": "Preserves metadata and artifact files; clarifies synthetic reports, unsigned receipts, missing training replay, and no hosted inference guarantee."
+    },
+    {
+      "repo_id": "SZLHOLDINGS/TinyKhipu-Nano",
+      "prior_revision": "d890010f874ecafd3f2f1ef4066d84b810ba775e",
+      "current_revision": "b89f5c50ef09d21c695e7a97e73161572daabc39",
+      "readme_sha256": "afcb7a0d4f1ee7223fdaa3101bb2b4c0a0649b1d997e63c82355c66b0d1fa4a5",
+      "changed_files": [
+        "README.md"
+      ],
+      "canonical_repository": "szl-holdings/szl-khipu",
+      "canonical_revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+      "canonical_path": "hf/TinyKhipu-Nano/README.md",
+      "canonical_copies": [
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier/hf/TinyKhipu-Nano.md",
+          "sha256": "afcb7a0d4f1ee7223fdaa3101bb2b4c0a0649b1d997e63c82355c66b0d1fa4a5",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier/hf/TinyKhipu-Nano.md"
+        },
+        {
+          "repository": "szl-holdings/szl-khipu",
+          "revision": "32234b8e56b9f273c6137582cda57633d920a6da",
+          "path": "atelier-space/cards/TinyKhipu-Nano.md",
+          "sha256": "afcb7a0d4f1ee7223fdaa3101bb2b4c0a0649b1d997e63c82355c66b0d1fa4a5",
+          "matches_current_hub_card": true,
+          "current_hub_vs_canonical_diff": "",
+          "url": "https://github.com/szl-holdings/szl-khipu/blob/32234b8e56b9f273c6137582cda57633d920a6da/atelier-space/cards/TinyKhipu-Nano.md"
+        }
+      ],
+      "review": "Preserves metadata and artifact files; clarifies synthetic reports, unsigned receipts, missing training replay, and no hosted inference guarantee."
+    }
+  ],
+  "policy_before_sha256": "95368e28f240dec68f3e6558682bdca6c74ad238321255b2b3b4d313d94a0f33",
+  "provider_writes_attempted": false,
+  "scope": "Card text and unchanged provider artifact manifests only; no model qualification."
+}
