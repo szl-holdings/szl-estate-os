@@ -17,6 +17,7 @@ from .model import (
 )
 from .storage import StorageError, guard_output_alias, write_reports
 from .setup import not_run_access, run_setup, write_setup_report
+from .snapshot_agent import ProjectionError, recommend_projection_file
 
 UNOBSERVED_TIME = "1970-01-01T00:00:00Z"
 
@@ -84,7 +85,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     verify.add_argument("--check-setup", action="store_true", help="Run reviewed tests and four narrow existing-auth identity/org/membership reads")
     verify.add_argument("--package-root", type=Path, help="Reviewed tools/szl_estate checkout for source and test verification")
     verify.add_argument("--access-receipt", type=Path, help="Optional receipt context; always freshly revalidate, never trust file assertions")
+    scout = sub.add_parser("recommend-scout", help="Offline, proposal-only advice from a bounded local scout projection")
+    scout.add_argument("projection", type=Path)
     args = parser.parse_args(argv)
+    if args.command == "recommend-scout":
+        try:
+            report = recommend_projection_file(args.projection)
+        except ProjectionError as failure:
+            print(json.dumps({"status": "FAIL", "code": str(failure)}, sort_keys=True))
+            return 2
+        print(json.dumps(report, sort_keys=True))
+        return 0
     if args.access_receipt and not args.check_setup:
         parser.error("--access-receipt requires --check-setup and fresh access revalidation")
     summaries = []
