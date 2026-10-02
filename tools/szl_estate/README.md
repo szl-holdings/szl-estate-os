@@ -31,8 +31,7 @@ python -m szl_estate verify --backend-bundle /path/to/szl-holdings-audit-evidenc
 
 The command writes estate_state.json, evidence.csv and report.md. It returns
 exit 1 when Phase 0 setup has not been checked or its criteria are not satisfied.
-The four full estate
-required scopes are NOT_RUN with OFFLINE_NOT_MEASURED and authorization UNKNOWN.
+The four full estate required scopes are NOT_RUN with OFFLINE_NOT_MEASURED and authorization UNKNOWN.
 INACCESSIBLE describes an attempted access failure, not an unexecuted audit.
 Full estate readiness is a separate later-phase gate. Identical inputs
 and `--as-of` yield identical bytes. Input digests and source times are retained;
@@ -41,6 +40,26 @@ Without source times, 1970-01-01 is an explicit unobserved sentinel; it is not
 a live observation. Reports show a reference time, not perpetual currentness.
 Writes are atomic per file. A failure between files returns an error and can
 leave mixed report generations; replay the same inputs before using that run.
+
+## Offline scout recommendations
+
+The optional `recommend-scout` command accepts only the bounded numeric JSON
+projection produced by the local estate snapshot scout. It prints a deterministic
+JSON report to standard output, with source digests and observation times next
+to proposal-only recommendations:
+
+```text
+python -m szl_estate recommend-scout /path/to/scout-projection.json
+```
+
+This command performs no network calls, provider writes, merge actions or model
+inference. It rejects duplicate keys, oversized files, inconsistent counts and
+claims that an unsigned projection authenticated itself or verified readiness.
+Its source hashes are claims carried by that unsigned projection; the command
+does not reread the raw GitHub and Hugging Face snapshot files. Keep any raw
+private-scope inventory out of public PRs. Default-head CI rollups and Space
+stages are historical hints for follow-up probes, never merge authorization,
+functional readiness, model qualification or an external witness.
 
 Check the actual Phase 0 contract from the repository root:
 

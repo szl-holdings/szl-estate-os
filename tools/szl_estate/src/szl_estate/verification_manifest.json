@@ -1,19 +1,20 @@
 {
   "files": {
     ".gitattributes": "0dacf9b940271a5a4433fc33092e8fa671f2611a909c18236a83d41424ff8c8a",
-    "pyproject.toml": "80d43a176160cf7a8af5e8ee3171a0586b4a46f1270de402c39183c816c7cc99",
+    "pyproject.toml": "de4a10bc37498452691d72f0869f303aae617f68452da2f4780bced1386bc254",
     "requirements-dev.txt": "4862e36136a14767370afef1a8c45be90ca03b0f57ee1d2ed0fef4f1ee143132",
-    "requirements.txt": "177f97343605603d1e285f79ee8a34ae988153a5bb10e9b8fa7a7f8e976da39a",
+    "requirements.txt": "96e078c0aaf1268e6654f09d9e4a1db387a22f02deeb4c34a970fc395f2ca687",
     "src/szl_estate/__init__.py": "026ed4d5f3000f6a9c797e910205e6074c6d26310f37ae1a9e0e9e5014c3754c",
     "src/szl_estate/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
     "src/szl_estate/access.py": "e03ea77c94cb4b89d3094cfb7e92617f088a01b59a1cbd7e5fcb21631d46f974",
     "src/szl_estate/cache.py": "2b8eeaba892c8fa82c29734db5df9a62f85463b4ada28727fc49921799e88a79",
     "src/szl_estate/classifier.py": "694d78e3519f028bd5962379fee94c3115ec75c1ae7bc402fdb0b076b970255b",
-    "src/szl_estate/cli.py": "9b72b7fdd8d6f58c0ae7e517084f67f663192b90474c277485b0326c6e1e6e63",
+    "src/szl_estate/cli.py": "d723ae65c1241f9451f53131c188fd335fc7c174746d2762d5b58dd1af89371d",
     "src/szl_estate/inputs.py": "f3675d893340031897e0bda7a84991ea460f02f94baa64466b6314d42c4e9735",
     "src/szl_estate/model.py": "eea3aa627d1aab0f90c6d86da98ca141d36d770231c4495c4407534d3c243ce6",
     "src/szl_estate/parsers.py": "dceb8b6679b843dbcbaa39ba001931a464133a28d9c59bfde14962698a594ff5",
     "src/szl_estate/setup.py": "a98bcaec6a99f3c7390d63cb2787d83d1a1a89192002d7b9588481dc92764436",
+    "src/szl_estate/snapshot_agent.py": "b7418c67bef1e49847008e90fee8caed58dcd1603c99698184f25169eb863d87",
     "src/szl_estate/storage.py": "2c8a1da9bee021384fe80db44f857fa39d75d72c90c2c688ec4bda0b1b9a7f77",
     "tests/fixtures/pr_states.json": "ffd2e1ba115c27f00ee55b63d0f9be373c299573b43dcb2c0b8a4775d3daaa99",
     "tests/test_access.py": "9fe203a21d33f13fe384b1ce077729b22d59df7144b3dbf1abe767b339f45599",
@@ -23,7 +24,8 @@
     "tests/test_inputs.py": "98597745bb3f8bf129ec846c916eac240a5ca6f256a35159de5b839e1b488007",
     "tests/test_model.py": "aaceaece2c391997eea5a4d1e560cd12a40d5f999d5e4a38cf48e75841a58610",
     "tests/test_parsers.py": "f28c0e8f5646314b59957eabdd179956696a1059aeba5ee1a56b133fd1731336",
-    "tests/test_setup.py": "80a0291530acf539963ed87135278fee5a9ca80f19bcec1e07cfdaf56b545121"
+    "tests/test_setup.py": "80a0291530acf539963ed87135278fee5a9ca80f19bcec1e07cfdaf56b545121",
+    "tests/test_snapshot_agent.py": "4c220621728041bdf9c96baf0dc7639b259e0d67c947606d37db4689db068acf"
   },
   "schema": "szl.reviewed-phase0-files/v1"
 }
