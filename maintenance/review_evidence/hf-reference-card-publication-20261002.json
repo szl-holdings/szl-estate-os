@@ -1,0 +1,332 @@
+{
+  "schema": "szl.reference-card-review-decision/v1",
+  "observed_at": "2026-10-02T02:11:32.295066+00:00",
+  "source_repository": "szl-holdings/szl-khipu",
+  "source_revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+  "source_pr": "https://github.com/szl-holdings/szl-khipu/pull/85",
+  "source_signature_verified": true,
+  "publication_state": "PUBLISHED_AND_INDEPENDENTLY_READ_BACK",
+  "model_qualification_claimed": false,
+  "cards": [
+    {
+      "repo_id": "SZLHOLDINGS/chakana",
+      "revision": "75cdc38ad264b2d326a0881ce8a3faddd3f5ddf1",
+      "disposition": "preserve",
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/chakana/blob/75cdc38ad264b2d326a0881ce8a3faddd3f5ddf1/README.md",
+      "reviewed_at": "2026-10-02T02:11:13.021399+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_repository": "szl-holdings/szl-khipu",
+      "source_revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+      "source_path": "atelier/hf/chakana.md",
+      "source_readme_sha256": "817851947e4f79a87990e20ba0c84e91d6a1c3edd4f8d6607654547e0a74615d",
+      "immutable_byte_parity": true,
+      "unmanaged_files_preserved": true,
+      "current_hf_head_matches": true,
+      "mutation_confirmed": true,
+      "publication_receipt": {
+        "schema": "szl.reference-card-publication/v1",
+        "source_repository": "szl-holdings/szl-khipu",
+        "source_sha": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "source_path": "atelier/hf/chakana.md",
+        "repo_id": "SZLHOLDINGS/chakana",
+        "expected_hf_parent": "503cf50d56f786b4ea4e950c18c556e976b484d2",
+        "before_readme_sha256": "879ef330317c390190e2f317c3295582eb9c357b11a3c00496672598f356d296",
+        "source_readme_sha256": "817851947e4f79a87990e20ba0c84e91d6a1c3edd4f8d6607654547e0a74615d",
+        "managed_files": [
+          "README.md"
+        ],
+        "model_admission_changed": false,
+        "metadata_preserved": true,
+        "state": "PUBLISHED_AND_READ_BACK",
+        "observed_at": "2026-10-02T02:07:41.662598+00:00",
+        "hf_revision": "75cdc38ad264b2d326a0881ce8a3faddd3f5ddf1",
+        "mutation_confirmed": true,
+        "immutable_byte_parity": true,
+        "unmanaged_files_preserved": true
+      },
+      "provider_file_manifest": {
+        ".gitattributes": {
+          "blob_id": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+          "size": 1519,
+          "lfs_sha256": null
+        },
+        "LICENSE": {
+          "blob_id": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+          "size": 11357,
+          "lfs_sha256": null
+        },
+        "README.md": {
+          "blob_id": "d0ca5900662f0b9aa5d25e0728cf54821d92801e",
+          "size": 7306,
+          "lfs_sha256": null
+        },
+        "TRAINING_RECEIPT.json": {
+          "blob_id": "9b5bcecd9858c63635941025213f753aaff51172",
+          "size": 1223,
+          "lfs_sha256": null
+        },
+        "bom/model-bom.cdx.json": {
+          "blob_id": "60574d596c2835437e2f0362d216f6c782338f49",
+          "size": 2210,
+          "lfs_sha256": null
+        },
+        "chakana.npz": {
+          "blob_id": "2cfa98ded6ab16eabfb1fb48bd17a28250ff28c6",
+          "size": 3219,
+          "lfs_sha256": null
+        },
+        "provenance.json": {
+          "blob_id": "940b5846d81d6a90a923a065ecba88722167029c",
+          "size": 1741,
+          "lfs_sha256": null
+        },
+        "status.json": {
+          "blob_id": "e2b8856d6526a0b71634000182946a680d14fc19",
+          "size": 1381,
+          "lfs_sha256": null
+        }
+      }
+    },
+    {
+      "repo_id": "SZLHOLDINGS/qantu",
+      "revision": "34630a2bd52c6723cbc83faea713e37fd957a9c9",
+      "disposition": "preserve",
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/qantu/blob/34630a2bd52c6723cbc83faea713e37fd957a9c9/README.md",
+      "reviewed_at": "2026-10-02T02:11:21.640674+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_repository": "szl-holdings/szl-khipu",
+      "source_revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+      "source_path": "atelier/hf/qantu.md",
+      "source_readme_sha256": "83d4a1ac110791bdee9fdfcdb91a7b8c44834850c340da1403e3460443dbe8c0",
+      "immutable_byte_parity": true,
+      "unmanaged_files_preserved": true,
+      "current_hf_head_matches": true,
+      "mutation_confirmed": true,
+      "publication_receipt": {
+        "schema": "szl.reference-card-publication/v1",
+        "source_repository": "szl-holdings/szl-khipu",
+        "source_sha": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "source_path": "atelier/hf/qantu.md",
+        "repo_id": "SZLHOLDINGS/qantu",
+        "expected_hf_parent": "d1b5621d3403745d38d420a52f05ea47d06327f0",
+        "before_readme_sha256": "fc521f194174a0515de2076a7cc01deb25f2a85759c93c630ee169bbe59a232b",
+        "source_readme_sha256": "83d4a1ac110791bdee9fdfcdb91a7b8c44834850c340da1403e3460443dbe8c0",
+        "managed_files": [
+          "README.md"
+        ],
+        "model_admission_changed": false,
+        "metadata_preserved": true,
+        "state": "PUBLISHED_AND_READ_BACK",
+        "observed_at": "2026-10-02T02:08:02.015264+00:00",
+        "hf_revision": "34630a2bd52c6723cbc83faea713e37fd957a9c9",
+        "mutation_confirmed": true,
+        "immutable_byte_parity": true,
+        "unmanaged_files_preserved": true
+      },
+      "provider_file_manifest": {
+        ".gitattributes": {
+          "blob_id": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+          "size": 1519,
+          "lfs_sha256": null
+        },
+        "LICENSE": {
+          "blob_id": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+          "size": 11357,
+          "lfs_sha256": null
+        },
+        "README.md": {
+          "blob_id": "2ae57ac5aad9bf72618d040800e16cd9a42ae12a",
+          "size": 6852,
+          "lfs_sha256": null
+        },
+        "TRAINING_RECEIPT.json": {
+          "blob_id": "9e985d4eed2ac71e18327b4b6c8ea01a257a6db2",
+          "size": 1205,
+          "lfs_sha256": null
+        },
+        "bom/model-bom.cdx.json": {
+          "blob_id": "e1c776c388258776e9319e8a57202d3025c0f88a",
+          "size": 2200,
+          "lfs_sha256": null
+        },
+        "provenance.json": {
+          "blob_id": "333e31444bcf5fccfe944435abc99079ae887695",
+          "size": 1739,
+          "lfs_sha256": null
+        },
+        "qantu.npz": {
+          "blob_id": "253d53bc2c9869feab28c928ad266b59c7ed7540",
+          "size": 3842,
+          "lfs_sha256": null
+        },
+        "status.json": {
+          "blob_id": "2cdfd3004ff90b70d7e599403f7895f064a7f6cd",
+          "size": 1379,
+          "lfs_sha256": null
+        }
+      }
+    },
+    {
+      "repo_id": "SZLHOLDINGS/tinku",
+      "revision": "82e1d54044eebc5de8426042863a469b94ec9f76",
+      "disposition": "preserve",
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/tinku/blob/82e1d54044eebc5de8426042863a469b94ec9f76/README.md",
+      "reviewed_at": "2026-10-02T02:11:28.642305+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_repository": "szl-holdings/szl-khipu",
+      "source_revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+      "source_path": "atelier/hf/tinku.md",
+      "source_readme_sha256": "f8dc03f9cbba2308507e0936587c933eaf976292f81994ff1a0ee2b716bd7a12",
+      "immutable_byte_parity": true,
+      "unmanaged_files_preserved": true,
+      "current_hf_head_matches": true,
+      "mutation_confirmed": true,
+      "publication_receipt": {
+        "schema": "szl.reference-card-publication/v1",
+        "source_repository": "szl-holdings/szl-khipu",
+        "source_sha": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "source_path": "atelier/hf/tinku.md",
+        "repo_id": "SZLHOLDINGS/tinku",
+        "expected_hf_parent": "0a33bd6f75b1d1b54ab962a480765edbf5283990",
+        "before_readme_sha256": "531cfd3934e40198655ce1856d25eaa4d029753c780ddaa5a0b2d27abd059374",
+        "source_readme_sha256": "f8dc03f9cbba2308507e0936587c933eaf976292f81994ff1a0ee2b716bd7a12",
+        "managed_files": [
+          "README.md"
+        ],
+        "model_admission_changed": false,
+        "metadata_preserved": true,
+        "state": "PUBLISHED_AND_READ_BACK",
+        "observed_at": "2026-10-02T02:08:20.305210+00:00",
+        "hf_revision": "82e1d54044eebc5de8426042863a469b94ec9f76",
+        "mutation_confirmed": true,
+        "immutable_byte_parity": true,
+        "unmanaged_files_preserved": true
+      },
+      "provider_file_manifest": {
+        ".gitattributes": {
+          "blob_id": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+          "size": 1519,
+          "lfs_sha256": null
+        },
+        "LICENSE": {
+          "blob_id": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+          "size": 11357,
+          "lfs_sha256": null
+        },
+        "README.md": {
+          "blob_id": "bc63783becae21d603149b4577a87cce294bbad8",
+          "size": 6786,
+          "lfs_sha256": null
+        },
+        "TRAINING_RECEIPT.json": {
+          "blob_id": "caf3928e36b02d01c4992d49d5e03977d434ea4c",
+          "size": 1195,
+          "lfs_sha256": null
+        },
+        "bom/model-bom.cdx.json": {
+          "blob_id": "39125f4eb7c50af853eb6445087b4bef8fbf7a76",
+          "size": 2200,
+          "lfs_sha256": null
+        },
+        "provenance.json": {
+          "blob_id": "1de19765219aaaf601d12dbba6ef20c20ba208e6",
+          "size": 1739,
+          "lfs_sha256": null
+        },
+        "status.json": {
+          "blob_id": "4fb98b58e774c4828866b05a50fda9dbf945d342",
+          "size": 1379,
+          "lfs_sha256": null
+        },
+        "tinku.npz": {
+          "blob_id": "b3a8ee41ce1299445bff280cb7a09d847c74150d",
+          "size": 3063,
+          "lfs_sha256": null
+        }
+      }
+    },
+    {
+      "repo_id": "SZLHOLDINGS/waman",
+      "revision": "6090fc395c5d5ecc5be8f4e27b17ebc9fb607fe8",
+      "disposition": "preserve",
+      "reason": "Canonical paired GitHub source was published by the reviewed one-target consumer; exact immutable README bytes and all unmanaged blob/LFS files were independently read back unchanged. Synthetic fixture limitations and model admission remain unchanged.",
+      "evidence_url": "https://huggingface.co/SZLHOLDINGS/waman/blob/6090fc395c5d5ecc5be8f4e27b17ebc9fb607fe8/README.md",
+      "reviewed_at": "2026-10-02T02:11:32.295066+00:00",
+      "review_evidence": "review_evidence/hf-reference-card-publication-20261002.json",
+      "source_repository": "szl-holdings/szl-khipu",
+      "source_revision": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+      "source_path": "atelier/hf/waman.md",
+      "source_readme_sha256": "c263ca7a2877e89893b07e41f79863b6bc915fa05ab153f3a93e097f102146f3",
+      "immutable_byte_parity": true,
+      "unmanaged_files_preserved": true,
+      "current_hf_head_matches": true,
+      "mutation_confirmed": true,
+      "publication_receipt": {
+        "schema": "szl.reference-card-publication/v1",
+        "source_repository": "szl-holdings/szl-khipu",
+        "source_sha": "f894feb1e94b212ed8b9e3ba344ebb9b2130b95b",
+        "source_path": "atelier/hf/waman.md",
+        "repo_id": "SZLHOLDINGS/waman",
+        "expected_hf_parent": "a48b979a765c4f60b497204db2a418dbf0c957ff",
+        "before_readme_sha256": "1c46bb5aa6d7cb3c4971586d367956ec4a7e949a02efe539bff03adbcbd70242",
+        "source_readme_sha256": "c263ca7a2877e89893b07e41f79863b6bc915fa05ab153f3a93e097f102146f3",
+        "managed_files": [
+          "README.md"
+        ],
+        "model_admission_changed": false,
+        "metadata_preserved": true,
+        "state": "PUBLISHED_AND_READ_BACK",
+        "observed_at": "2026-10-02T02:08:35.203989+00:00",
+        "hf_revision": "6090fc395c5d5ecc5be8f4e27b17ebc9fb607fe8",
+        "mutation_confirmed": true,
+        "immutable_byte_parity": true,
+        "unmanaged_files_preserved": true
+      },
+      "provider_file_manifest": {
+        ".gitattributes": {
+          "blob_id": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+          "size": 1519,
+          "lfs_sha256": null
+        },
+        "LICENSE": {
+          "blob_id": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+          "size": 11357,
+          "lfs_sha256": null
+        },
+        "README.md": {
+          "blob_id": "3dced46a179ceefb66a405b4e2b50143ead346ea",
+          "size": 7170,
+          "lfs_sha256": null
+        },
+        "TRAINING_RECEIPT.json": {
+          "blob_id": "b611c74b8b7f0f2e0c83f070d42b6e4839bae95f",
+          "size": 1203,
+          "lfs_sha256": null
+        },
+        "bom/model-bom.cdx.json": {
+          "blob_id": "34acba0603bd48f5b679ad41eaad9d1e29842b3b",
+          "size": 2200,
+          "lfs_sha256": null
+        },
+        "provenance.json": {
+          "blob_id": "e5cf8527e833d15342c301c6ddbf87858116d49c",
+          "size": 1739,
+          "lfs_sha256": null
+        },
+        "status.json": {
+          "blob_id": "694eb6510b29a38506efec6ace9309c63ebc278f",
+          "size": 1379,
+          "lfs_sha256": null
+        },
+        "waman.npz": {
+          "blob_id": "96f2e1ca29e5dcacc5ec7cebc763a236ba649b2a",
+          "size": 4189,
+          "lfs_sha256": null
+        }
+      }
+    }
+  ]
+}

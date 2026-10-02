@@ -1,4 +1,4 @@
-# SZL maintenance runner 2.1.1
+# SZL maintenance runner 2.1.2
 
 This directory contains the Python source for the attached estate maintenance
 build. It is a separate, explicitly invoked tool alongside Estate OS. The
@@ -40,3 +40,11 @@ no claim that every estate application is operational.
 Validation: from this directory, run `python -m pytest -q`. The release was
 locally verified on Windows with 105 tests and 18 subtests. Hosted CI executes
 the same suite independently on Linux.
+
+The October 1 card review advances eight explicitly reviewed immutable pins.
+Each entry binds the canonical GitHub card bytes and its dated review in
+`review_evidence/`. Four Nano cards preserve truthful synthetic limitations;
+four reference cards were published by the canonical consumer and read back
+with unchanged artifact manifests. These decisions establish card parity
+and preserve model admission limits. Other card pins and legacy migration
+evidence retain their original review timestamps.
