@@ -51,18 +51,21 @@ class StorageTests(unittest.TestCase):
                 model=None, timeout=10, output_path=self.plan,
             )
 
-    def seed_audit(self, *, with_receipt=True):
+    def seed_audit(self, *, with_receipt=True, completed_at=None, audit_status="MEASURED"):
         status = context()["status"]
+        if completed_at is not None:
+            status["completed_at"] = completed_at
+        status["status"] = audit_status
         connection = estate.connect_db(self.db)
         receipt_hash = "b" * 64
         if with_receipt:
             receipt_hash = estate.append_receipt(connection, audit_id=status["audit_id"], kind="ESTATE_AUDIT", payload={
-                "audit_id": status["audit_id"], "status": "MEASURED", "completed_at": status["completed_at"],
+                "audit_id": status["audit_id"], "status": audit_status, "completed_at": status["completed_at"],
                 "asset_count": 0, "proposal_count": 0, "scope": {}, "sources": [],
             })["receipt_hash"]
         connection.execute(
             "INSERT INTO audit_runs (audit_id,started_at,completed_at,status,scope_json,source_reports_json,asset_count,proposal_count,receipt_hash,app_version) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (status["audit_id"], status["completed_at"], status["completed_at"], "MEASURED", "{}", "[]", 0, 0, receipt_hash, estate.APP_VERSION),
+            (status["audit_id"], status["completed_at"], status["completed_at"], audit_status, "{}", "[]", 0, 0, receipt_hash, estate.APP_VERSION),
         )
         connection.commit()
         connection.close()
@@ -112,6 +115,43 @@ class StorageTests(unittest.TestCase):
             connection.execute(f"UPDATE audit_runs SET {column}=?", (original,))
             connection.commit()
             connection.close()
+
+    def test_stale_blocked_plan_keeps_receipt_without_exposing_proposals(self):
+        completed_at = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=2)).isoformat()
+        self.seed_audit(completed_at=completed_at)
+        captured = estate.steward_context(self.db)
+        self.assertTrue(captured["status"]["receipt_chain"]["chain_valid"])
+        self.assertTrue(captured["status"]["audit_receipt_binding"]["valid"])
+
+        result = estate.command_steward_plan(
+            self.db, mission="Map safe estate evidence", provider="deterministic",
+            model=None, timeout=10, output_path=self.plan,
+        )
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertGreater(result["proposal_count"], 0)
+
+        latest = estate.load_steward_status(self.plan, self.db)["latest_plan"]
+        self.assertTrue(latest["recorded"])
+        self.assertTrue(latest["is_latest_recorded_plan"])
+        self.assertEqual(latest["receipt_hash"], result["receipt"]["receipt_hash"])
+        self.assertEqual(latest["plan_status"], "BLOCKED")
+        self.assertFalse(latest["evidence_fresh"])
+        self.assertEqual(latest["state"], "STALE_EVIDENCE")
+        self.assertEqual(latest["proposals"], [])
+
+    def test_current_partial_audit_keeps_blocked_plan_without_exposing_proposals(self):
+        self.seed_audit(audit_status="PARTIAL")
+        result = estate.command_steward_plan(
+            self.db, mission="Map safe estate evidence", provider="deterministic",
+            model=None, timeout=10, output_path=self.plan,
+        )
+        self.assertEqual(result["status"], "BLOCKED")
+        latest = estate.load_steward_status(self.plan, self.db)["latest_plan"]
+        self.assertEqual(latest["state"], "RECORDED")
+        self.assertEqual(latest["plan_status"], "BLOCKED")
+        self.assertTrue(latest["evidence_current"])
+        self.assertTrue(latest["evidence_fresh"])
+        self.assertEqual(latest["proposals"], [])
 
     def test_bytes_receipt_and_immutable_artifact_bound(self):
         result = self.write_plan()

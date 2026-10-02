@@ -95,6 +95,16 @@ proof. Human review and deterministic downstream release controls remain
 required. Operational harmful biology, offensive malware, evidence
 fabrication, credential theft, and safety/control bypasses are denied.
 
+Each accepted proposal must cite the exact audit ID, audit receipt hash, and
+bounded context digest captured in its plan. The validator rejects invented
+handles and moving aliases such as `receipt:latest`, even if a plan's overall
+content digest is recomputed. A deterministic draft built without eligible
+evidence carries only `evidence:UNAVAILABLE` and remains `BLOCKED`. These
+handles bind the draft to an observation; they do not independently establish
+the truth of a proposal's hypothesis or an external provider's state. Older
+plans containing unbound aliases remain historical artifacts and fail current
+validation until regenerated from a fresh governed audit.
+
 Writes follow this order:
 
 1. Exclusively create and flush `outputs/steward-plans/<plan_id>.json`.
@@ -108,7 +118,8 @@ immutable file is evidence of an incomplete write, not a recorded plan. A
 publication failure after commit leaves a recoverable immutable artifact and
 receipt. Concurrent writers serialize their chain append; an out-of-order
 latest projection is labeled `STALE_PROJECTION`, not silently accepted as
-latest. Readback also hides proposed work when its audit is superseded/stale.
+latest. Readback hides proposals from blocked plans and whenever the bound
+audit is superseded or stale, while retaining the plan status and receipt.
 Unsigned receipts prove local byte/chain consistency, not external identity or
 independent witness. Preserve outputs and the database for incident analysis;
 do not erase retained failures to restore a green label.
@@ -127,6 +138,10 @@ The standalone `steward_public.py` reader admits only the closed public schema,
 exact source revision and exact-byte SHA-256. Freshness is limited to two hours
 from the original audit, not the time of export; stale views hide proposals.
 This is unsigned integrity evidence and never a production-readiness witness.
+The manually dispatched observation workflow does not refresh the deployed
+projection. Until an authenticated producer and sole canonical publisher can
+deliver and read back a fresh bounded projection, an expired live endpoint is
+expected to remain unavailable rather than extend its validity window.
 Only this public projection and its pinned reader may be admitted into A11oy's
 existing protected source and sole canonical publisher. The private database,
 full plan, local dashboard, inventories, paths and credentials are not part of
