@@ -655,10 +655,19 @@ def _source_report_projection(value: Any) -> list[dict[str, Any]]:
     ]
 
 
-def _deterministic_draft(context: dict[str, Any], mission: str) -> dict[str, Any]:
-    snapshot = _summarize_context(context)
-    audit = snapshot["audit"]
-    audit_id = audit.get("audit_id") or "UNAVAILABLE"
+def _expected_evidence_handles(evidence: dict[str, Any]) -> list[str]:
+    """Return only references bound to the captured audit snapshot."""
+    if evidence.get("eligible_for_planning") is not True:
+        return ["evidence:UNAVAILABLE"]
+    return [
+        f"audit:{evidence['audit_id']}",
+        f"receipt:{evidence['audit_receipt_hash']}",
+        f"context:sha256:{evidence['context_sha256']}",
+    ]
+
+
+def _deterministic_draft(mission: str, evidence: dict[str, Any]) -> dict[str, Any]:
+    evidence_handles = _expected_evidence_handles(evidence)
     common_denies = [
         "No direct provider mutation or credential access",
         "No branch-protection bypass, force push, self-approval, or fabricated evidence",
@@ -673,7 +682,7 @@ def _deterministic_draft(context: dict[str, Any], mission: str) -> dict[str, Any
             "release_phase": "GITHUB",
             "risk_level": "LOW",
             "novelty_claim": "MODELED: rank work by missing proof edges rather than repository popularity or model-card claims.",
-            "evidence_handles": [f"audit:{audit_id}", "receipt:latest", "source-reports:latest"],
+            "evidence_handles": list(evidence_handles),
             "allowed_effects": ["Generate a content-addressed gap report", "Prepare reviewable patch proposals against exact heads"],
             "denied_effects": common_denies,
             "steps": ["Reconcile full inventories", "Separate source, CI, provider, deployment, and runtime states", "Rank minimal root-cause repairs"],
@@ -689,7 +698,7 @@ def _deterministic_draft(context: dict[str, Any], mission: str) -> dict[str, Any
             "release_phase": "MODEL_EVAL",
             "risk_level": "MEDIUM",
             "novelty_claim": "MODELED: make proof-layer deltas, refusal retention, and source parity first-class optimization axes.",
-            "evidence_handles": [f"audit:{audit_id}", "hf-inventory:latest", "training-evidence:declared-only"],
+            "evidence_handles": list(evidence_handles),
             "allowed_effects": ["Design synthetic and held-out evaluations", "Prepare model-card and provenance patch proposals"],
             "denied_effects": common_denies + ["No paid training job or model publication"],
             "steps": ["Freeze comparator and evaluation splits", "Measure contamination and refusal behavior", "Propose promotion only after critical gates pass"],
@@ -705,7 +714,7 @@ def _deterministic_draft(context: dict[str, Any], mission: str) -> dict[str, Any
             "release_phase": "DOMAIN",
             "risk_level": "MEDIUM",
             "novelty_claim": "MODELED: expose proof-layer vectors and stale-state blockers instead of a single health color.",
-            "evidence_handles": [f"audit:{audit_id}", "domain-probes:latest", "canonical-source:exact-head"],
+            "evidence_handles": list(evidence_handles),
             "allowed_effects": ["Prepare a reviewable public-projection patch", "Define independent readback probes and rollback criteria"],
             "denied_effects": common_denies + ["No DNS change or production deployment"],
             "steps": ["Generate projection from the governed audit", "Bind it to exact source and receipt", "Verify both domains after separately approved deployment"],
@@ -714,12 +723,6 @@ def _deterministic_draft(context: dict[str, Any], mission: str) -> dict[str, Any
             "stop_conditions": ["Canonical source is not merged", "Provider publication parity is not verified"],
         },
     ]
-    action_queue = snapshot.get("action_queue") or []
-    if action_queue:
-        first = action_queue[0]
-        proposals[0]["evidence_handles"].append(
-            f"control:{_safe_text(first.get('control_id') or 'unknown', 200)}"
-        )
     return {
         "schema_version": DRAFT_SCHEMA_VERSION,
         "summary": (
@@ -735,7 +738,7 @@ def _deterministic_draft(context: dict[str, Any], mission: str) -> dict[str, Any
     }
 
 
-def _model_prompt(mission: str, context: dict[str, Any]) -> str:
+def _model_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any]) -> str:
     return "\n".join(
         [
             "You are the proposal-only SZL Frontier Steward reasoning plane.",
@@ -747,6 +750,9 @@ def _model_prompt(mission: str, context: dict[str, Any]) -> str:
             "Allowed effects are limited to research, read-only observation, local sandbox tests, and reviewable proposal artifacts.",
             "Use this immutable release order: GitHub exact source and CI, protected merge, Hugging Face publication/readback, domain deployment/readback.",
             "Keep source, CI, protected merge, provider publication, deployment, readiness, functional probe, and external witness separate.",
+            "Copy this exact evidence_handles list into every proposal. Other references, including 'latest' aliases, are invalid:",
+            _canonical_json(_expected_evidence_handles(evidence)),
+            "These handles identify the captured audit, its receipt, and its bounded context; they do not prove each proposed claim.",
             f"Requested reasoning family label: {REQUESTED_MODEL_FAMILY}. Do not claim this identity is verified.",
             f"Mission: {mission}",
             "Evidence snapshot JSON:",
@@ -809,15 +815,15 @@ def _redact_credentials(text: str) -> str:
     )
 
 
-def _redacted_prompt(mission: str, context: dict[str, Any]) -> str:
-    prompt = _redact_credentials(_model_prompt(mission, context))
+def _redacted_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any]) -> str:
+    prompt = _redact_credentials(_model_prompt(mission, context, evidence))
     if len(prompt.encode("utf-8")) > MAX_PROMPT_BYTES:
         raise StewardError("Planning context exceeds the bounded prompt size limit")
     return prompt
 
 
 def _run_responses(
-    mission: str, context: dict[str, Any], *, model_id: str,
+    mission: str, context: dict[str, Any], evidence: dict[str, Any], *, model_id: str,
     timeout_seconds: int,
     transport: Callable[[urllib.request.Request, int], bytes] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -826,7 +832,7 @@ def _run_responses(
         raise StewardError("OPENAI_API_KEY is absent; approved Daybreak project access is required")
     if len(key) > 1_024 or re.search(r"[\x00-\x20\x7f]", key):
         raise StewardError("OPENAI_API_KEY has an invalid header shape")
-    prompt = _redacted_prompt(mission, context)
+    prompt = _redacted_prompt(mission, context, evidence)
     body = {
         "model": model_id, "input": prompt,
         "access_programs": {"cyber": DAYBREAK_PROGRAM},
@@ -900,6 +906,7 @@ def _run_responses(
 def _run_codex_cli(
     mission: str,
     context: dict[str, Any],
+    evidence: dict[str, Any],
     *,
     cwd: Path,
     model_id: str | None,
@@ -942,7 +949,7 @@ def _run_codex_cli(
         # snapshot.  Feed the prompt on stdin so the immutable evidence context
         # never becomes a command-line argument or process-list artifact.
         command.append("-")
-        prompt = _redacted_prompt(mission, context)
+        prompt = _redacted_prompt(mission, context, evidence)
         # No provider keys, signing material, proxy settings, or task data is
         # inherited.  A blank configuration intentionally does not reuse the
         # user's CLI authentication/MCP/skills.  Host read isolation is still
@@ -988,7 +995,7 @@ def _run_codex_cli(
         return draft, metadata
 
 
-def _validate_model_draft(draft: Any) -> list[str]:
+def _validate_model_draft(draft: Any, evidence: dict[str, Any]) -> list[str]:
     try:
         errors = _validate_schema(draft, model_draft_schema(), "draft")
     except (ValueError, TypeError, OverflowError, RecursionError):
@@ -1026,6 +1033,7 @@ def _validate_model_draft(draft: Any) -> list[str]:
         "stop_conditions",
     }
     phases = {"GITHUB", "HUGGING_FACE", "DOMAIN", "RESEARCH", "MODEL_EVAL"}
+    expected_handles = _expected_evidence_handles(evidence)
     for index, proposal in enumerate(proposals):
         if not isinstance(proposal, dict):
             errors.append(f"proposal[{index}] must be an object")
@@ -1051,6 +1059,10 @@ def _validate_model_draft(draft: Any) -> list[str]:
                 isinstance(item, str) and item.strip() for item in value
             ):
                 errors.append(f"proposal[{index}].{field} must be a nonempty string list")
+        handles = proposal.get("evidence_handles")
+        if isinstance(handles, list) and all(isinstance(item, str) for item in handles):
+            if len(handles) != len(expected_handles) or set(handles) != set(expected_handles):
+                errors.append(f"proposal[{index}].evidence_handles must match the captured audit snapshot")
         executable_text = "\n".join(
             str(item)
             for field in sorted(required - {"denied_effects"})
@@ -1254,7 +1266,7 @@ def compile_plan(
         )
 
     if provider == "deterministic":
-        draft = _deterministic_draft(context, mission)
+        draft = _deterministic_draft(mission, evidence)
         model = _model_metadata("deterministic", None)
     else:
         try:
@@ -1262,12 +1274,12 @@ def compile_plan(
                 if not allow_local_agent:
                     raise StewardError("CLI adapter requires explicit local-development opt-in; production isolation is unverified")
                 draft, model = _run_codex_cli(
-                    mission, context, cwd=(cwd or Path.cwd()), model_id=model_id,
+                    mission, context, evidence, cwd=(cwd or Path.cwd()), model_id=model_id,
                     timeout_seconds=timeout_seconds, runner=cli_runner,
                 )
             else:
                 draft, model = _run_responses(
-                    mission, context, model_id=model_id,
+                    mission, context, evidence, model_id=model_id,
                     timeout_seconds=timeout_seconds, transport=response_transport,
                 )
         except StewardError as exc:
@@ -1298,7 +1310,7 @@ def compile_plan(
             )
         model["invoked"] = True
 
-    errors = _validate_model_draft(draft)
+    errors = _validate_model_draft(draft, evidence)
     if errors:
         policy = {
             "decision": "DENY",
@@ -1378,7 +1390,7 @@ def validate_plan(plan: Any) -> dict[str, Any]:
     status = plan.get("status")
     draft = plan.get("draft")
     if status == "PROPOSED":
-        errors.extend(_validate_model_draft(draft))
+        errors.extend(_validate_model_draft(draft, plan["evidence_snapshot"]))
         if plan.get("evidence_snapshot", {}).get("fresh_for_planning") is not True:
             errors.append("proposed plan requires a fresh audit")
         evidence = plan["evidence_snapshot"]
@@ -1396,7 +1408,7 @@ def validate_plan(plan: Any) -> dict[str, Any]:
             errors.append("proposed plan requires an allowing policy")
     elif status == "BLOCKED":
         if draft is not None:
-            errors.extend(_validate_model_draft(draft))
+            errors.extend(_validate_model_draft(draft, plan["evidence_snapshot"]))
     elif status == "DENIED":
         if draft is not None:
             errors.append("denied plan must not retain an executable draft")

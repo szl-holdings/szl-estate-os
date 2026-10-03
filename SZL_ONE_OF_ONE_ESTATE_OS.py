@@ -4724,7 +4724,7 @@ def load_steward_status(
                     except (ValueError, TypeError):
                         pass
                     state = ("RECORDED" if newest else "STALE_PROJECTION") if recorded else "BROKEN"
-                    if recorded and newest and payload["status"] == "PROPOSED" and not (evidence_current and evidence_fresh):
+                    if recorded and newest and not (evidence_current and evidence_fresh):
                         state = "STALE_EVIDENCE"
                     latest.update({
                         "state": state,
@@ -4741,7 +4741,7 @@ def load_steward_status(
                     if recorded and newest:
                         latest["model"] = payload["model"]
                         latest["policy"] = payload["policy"]
-                        if state == "RECORDED":
+                        if state == "RECORDED" and payload["status"] == "PROPOSED":
                             latest["proposals"] = (payload.get("draft") or {}).get("proposals", [])
                         latest["evidence_snapshot"] = payload["evidence_snapshot"]
         except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError, sqlite3.Error) as exc:
