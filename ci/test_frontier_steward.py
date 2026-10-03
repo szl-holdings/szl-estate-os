@@ -303,6 +303,151 @@ class FrontierStewardSchemaTests(unittest.TestCase):
             self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
 
 
+class OllamaLocalTests(unittest.TestCase):
+    digest = "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0"
+    model = "qwen3:4b-instruct"
+
+    def tags(self, digest: str) -> bytes:
+        return json.dumps({"models": [{
+            "name": self.model, "digest": digest, "size": 2497293803,
+            "details": {"format": "gguf"},
+        }]}).encode()
+
+    def test_explicit_pin_and_evidence_gate_prevent_model_load(self) -> None:
+        with self.assertRaises(ValueError):
+            steward.compile_plan(provider="ollama-local", model_id=self.model,
+                                 context=observed_context())
+        with self.assertRaises(ValueError):
+            steward.compile_plan(provider="ollama-local", model_digest=self.digest,
+                                 context=observed_context())
+        blocked = steward.compile_plan(
+            provider="ollama-local", model_id=self.model, model_digest=self.digest,
+            context={}, ollama_transport=lambda *_: self.fail("stale audit reached Ollama"),
+        )
+        self.assertEqual(blocked["status"], "BLOCKED")
+        self.assertFalse(blocked["model"]["invoked"])
+        self.assertTrue(steward.validate_plan(blocked)["valid"])
+
+    def test_loopback_only_pinned_structured_proposal(self) -> None:
+        data = observed_context()
+        draft = steward.compile_plan(mission="Map safe evidence", context=data,
+                                     provider="deterministic")["draft"]
+        calls = []
+
+        def transport(request, timeout):
+            calls.append((request, timeout))
+            if request.full_url == steward.OLLAMA_TAGS_ENDPOINT:
+                return self.tags(self.digest)
+            self.assertEqual(request.full_url, steward.OLLAMA_GENERATE_ENDPOINT)
+            return json.dumps({
+                "model": self.model, "done": True, "done_reason": "stop",
+                "response": json.dumps(draft),
+            }).encode()
+
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-private-test-fixture",
+                                          "GH_TOKEN": "gh-private-fixture"}):
+            plan = steward.compile_plan(
+                mission="Map safe evidence gh-private-fixture", context=data,
+                provider="ollama-local", model_id=self.model, model_digest=self.digest,
+                timeout_seconds=300, ollama_transport=transport,
+            )
+        self.assertEqual([call[0].full_url for call in calls], [
+            steward.OLLAMA_TAGS_ENDPOINT, steward.OLLAMA_GENERATE_ENDPOINT,
+            steward.OLLAMA_TAGS_ENDPOINT,
+        ])
+        self.assertEqual([timeout for _, timeout in calls], [5, 120, 5])
+        body = json.loads(calls[1][0].data)
+        self.assertEqual(body["model"], self.model)
+        self.assertEqual(body["format"], steward.model_draft_schema())
+        self.assertFalse(body["stream"])
+        self.assertFalse(body["think"])
+        self.assertEqual(body["keep_alive"], 0)
+        self.assertEqual(body["options"]["num_ctx"], 8192)
+        self.assertNotIn("tools", body)
+        self.assertIsNone(calls[1][0].get_header("Authorization"))
+        self.assertNotIn("gh-private-fixture", body["prompt"])
+        self.assertEqual(plan["status"], "PROPOSED")
+        self.assertEqual(plan["model"]["identity_state"], "LOCAL_MANIFEST_DIGEST_MATCH")
+        self.assertEqual(plan["model"]["requested_family"], "LOCAL_OPEN_MODEL")
+        self.assertIn("LOCAL_OPEN_MODEL", body["prompt"])
+        self.assertNotIn("Requested reasoning family label: Daybreak", body["prompt"])
+        self.assertEqual(plan["model"]["resolved_model"],
+                         f"{self.model}@sha256:{self.digest}")
+        self.assertFalse(plan["model"]["production_allowed"])
+        self.assertTrue(steward.validate_plan(plan)["valid"])
+        for field, value in (("requested_family", "Daybreak"),
+                             ("identity_state", "UNAVAILABLE"),
+                             ("runtime", "NO_TOOLS_RESPONSES")):
+            changed = json.loads(json.dumps(plan))
+            changed["model"][field] = value
+            steward._finalize_digest(changed)
+            self.assertFalse(steward.validate_plan(changed)["valid"], field)
+
+    def test_manifest_mismatch_or_drift_blocks_without_fallback(self) -> None:
+        calls = []
+
+        def mismatch(request, _):
+            calls.append(request.full_url)
+            return self.tags("b" * 64)
+
+        plan = steward.compile_plan(
+            mission="Map safe evidence", context=observed_context(),
+            provider="ollama-local", model_id=self.model, model_digest=self.digest,
+            ollama_transport=mismatch,
+        )
+        self.assertEqual(calls, [steward.OLLAMA_TAGS_ENDPOINT])
+        self.assertEqual(plan["status"], "BLOCKED")
+        self.assertFalse(plan["model"]["invoked"])
+        self.assertTrue(steward.validate_plan(plan)["valid"])
+
+        data = observed_context()
+        draft = steward.compile_plan(mission="Map safe evidence", context=data,
+                                     provider="deterministic")["draft"]
+        reads = 0
+
+        def drift(request, _):
+            nonlocal reads
+            if request.full_url == steward.OLLAMA_TAGS_ENDPOINT:
+                reads += 1
+                return self.tags(self.digest if reads == 1 else "b" * 64)
+            return json.dumps({"model": self.model, "done": True,
+                               "response": json.dumps(draft)}).encode()
+
+        changed = steward.compile_plan(
+            mission="Map safe evidence", context=data, provider="ollama-local",
+            model_id=self.model, model_digest=self.digest, ollama_transport=drift,
+        )
+        self.assertEqual(changed["status"], "BLOCKED")
+        self.assertTrue(changed["model"]["invoked"])
+        self.assertIsNone(changed["draft"])
+        self.assertTrue(steward.validate_plan(changed)["valid"])
+
+    def test_tool_or_incomplete_output_is_blocked(self) -> None:
+        for change in ({"tool_calls": [{"name": "write"}]}, {"done": False},
+                       {"done_reason": "length"}):
+            with self.subTest(change=change):
+                data = observed_context()
+                draft = steward.compile_plan(mission="Map safe evidence", context=data,
+                                             provider="deterministic")["draft"]
+
+                def transport(request, _):
+                    if request.full_url == steward.OLLAMA_TAGS_ENDPOINT:
+                        return self.tags(self.digest)
+                    output = {"model": self.model, "done": True, "done_reason": "stop",
+                              "response": json.dumps(draft)}
+                    output.update(change)
+                    return json.dumps(output).encode()
+
+                plan = steward.compile_plan(
+                    mission="Map safe evidence", context=data, provider="ollama-local",
+                    model_id=self.model, model_digest=self.digest, ollama_transport=transport,
+                )
+                self.assertEqual(plan["status"], "BLOCKED")
+                self.assertTrue(plan["model"]["invoked"])
+                self.assertIsNone(plan["draft"])
+                self.assertTrue(steward.validate_plan(plan)["valid"])
+
+
 class ResponsesTests(unittest.TestCase):
     def test_incomplete_http_read_becomes_redacted_recordable_block(self):
         def truncated(*args):

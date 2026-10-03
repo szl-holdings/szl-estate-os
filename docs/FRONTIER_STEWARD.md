@@ -80,6 +80,32 @@ read-denied. Ambient CLI authentication/configuration is deliberately not
 forwarded; access may therefore fail. Do not loosen these controls to make a
 model invocation pass.
 
+The optional keyless local adapter requires an exact installed model tag and
+its 64-character manifest digest. For this host, `/api/tags` reported
+`qwen3:4b-instruct` at
+`0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0`
+on 2026-10-03. Recheck the local listing before use; a changed digest blocks
+the call. After a fresh eligible audit, a bounded proposal-only run is:
+
+```powershell
+python SZL_ONE_OF_ONE_ESTATE_OS.py steward-plan --provider ollama-local --model qwen3:4b-instruct --model-digest 0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0 --timeout 120
+```
+
+The adapter contacts only `127.0.0.1:11434`, ignores proxy settings, and
+checks the locally listed GGUF manifest digest before and after a single
+structured-output generation. It sets a bounded context and output, disables
+streaming and thinking, and asks Ollama to unload after the call. It supplies
+no tools or API key and never falls back to a cloud provider. The digest is
+reported by the local Ollama service; it is not an independent byte-level
+attestation of the weights or proof of secret isolation. Local memory and disk
+headroom must be checked before a real run. A failed readback, changed tag,
+incomplete output, or invalid draft is recorded as BLOCKED or DENIED.
+`production_allowed` remains false. See the official
+[generate](https://docs.ollama.com/api/generate),
+[local model listing](https://docs.ollama.com/api/tags), and
+[structured output](https://docs.ollama.com/capabilities/structured-outputs)
+contracts.
+
 Official references: [Daybreak access](https://developers.openai.com/api/docs/guides/daybreak),
 [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
 and [Responses migration/storage controls](https://developers.openai.com/api/docs/guides/migrate-to-responses).

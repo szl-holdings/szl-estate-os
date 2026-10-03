@@ -167,10 +167,12 @@ class PublicProjectionTests(unittest.TestCase):
                 public.build_public_projection(status, producer_revision=REVISION, now=CLOCK)
 
     def test_live_and_local_agent_providers_not_publicly_admitted(self):
-        for key, value in (("adapter", "responses"), ("adapter", "codex-cli"), ("invoked", True),
-                           ("invoked", 0), ("production_allowed", True), ("runtime", "LOCAL_DEVELOPMENT_AGENT"),
+        for key, value in (("adapter", "responses"), ("adapter", "codex-cli"), ("adapter", "ollama-local"),
+                           ("invoked", True), ("invoked", 0), ("production_allowed", True),
+                           ("runtime", "LOCAL_DEVELOPMENT_AGENT"), ("runtime", "LOCAL_OLLAMA_NO_TOOLS"),
                            ("requested_model", "forged-model"), ("resolved_model", "forged-model"),
-                           ("response_sha256", "0" * 64), ("identity_state", "PROVIDER_REPORTED_UNPINNED")):
+                           ("response_sha256", "0" * 64), ("identity_state", "PROVIDER_REPORTED_UNPINNED"),
+                           ("identity_state", "LOCAL_MANIFEST_DIGEST_MATCH")):
             status = synthetic_status()
             status["latest_plan"]["model"][key] = value
             with self.assertRaises(public.PublicProjectionError):
