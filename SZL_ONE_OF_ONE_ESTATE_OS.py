@@ -46,7 +46,6 @@ from typing import Any, Iterable
 from estate.provenance_policy import classify_provenance
 from frontier_steward import (
     DEFAULT_MISSION as STEWARD_DEFAULT_MISSION,
-    DEFAULT_MODEL_ID as STEWARD_DEFAULT_MODEL_ID,
     compile_plan as compile_steward_plan,
     model_draft_schema as steward_draft_schema,
     plan_envelope_schema as steward_plan_schema,
@@ -4518,17 +4517,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     steward_plan_parser.add_argument(
         "--provider",
-        choices=("responses", "codex-cli", "deterministic"),
+        choices=("responses", "codex-cli", "ollama-local", "deterministic"),
         default="responses",
         help="Reasoning provider; deterministic is an honest degraded-mode planner",
     )
     steward_plan_parser.add_argument(
         "--model",
-        default=STEWARD_DEFAULT_MODEL_ID,
+        default=None,
         help=(
-            "Accessible model alias (default: gpt-daybreak-blue-latest); "
+            "Accessible model alias (Responses default: gpt-daybreak-blue-latest; "
+            "required for ollama-local); "
             "the mutable alias remains unverified until separately attested"
         ),
+    )
+    steward_plan_parser.add_argument(
+        "--model-digest",
+        help="Required 64-hex local Ollama manifest digest; valid only for ollama-local",
     )
     steward_plan_parser.add_argument("--timeout", type=int, default=300)
     steward_plan_parser.add_argument(
@@ -4791,6 +4795,7 @@ def command_steward_plan(
     model: str | None,
     timeout: int,
     output_path: Path,
+    model_digest: str | None = None,
     allow_local_agent: bool = False,
 ) -> dict[str, Any]:
     output_path = output_path.resolve()
@@ -4808,6 +4813,7 @@ def command_steward_plan(
         context=context,
         provider=provider,
         model_id=model,
+        model_digest=model_digest,
         cwd=ROOT,
         timeout_seconds=timeout,
         allow_local_agent=allow_local_agent,
@@ -5208,6 +5214,7 @@ def main(argv: list[str] | None = None) -> int:
                 mission=mission,
                 provider=args.provider,
                 model=args.model,
+                model_digest=args.model_digest,
                 timeout=args.timeout,
                 output_path=args.output.resolve(),
                 allow_local_agent=args.allow_local_agent,

@@ -8,6 +8,9 @@ secret.  Every draft is compiled and checked again by deterministic code.
 
 This module has no third-party runtime dependency.  Its default Responses API
 adapter sends a bounded data snapshot to a fixed HTTPS endpoint with no tools.
+An opt-in Ollama adapter uses only a fixed loopback endpoint and a locally
+listed model whose manifest digest is supplied by the caller.  That digest is
+runtime-reported identity, not independent weight attestation.
 The optional local agent is development-only: read-only is not read-isolated,
 and no secret-isolation or production claim is made for it.  Model failure is
 recorded without silently changing models or falling back to another provider.
@@ -38,11 +41,16 @@ PLAN_SCHEMA_VERSION = "szl.frontier-steward.plan/v1"
 DRAFT_SCHEMA_VERSION = "szl.frontier-steward.draft/v1"
 STEWARD_VERSION = "0.2.0"
 REQUESTED_MODEL_FAMILY = "Daybreak"
+LOCAL_MODEL_FAMILY = "LOCAL_OPEN_MODEL"
 DEFAULT_MODEL_ID = "gpt-daybreak-blue-latest"
 MAX_AUDIT_AGE_HOURS = 24
 RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses"
+OLLAMA_TAGS_ENDPOINT = "http://127.0.0.1:11434/api/tags"
+OLLAMA_GENERATE_ENDPOINT = "http://127.0.0.1:11434/api/generate"
 MAX_RESPONSE_BYTES = 2_000_000
 MAX_PROMPT_BYTES = 200_000
+MAX_OLLAMA_PROMPT_BYTES = 16_000
+MAX_OLLAMA_TIMEOUT_SECONDS = 120
 DAYBREAK_PROGRAM = "daybreak_blue"
 RELEASE_ORDER = (
     "github:szl-holdings",
@@ -481,12 +489,14 @@ def plan_envelope_schema() -> dict[str, Any]:
             "status": enum("PROPOSED", "BLOCKED", "DENIED"),
             "mission": {"type": "string", "minLength": 1, "maxLength": 12_000},
             "model": closed({
-                "adapter": enum("responses", "codex-cli", "deterministic"),
-                "runtime": enum("NO_TOOLS_RESPONSES", "LOCAL_DEVELOPMENT_AGENT", "NO_MODEL_CALL"),
-                "requested_family": {"type": "string", "const": REQUESTED_MODEL_FAMILY},
+                "adapter": enum("responses", "codex-cli", "ollama-local", "deterministic"),
+                "runtime": enum("NO_TOOLS_RESPONSES", "LOCAL_DEVELOPMENT_AGENT",
+                                "LOCAL_OLLAMA_NO_TOOLS", "NO_MODEL_CALL"),
+                "requested_family": enum(REQUESTED_MODEL_FAMILY, LOCAL_MODEL_FAMILY),
                 "requested_model": nullable_text,
                 "resolved_model": nullable_text,
-                "identity_state": enum("UNAVAILABLE", "PROVIDER_REPORTED_UNPINNED"),
+                "identity_state": enum("UNAVAILABLE", "PROVIDER_REPORTED_UNPINNED",
+                                       "LOCAL_MANIFEST_DIGEST_MATCH"),
                 "run_status": text,
                 "invoked": {"type": "boolean"},
                 "production_allowed": false,
@@ -738,7 +748,8 @@ def _deterministic_draft(mission: str, evidence: dict[str, Any]) -> dict[str, An
     }
 
 
-def _model_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any]) -> str:
+def _model_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any],
+                  requested_family: str = REQUESTED_MODEL_FAMILY) -> str:
     return "\n".join(
         [
             "You are the proposal-only SZL Frontier Steward reasoning plane.",
@@ -753,7 +764,7 @@ def _model_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any
             "Copy this exact evidence_handles list into every proposal. Other references, including 'latest' aliases, are invalid:",
             _canonical_json(_expected_evidence_handles(evidence)),
             "These handles identify the captured audit, its receipt, and its bounded context; they do not prove each proposed claim.",
-            f"Requested reasoning family label: {REQUESTED_MODEL_FAMILY}. Do not claim this identity is verified.",
+            f"Requested reasoning family label: {requested_family}. Do not claim this identity is independently verified.",
             f"Mission: {mission}",
             "Evidence snapshot JSON:",
             _canonical_json(_summarize_context(context)),
@@ -780,12 +791,26 @@ def _responses_transport(request: urllib.request.Request, timeout_seconds: int) 
     return body
 
 
+def _ollama_transport(request: urllib.request.Request, timeout_seconds: int) -> bytes:
+    if request.full_url not in {OLLAMA_TAGS_ENDPOINT, OLLAMA_GENERATE_ENDPOINT}:
+        raise StewardError("Ollama endpoint is not the fixed loopback API")
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    with opener.open(request, timeout=timeout_seconds) as response:
+        if response.geturl() != request.full_url:
+            raise StewardError("Ollama endpoint changed unexpectedly", invoked=True)
+        body = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(body) > MAX_RESPONSE_BYTES:
+        raise StewardError("Ollama payload exceeds the bounded size limit", invoked=True)
+    return body
+
+
 def _model_metadata(provider: str, model_id: str | None) -> dict[str, Any]:
     return {
         "adapter": provider,
         "runtime": {"responses": "NO_TOOLS_RESPONSES", "codex-cli": "LOCAL_DEVELOPMENT_AGENT",
+                    "ollama-local": "LOCAL_OLLAMA_NO_TOOLS",
                     "deterministic": "NO_MODEL_CALL"}[provider],
-        "requested_family": REQUESTED_MODEL_FAMILY,
+        "requested_family": LOCAL_MODEL_FAMILY if provider == "ollama-local" else REQUESTED_MODEL_FAMILY,
         "requested_model": model_id if provider != "deterministic" else None,
         "resolved_model": None,
         "identity_state": "UNAVAILABLE",
@@ -793,6 +818,7 @@ def _model_metadata(provider: str, model_id: str | None) -> dict[str, Any]:
         "invoked": False,
         "production_allowed": False,
         "secret_isolation_state": {"responses": "NO_LOCAL_TOOLS", "codex-cli": "UNVERIFIED",
+                                   "ollama-local": "UNVERIFIED",
                                    "deterministic": "NO_MODEL_CALL"}[provider],
         "prompt_sha256": None, "response_sha256": None,
         "access_program_requested": DAYBREAK_PROGRAM if provider == "responses" else None,
@@ -815,8 +841,9 @@ def _redact_credentials(text: str) -> str:
     )
 
 
-def _redacted_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any]) -> str:
-    prompt = _redact_credentials(_model_prompt(mission, context, evidence))
+def _redacted_prompt(mission: str, context: dict[str, Any], evidence: dict[str, Any],
+                     requested_family: str = REQUESTED_MODEL_FAMILY) -> str:
+    prompt = _redact_credentials(_model_prompt(mission, context, evidence, requested_family))
     if len(prompt.encode("utf-8")) > MAX_PROMPT_BYTES:
         raise StewardError("Planning context exceeds the bounded prompt size limit")
     return prompt
@@ -900,6 +927,98 @@ def _run_responses(
                      "run_status": "FINISHED", "invoked": True,
                      "prompt_sha256": _sha256(prompt), "response_sha256": _sha256(raw),
                      "access_program_observed": DAYBREAK_PROGRAM})
+    return draft, metadata
+
+
+def _run_ollama(
+    mission: str, context: dict[str, Any], evidence: dict[str, Any], *,
+    model_id: str, model_digest: str, timeout_seconds: int,
+    transport: Callable[[urllib.request.Request, int], bytes] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Use one local model only after two matching manifest readbacks."""
+    exchange = transport or _ollama_transport
+    timeout = min(timeout_seconds, MAX_OLLAMA_TIMEOUT_SECONDS)
+    model_ref = f"{model_id}@sha256:{model_digest}"
+
+    def request_json(request: urllib.request.Request, *, invoked: bool) -> tuple[dict[str, Any], bytes]:
+        try:
+            call_timeout = min(timeout, 5) if request.full_url == OLLAMA_TAGS_ENDPOINT else timeout
+            raw = exchange(request, call_timeout)
+        except urllib.error.HTTPError as exc:
+            raise StewardError(f"Ollama request rejected (HTTP {exc.code}); no fallback attempted",
+                               invoked=invoked) from None
+        except StewardError as exc:
+            raise StewardError(str(exc), invoked=invoked or exc.invoked) from None
+        except (OSError, TimeoutError, ValueError, http.client.HTTPException) as exc:
+            raise StewardError(f"Ollama transport failed ({type(exc).__name__}); no fallback attempted",
+                               invoked=invoked) from None
+        if not isinstance(raw, bytes) or len(raw) > MAX_RESPONSE_BYTES:
+            raise StewardError("Ollama returned an invalid or oversized byte payload", invoked=invoked)
+        try:
+            parsed = strict_json_loads(raw)
+        except (ValueError, UnicodeError, RecursionError):
+            raise StewardError("Ollama returned invalid or ambiguous JSON", invoked=invoked) from None
+        if not isinstance(parsed, dict):
+            raise StewardError("Ollama returned a non-object payload", invoked=invoked)
+        return parsed, raw
+
+    def manifest_digest(*, invoked: bool) -> str:
+        request = urllib.request.Request(OLLAMA_TAGS_ENDPOINT, method="GET",
+                                         headers={"Accept": "application/json"})
+        payload, _ = request_json(request, invoked=invoked)
+        models = payload.get("models")
+        if not isinstance(models, list):
+            raise StewardError("Ollama local model listing is unavailable", invoked=invoked)
+        matches = [item for item in models if isinstance(item, dict) and item.get("name") == model_id]
+        if len(matches) != 1:
+            raise StewardError("Ollama model is absent or ambiguously listed locally", invoked=invoked)
+        item = matches[0]
+        digest = item.get("digest")
+        details = item.get("details")
+        if (not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)
+                or type(item.get("size")) is not int or item["size"] <= 0
+                or not isinstance(details, dict) or details.get("format") != "gguf"):
+            raise StewardError("Ollama local GGUF manifest is incomplete", invoked=invoked)
+        return digest
+
+    if manifest_digest(invoked=False) != model_digest:
+        raise StewardError("Ollama local manifest digest differs from the explicit pin")
+    prompt = _redacted_prompt(mission, context, evidence, LOCAL_MODEL_FAMILY)
+    if len(prompt.encode("utf-8")) > MAX_OLLAMA_PROMPT_BYTES:
+        raise StewardError("Ollama planning prompt exceeds the local context limit")
+    body = {
+        "model": model_id,
+        "prompt": prompt,
+        "format": model_draft_schema(),
+        "stream": False,
+        "think": False,
+        "keep_alive": 0,
+        "options": {"num_ctx": 8192, "num_predict": 4096, "temperature": 0, "seed": 0},
+    }
+    request = urllib.request.Request(
+        OLLAMA_GENERATE_ENDPOINT, data=_canonical_json(body).encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+    response, response_bytes = request_json(request, invoked=True)
+    if (response.get("model") != model_id or response.get("done") is not True
+            or response.get("done_reason") not in (None, "stop")
+            or any(field in response for field in ("tool_calls", "tools"))):
+        raise StewardError("Ollama response is incomplete or has unsupported output", invoked=True)
+    output = response.get("response")
+    if not isinstance(output, str) or not output.strip() or len(output.encode("utf-8")) > MAX_RESPONSE_BYTES:
+        raise StewardError("Ollama structured text is empty or oversized", invoked=True)
+    try:
+        draft = strict_json_loads(output)
+    except (ValueError, UnicodeError, RecursionError):
+        raise StewardError("Ollama draft is invalid or ambiguous JSON", invoked=True) from None
+    if manifest_digest(invoked=True) != model_digest:
+        raise StewardError("Ollama local manifest changed during generation", invoked=True)
+    metadata = _model_metadata("ollama-local", model_ref)
+    metadata.update({
+        "resolved_model": model_ref, "identity_state": "LOCAL_MANIFEST_DIGEST_MATCH",
+        "run_status": "FINISHED", "invoked": True,
+        "prompt_sha256": _sha256(prompt), "response_sha256": _sha256(response_bytes),
+    })
     return draft, metadata
 
 
@@ -1168,11 +1287,13 @@ def compile_plan(
     context: dict[str, Any] | None = None,
     provider: str = "responses",
     model_id: str | None = None,
+    model_digest: str | None = None,
     cwd: Path | None = None,
     timeout_seconds: int = 300,
     cli_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     allow_local_agent: bool = False,
     response_transport: Callable[[urllib.request.Request, int], bytes] | None = None,
+    ollama_transport: Callable[[urllib.request.Request, int], bytes] | None = None,
 ) -> dict[str, Any]:
     """Compile one governed, content-addressed proposal plan."""
 
@@ -1187,16 +1308,26 @@ def compile_plan(
     if len(mission) > 12_000:
         raise ValueError("mission exceeds 12,000 characters")
     mission = _redact_credentials(mission)
-    if provider not in {"responses", "codex-cli", "deterministic"}:
+    if provider not in {"responses", "codex-cli", "ollama-local", "deterministic"}:
         raise ValueError(f"unsupported provider: {provider}")
     if type(timeout_seconds) is not int or not 10 <= timeout_seconds <= 1_800:
         raise ValueError("timeout_seconds must be between 10 and 1800")
 
     if type(allow_local_agent) is not bool:
         raise ValueError("allow_local_agent must be boolean")
+    if provider == "ollama-local":
+        if not model_id:
+            raise ValueError("ollama-local requires an explicit model_id")
+        if not isinstance(model_digest, str) or not re.fullmatch(r"[a-f0-9]{64}", model_digest):
+            raise ValueError("ollama-local requires an explicit 64-hex manifest digest")
+    elif model_digest is not None:
+        raise ValueError("model_digest is only valid for ollama-local")
     model_id = model_id or DEFAULT_MODEL_ID
     if not isinstance(model_id, str) or not model_id.strip() or len(model_id) > 500 or re.search(r"[\x00-\x20\x7f]", model_id):
         raise ValueError("model_id must be a bounded identifier")
+    if provider == "ollama-local" and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}", model_id):
+        raise ValueError("ollama-local model_id must be a bounded local tag")
+    model_ref = f"{model_id}@sha256:{model_digest}" if provider == "ollama-local" else model_id
     created_at = _utc_now()
     plan_id = f"steward-plan-{uuid.uuid4().hex[:24]}"
     pre_gate = evaluate_safety(mission)
@@ -1229,7 +1360,7 @@ def compile_plan(
                 "created_at": created_at,
                 "status": "DENIED",
                 "mission": mission,
-                "model": _model_metadata(provider, model_id),
+                "model": _model_metadata(provider, model_ref),
                 "authority": authority,
                 "release_order": list(RELEASE_ORDER),
                 "evidence_snapshot": evidence,
@@ -1249,7 +1380,7 @@ def compile_plan(
                 "created_at": created_at,
                 "status": "BLOCKED",
                 "mission": mission,
-                "model": {**_model_metadata(provider, model_id), "run_status": "NOT_INVOKED_AUDIT_BLOCKED"},
+                "model": {**_model_metadata(provider, model_ref), "run_status": "NOT_INVOKED_AUDIT_BLOCKED"},
                 "authority": authority,
                 "release_order": list(RELEASE_ORDER),
                 "evidence_snapshot": evidence,
@@ -1270,7 +1401,12 @@ def compile_plan(
         model = _model_metadata("deterministic", None)
     else:
         try:
-            if provider == "codex-cli":
+            if provider == "ollama-local":
+                draft, model = _run_ollama(
+                    mission, context, evidence, model_id=model_id, model_digest=model_digest,
+                    timeout_seconds=timeout_seconds, transport=ollama_transport,
+                )
+            elif provider == "codex-cli":
                 if not allow_local_agent:
                     raise StewardError("CLI adapter requires explicit local-development opt-in; production isolation is unverified")
                 draft, model = _run_codex_cli(
@@ -1292,7 +1428,7 @@ def compile_plan(
                     "created_at": created_at,
                     "status": "BLOCKED",
                     "mission": mission,
-                    "model": {**_model_metadata(provider, model_id), "run_status": "FAILED_CLOSED", "invoked": exc.invoked},
+                    "model": {**_model_metadata(provider, model_ref), "run_status": "FAILED_CLOSED", "invoked": exc.invoked},
                     "authority": authority,
                     "release_order": list(RELEASE_ORDER),
                     "evidence_snapshot": evidence,
@@ -1420,12 +1556,27 @@ def validate_plan(plan: Any) -> dict[str, Any]:
     if pre_gate.decision == "DENY" and (status != "DENIED" or plan["model"]["invoked"]):
         errors.append("mission denial is absorbing and forbids model invocation")
     model = plan["model"]
+    expected_family = LOCAL_MODEL_FAMILY if model["adapter"] == "ollama-local" else REQUESTED_MODEL_FAMILY
+    if model["requested_family"] != expected_family:
+        errors.append("model requested_family does not match the selected adapter")
+    if model["adapter"] == "ollama-local":
+        if model["runtime"] != "LOCAL_OLLAMA_NO_TOOLS" or model["secret_isolation_state"] != "UNVERIFIED":
+            errors.append("local adapter runtime and isolation labels are invalid")
+        if status == "PROPOSED" and model["identity_state"] != "LOCAL_MANIFEST_DIGEST_MATCH":
+            errors.append("proposed local plan requires matching manifest readbacks")
     if model["adapter"] == "deterministic" and model["invoked"]:
         errors.append("deterministic provider cannot claim model invocation")
     if model["adapter"] == "codex-cli" and model["invoked"] and not plan["authority"]["local_agent_development_opt_in"]:
         errors.append("CLI model invocation requires explicit development opt-in")
     if model["identity_state"] == "PROVIDER_REPORTED_UNPINNED" and (not model["invoked"] or not model["resolved_model"]):
         errors.append("provider identity requires a completed model readback")
+    if model["identity_state"] == "LOCAL_MANIFEST_DIGEST_MATCH":
+        if (model["adapter"] != "ollama-local" or not model["invoked"]
+                or model["requested_model"] != model["resolved_model"]
+                or not isinstance(model["resolved_model"], str)
+                or not re.fullmatch(r"[^@\s]+@sha256:[a-f0-9]{64}", model["resolved_model"])
+                or not model["prompt_sha256"] or not model["response_sha256"]):
+            errors.append("local model identity requires matching manifest and invocation digests")
     return {
         "schema_version": "szl.frontier-steward.validation/v1",
         "status": "PASS" if not errors else "FAIL",
