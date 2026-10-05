@@ -1,9 +1,9 @@
 {
   "files": {
     ".gitattributes": "0dacf9b940271a5a4433fc33092e8fa671f2611a909c18236a83d41424ff8c8a",
-    "pyproject.toml": "de4a10bc37498452691d72f0869f303aae617f68452da2f4780bced1386bc254",
+    "pyproject.toml": "87d191addac5857da2e3ae88cee9da69ebfa96400b22bbc94361b63e57d0ebe1",
     "requirements-dev.txt": "4862e36136a14767370afef1a8c45be90ca03b0f57ee1d2ed0fef4f1ee143132",
-    "requirements.txt": "96e078c0aaf1268e6654f09d9e4a1db387a22f02deeb4c34a970fc395f2ca687",
+    "requirements.txt": "ed106730599f0303ee7a1791219ecdc30587a17b9730a5702f60e886f78effa1",
     "src/szl_estate/__init__.py": "026ed4d5f3000f6a9c797e910205e6074c6d26310f37ae1a9e0e9e5014c3754c",
     "src/szl_estate/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
     "src/szl_estate/access.py": "e03ea77c94cb4b89d3094cfb7e92617f088a01b59a1cbd7e5fcb21631d46f974",
