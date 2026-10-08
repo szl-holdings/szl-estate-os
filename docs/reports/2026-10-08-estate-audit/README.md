@@ -2,9 +2,11 @@
 
 **Internal review packet, prepared 2026-10-08.** This records dated observations and pinned source findings. It is a proposal for review, not a release approval or a claim that the ecosystem is fully wired. No repository source, tests, model, training job, or live service was executed for this packet.
 
+**October 8 update:** A later authenticated census found **141 visible repositories** (128 public, 13 private, 29 archived). See the [dated census and current-head wiring addendum](october-8-refresh.md), [complete inventory](repository-census-2026-10-08.csv), and [head delta](head-delta-2026-10-08.csv). The October 3 inventory and October 7 path ledger below remain historical snapshots.
+
 ## Inventory and exact coverage boundary
 
-The last complete authorized organization census was **2026-10-03 15:06 UTC**: **139 repositories** (127 public, 12 private, 29 archived). Authenticated GraphQL pagination reached its terminal page and an independent REST name listing agreed. [Repository pins](repository-pins-2026-10-03.csv) provide every name, GitHub ID, visibility, archive state, and then-default-head commit. This is a historical inventory, not a fresh October 8 count.
+The earlier complete authorized organization census was **2026-10-03 15:06 UTC**: **139 repositories** (127 public, 12 private, 29 archived). Authenticated GraphQL pagination reached its terminal page and an independent REST name listing agreed. [Repository pins](repository-pins-2026-10-03.csv) provide every name, GitHub ID, visibility, archive state, and then-default-head commit. This is a historical inventory, not a fresh October 8 count.
 
 A frozen consolidation of the ten original per-file ledgers at about **2026-10-07 20:03 UTC** matched all 139 assigned repositories and 35,095 saved tree paths to pinned commits. Every saved recursive tree was untruncated. No repository ledger, path key, or assigned commit pin was missing or duplicated. One A11oy gitlink pointer lacked its target OID in the ledger; the saved tree had it. [Bucket coverage](bucket-coverage-2026-10-07.csv) records the frozen states:
 
