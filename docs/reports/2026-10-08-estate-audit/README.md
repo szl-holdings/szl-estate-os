@@ -4,6 +4,8 @@
 
 **October 8 update:** A later authenticated census found **141 visible repositories** (128 public, 13 private, 29 archived). See the [dated census and current-head wiring addendum](october-8-refresh.md), [complete inventory](repository-census-2026-10-08.csv), and [head delta](head-delta-2026-10-08.csv). The October 3 inventory and October 7 path ledger below remain historical snapshots.
 
+Further review: [source coverage for the two added repositories](new-repositories-source-coverage.md), the [dated open-PR census and sequential queue](open-pr-census.md), and postmerge effect reports for [Forge #582](forge-582-postmerge-effects.md) and [Command Lab #56](command-lab-56-postmerge-effects.md). The PR census records changing states; it clears no merge.
+
 ## Inventory and exact coverage boundary
 
 The earlier complete authorized organization census was **2026-10-03 15:06 UTC**: **139 repositories** (127 public, 12 private, 29 archived). Authenticated GraphQL pagination reached its terminal page and an independent REST name listing agreed. [Repository pins](repository-pins-2026-10-03.csv) provide every name, GitHub ID, visibility, archive state, and then-default-head commit. This is a historical inventory, not a fresh October 8 count.
