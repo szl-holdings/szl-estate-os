@@ -568,6 +568,34 @@ def check(report: dict[str, object], check_id: str) -> dict[str, str]:
 
 
 class ReadinessTests(unittest.TestCase):
+    def test_header_finding_distinguishes_absent_from_present_invalid(self) -> None:
+        value = audit()
+        add_audited_deployment(value)
+        assets = value["assets"]
+        assert isinstance(assets, list)
+        domain = next(
+            asset for asset in assets
+            if isinstance(asset, dict) and asset.get("asset_id") == PRIMARY_DEPLOYMENT_ASSET_ID
+        )
+        metadata = domain["metadata"]
+        assert isinstance(metadata, dict)
+        metadata["security_headers"] = {
+            "content-security-policy": False,
+            "referrer-policy": False,
+            "strict-transport-security": True,
+            "x-content-type-options": True,
+        }
+        metadata["security_header_values"] = {
+            "content-security-policy": "frame-ancestors 'self'",
+        }
+        report = verify(value, manifest(), "baseline")
+        finding = check(report, f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}")
+        self.assertEqual(finding["state"], "FAIL")
+        self.assertEqual(
+            finding["detail"],
+            "missing=referrer-policy; invalid=content-security-policy",
+        )
+
     def test_baseline_accepts_only_known_local_evidence(self) -> None:
         self.assertEqual(signature_state("HMAC_SHA256", "baseline"), "PASS")
         self.assertEqual(signature_state("UNSIGNED", "baseline"), "WARN")

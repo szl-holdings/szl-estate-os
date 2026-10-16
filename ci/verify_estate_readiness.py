@@ -2008,18 +2008,42 @@ def verify(
                 metadata.get("security_headers") if isinstance(metadata, dict) else None
             )
             headers = configured_headers if isinstance(configured_headers, dict) else {}
+            configured_values = (
+                metadata.get("security_header_values") if isinstance(metadata, dict) else None
+            )
+            header_values = (
+                configured_values if isinstance(configured_values, dict) else {}
+            )
             missing = [
                 header
                 for header in required_security_headers
                 if not headers.get(header)
+                and not (
+                    isinstance(header_values.get(header), str)
+                    and header_values[header].strip()
+                )
+            ]
+            invalid = [
+                header
+                for header in required_security_headers
+                if not headers.get(header)
+                and isinstance(header_values.get(header), str)
+                and header_values[header].strip()
             ]
             checks.append(
                 result(
                     f"headers.{asset_id}",
-                    "PASS" if not missing else "FAIL",
-                    "all required headers observed"
-                    if not missing
-                    else f"missing={','.join(missing)}",
+                    "PASS" if not missing and not invalid else "FAIL",
+                    "all required header checks passed"
+                    if not missing and not invalid
+                    else "; ".join(
+                        part
+                        for part in (
+                            f"missing={','.join(missing)}" if missing else "",
+                            f"invalid={','.join(invalid)}" if invalid else "",
+                        )
+                        if part
+                    ),
                 )
             )
 

@@ -74,6 +74,26 @@ class RemediationQueueTests(unittest.TestCase):
             ["content-security-policy", "referrer-policy"],
         )
 
+    def test_present_invalid_header_still_requires_provider_repair(self) -> None:
+        cases = (
+            ("invalid=content-security-policy", ["content-security-policy"]),
+            (
+                "missing=referrer-policy; invalid=content-security-policy",
+                ["content-security-policy", "referrer-policy"],
+            ),
+        )
+        for detail, required_headers in cases:
+            with self.subTest(detail=detail):
+                queue = build_queue(
+                    readiness(("headers.domain:route:a11oy.net/", "FAIL", detail)),
+                    manifest(),
+                    readiness_sha256=DIGEST,
+                    manifest_sha256=MANIFEST_DIGEST,
+                )
+                action = queue["actions"][0]
+                self.assertEqual(action["action"], "APPLY_EDGE_RESPONSE_HEADERS")
+                self.assertEqual(action["required_headers"], required_headers)
+
     def test_inventory_and_evidence_findings_remain_distinct(self) -> None:
         queue = build_queue(
             readiness(
@@ -305,6 +325,20 @@ class RemediationQueueTests(unittest.TestCase):
                         "headers.domain:route:a11oy.net/",
                         "FAIL",
                         "missing=content-security-policy,hf_abcdefghijklmnopqrstuvwxyz",
+                    )
+                ),
+                manifest(),
+                readiness_sha256=DIGEST,
+                manifest_sha256=MANIFEST_DIGEST,
+            )
+
+        with self.assertRaisesRegex(ContractError, "non-allowlisted"):
+            build_queue(
+                readiness(
+                    (
+                        "headers.domain:route:a11oy.net/",
+                        "FAIL",
+                        "invalid=content-security-policy,hf_abcdefghijklmnopqrstuvwxyz",
                     )
                 ),
                 manifest(),
