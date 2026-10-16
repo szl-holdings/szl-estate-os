@@ -253,22 +253,20 @@ def prohibited_status_targets(detail: str) -> list[str]:
     return targets
 
 
-def missing_headers(detail: str, *, allowed: frozenset[str]) -> list[str]:
-    match = re.search(r"(?:^|\s)missing=([^;\s]+)", detail)
-    if match is None:
-        return []
+def required_header_repairs(detail: str, *, allowed: frozenset[str]) -> list[str]:
     headers: set[str] = set()
-    for item in match.group(1).split(","):
-        header = item.strip().lower()
-        if not header:
-            continue
-        if (
-            not HTTP_HEADER_NAME.fullmatch(header)
-            or header not in allowed
-            or sanitize_detail(header) != header
-        ):
-            raise ContractError("readiness missing-header detail contains a non-allowlisted value")
-        headers.add(header)
+    for group in re.findall(r"(?:^|[;\s])(?:missing|invalid)=([^;\s]+)", detail):
+        for item in group.split(","):
+            header = item.strip().lower()
+            if not header:
+                continue
+            if (
+                not HTTP_HEADER_NAME.fullmatch(header)
+                or header not in allowed
+                or sanitize_detail(header) != header
+            ):
+                raise ContractError("readiness header detail contains a non-allowlisted value")
+            headers.add(header)
     return sorted(headers)
 
 
@@ -445,7 +443,7 @@ def build_queue(
                     f"passes. Original finding: {sanitized_detail}"
                 )
             headers = (
-                missing_headers(sanitized_detail, allowed=allowed_headers)
+                required_header_repairs(sanitized_detail, allowed=allowed_headers)
                 if action == "APPLY_EDGE_RESPONSE_HEADERS"
                 else []
             )
