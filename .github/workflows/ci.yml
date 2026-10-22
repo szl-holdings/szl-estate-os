@@ -63,3 +63,5 @@ jobs:
         run: python ci/test_estate_inventory.py -v
       - name: Test Steward no-tool provider, absorbing policy, and recorded artifact contracts
         run: python -m unittest discover -s ci -p 'test*steward*.py' -v
+      - name: Test read-only coordinator receipt chain and signing contracts
+        run: python -I -B tools/coordinator/test_szl_coordinator.py -v
