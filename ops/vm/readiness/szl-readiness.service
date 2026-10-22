@@ -1,0 +1,24 @@
+[Unit]
+Description=SZL readiness check (fail-closed, read-only; never trains, signs, uploads or kills)
+ConditionPathExists=!/var/lib/szl-readiness/STOP
+
+[Service]
+Type=oneshot
+# User name REPORTED from the Massed Compute portal as 'Ubuntu'; confirm with `id` on the VM before install.
+User=Ubuntu
+EnvironmentFile=/etc/szl/readiness.env
+StateDirectory=szl-readiness
+ExecStart=/usr/bin/python3 -I -B /opt/szl/readiness/szl_readiness_runner.py \
+  --bundle /opt/szl/readiness --root ${SZL_ROOT} --manifest ${SZL_MANIFEST} --data-pins ${SZL_DATA_PINS} \
+  --evidence-base /var/lib/szl-readiness --min-disk-gb 20 --min-ram-gib 4 --timeout 10800
+# exit 1/2/3 are verdicts, not crashes: record them, do not restart
+SuccessExitStatus=1 2 3
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/szl-readiness
+IPAddressDeny=any
+TimeoutStartSec=4h

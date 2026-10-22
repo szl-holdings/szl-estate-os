@@ -1,0 +1,35 @@
+{
+ "runner": "szl-readiness-runner/0.1.0",
+ "host": "Windows laptop (not the VM)",
+ "tests": "20/20 OK, 3 repeats + 2 repeats after final edit",
+ "mutants": {
+  "no_pin_check": "KILLED",
+  "no_input_check": "KILLED",
+  "unknown_disk_ok": "KILLED",
+  "unknown_ram_ok": "KILLED",
+  "no_stop_latch": "KILLED",
+  "steal_lock": "KILLED",
+  "timeout_ok": "KILLED",
+  "trust_exit": "KILLED",
+  "trust_verdict": "KILLED",
+  "trust_printed_sha": "KILLED",
+  "skip_chain": "KILLED",
+  "no_history_chain": "KILLED"
+ },
+ "mutants_killed": "12/12",
+ "control_copy": "passes 20/20",
+ "bug_found_and_fixed": "same-second run_dir collision raised uncaught FileExistsError; now random suffix + BLOCKED on collision; regression test test_fresh_run_dirs_same_second",
+ "real_payload_executed": false,
+ "vm_executed": false,
+ "files_sha256": {
+  "INSTALL_VM.md": "1c51215f7fd70971635d3d56dcf466f14fd4a1ca276fbf9c33470ce6f471e5fb",
+  "readiness.env.example": "ec14a3a7007f0026aeb824b5a38babfacdfe2af7c89735dffd6026d09aa92465",
+  "szl-readiness.service": "6129027dd13e668cbae1ae3f8dfffac258cab4e4f656c51ae5bf2c3303cfc614",
+  "szl-readiness.timer": "71e65dafdc569d9c12a934596050772038f0f9a45366be1a5e9d82447229cb18",
+  "szl_readiness_runner.py": "d2d17feb86aa905c01c80c027709a55c71b3860a3173d5b4d78cfe41c600e769",
+  "szl_vm_master_payload.py": "ef05883d3cd8011057d525183ac702407e0ef7c9c4979e60b935199c32172f37",
+  "szl_vm_readiness.py": "b23ea34179f059029e7d97df4f7833e3d243141e84270b61ca59e983e1ca4f96",
+  "test_szl_readiness_runner.py": "ec0727fa5be5fafb32ee5ce7e113f36b82903e36589e4e67fd5270ef142beff5"
+ },
+ "zip_sha256": "52e82d79286e58d86aa67168ead709eea41427e76bd04917a439595f2a4d81ec"
+}
