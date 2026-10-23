@@ -1,0 +1,52 @@
+{
+  "utc": "2026-10-21T16:45:39.017933+00:00",
+  "session": "f300d563",
+  "scope": "static re-verification of readiness_reconciliation_2026-10-21.md (e9f69f67) from session f0dc2fc7; nothing executed on VM or locally",
+  "access": {
+    "list_compute": [],
+    "tcp_64.247.206.118:22": "PermissionError WinError 10013",
+    "ssh.exe_BatchMode_StrictHostKeyChecking=yes": "exit 255: connect to host 64.247.206.118 port 22: Permission denied",
+    "label": "MEASURED"
+  },
+  "laptop": {
+    "C_free_GB": [
+      5.81,
+      5.82,
+      5.82
+    ],
+    "window_utc": "16:44:31-16:44:41",
+    "hard_stop_GB": 15,
+    "RAM_avail_GiB": 5.42,
+    "RAM_total_GiB": 31.59,
+    "processes": "UNKNOWN (Get-CimInstance denied; Get-Process sees 6 sandbox processes only)",
+    "label": "MEASURED"
+  },
+  "hashes": {
+    "1.1.0": "2672faaefd7adfe527d31f5fe0e3b8b7ed9418d7e3e0e0a6d7f128b7c9f0786d",
+    "1.1.1": "9efb802b7c37d0abb89d8e671179dec4f8896cad13bdff49fea15f8f19d102db",
+    "1.1.2": "ef05883d3cd8011057d525183ac702407e0ef7c9c4979e60b935199c32172f37",
+    "1.2.0": "73d7fa28eadc90b7105085b23ffb791478b55d5116ce2c629f0deb68177a5c47",
+    "ready": "b23ea34179f059029e7d97df4f7833e3d243141e84270b61ca59e983e1ca4f96"
+  },
+  "artifact_versions": {
+    "1.1.0": "f8092a05-d62c-42b2-b4ff-c8696c88caf8",
+    "1.1.1": "cb31f12b-03a7-4c3b-a352-3ef65f650b10",
+    "1.1.2": "531d4d72-cc4c-421c-9caf-4d0be4be9804",
+    "1.2.0": "5471ab0e-94df-4227-897a-126112480e52",
+    "ready": "2d098088-7ae9-43eb-962b-fc22f31ffa0a"
+  },
+  "agree_with_f0dc2fc7": [
+    "all 5 sha256 values",
+    "VERSION strings 1.1.1/1.1.2/1.2.0",
+    "1.2.0 lacks cmd_brief, leakage_verdict; adds cmd_verify, cmd_e2e, verify_chain",
+    "1.2.0 drops cli_guards_ok, has verify_ok",
+    "nothing defined in 1.1.1 is missing from 1.2.0 (sibling of 1.1.2, both from 1.1.1)",
+    "checker pins only ef05883d (1.1.2)",
+    "checker calls selftest, preflight, inventory, training, failures, resume-gate"
+  ],
+  "minor_difference": "line similarity 1.1.0->1.2.0 = 0.883 here vs 0.884 reported (rounding); 1.1.1 0.892 and 1.1.2 0.856 match",
+  "not_reverified": [
+    "checker side-effect defects in its section 3 (re-run receipt_chain failure, uncaught TimeoutExpired, verdict omits command/env/logs)",
+    "M and P are UNKNOWN: no verified artifact names them"
+  ]
+}

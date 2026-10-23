@@ -1,0 +1,688 @@
+{
+ "label": "EMULATOR (fakesnow 0.11.22) - NOT Snowflake results",
+ "versions": {
+  "fakesnow": "0.11.22",
+  "snowflake-connector-python": "3.12.4",
+  "duckdb": "1.5.6",
+  "sqlglot": "30.22.0"
+ },
+ "summary": {
+  "PASS": 40,
+  "FAIL": 0,
+  "UNSUPPORTED_BY_EMULATOR": 44
+ },
+ "results": [
+  {
+   "id": "DDL00",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "accepted by fakesnow as a no-op; access control not emulated",
+   "statement_sha256": "d8dd6b290915785e6b0e5a3eafb97222a728914af803a1f33c4be2f3927e1d30",
+   "statement_head": "USE ROLE USERADMIN"
+  },
+  {
+   "id": "DDL01",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "55c29b56c83ceb025462ea040dd9726a7a7f566dee174cef4351d851bc115d40",
+   "statement_head": "CREATE ROLE SZL_EE_OWNER COMMENT = 'Owns EE schemas and tables. Not used by the app or loa"
+  },
+  {
+   "id": "DDL02",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "6a1c75c21c953020b106f5ae963f31d3a3c1407eedf43a43fde11b50cce3e9f3",
+   "statement_head": "CREATE ROLE SZL_EE_INGEST COMMENT = 'Loader: SELECT and INSERT only on EE_DATA tables.'"
+  },
+  {
+   "id": "DDL03",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "64ccc11359ab6625cb51e464c211b59498d0dad5a21a95febc18e40a5119a946",
+   "statement_head": "CREATE ROLE SZL_EE_APP COMMENT = 'Owns the Streamlit object; owner-rights queries are SELE"
+  },
+  {
+   "id": "DDL04",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "0fc892827ffd0db2070fb02d0c212eac515d2b7f4ccc5bf63c572b64da8c97b5",
+   "statement_head": "CREATE ROLE SZL_EE_VIEWER COMMENT = 'View-only audience: USAGE on db, app schema and app o"
+  },
+  {
+   "id": "DDL05",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "7c2f1b9906bb45aa4386587012ff73a96066e4a0fc3071881c1cbde713116bfb",
+   "statement_head": "GRANT ROLE SZL_EE_OWNER TO ROLE SYSADMIN"
+  },
+  {
+   "id": "DDL06",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "accepted by fakesnow as a no-op; access control not emulated",
+   "statement_sha256": "671e451fd985214e9932c66a91406f469769d55d4bd569dd9c9d5d8bb259ce2e",
+   "statement_head": "USE ROLE SYSADMIN"
+  },
+  {
+   "id": "DDL07",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "d52a2a1955426d0fb83723b5e516d0da7e1dc6d58926ef5db1af9d3d1de0375c",
+   "statement_head": "CREATE DATABASE SZL_EE_DB DATA_RETENTION_TIME_IN_DAYS = 1\n  COMMENT = 'SZL Evidence Explor"
+  },
+  {
+   "id": "DDL07b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "d52a2a1955426d0fb83723b5e516d0da7e1dc6d58926ef5db1af9d3d1de0375c",
+   "statement_head": "CREATE DATABASE SZL_EE_DB DATA_RETENTION_TIME_IN_DAYS = 1\n  COMMENT = 'SZL Evidence Explor"
+  },
+  {
+   "id": "DDL08",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "046f21fe4adaedcd35caf4aeeeb3d623c522b616f64c0ac4dee1d62c82ce7c96",
+   "statement_head": "GRANT OWNERSHIP ON DATABASE SZL_EE_DB TO ROLE SZL_EE_OWNER REVOKE CURRENT GRANTS"
+  },
+  {
+   "id": "DDL09",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "accepted by fakesnow as a no-op; access control not emulated",
+   "statement_sha256": "dc4b8aebc7946b621a3d74455f398f25a507fa0168fc5fda53510004862efe4a",
+   "statement_head": "USE ROLE SZL_EE_OWNER"
+  },
+  {
+   "id": "DDL10",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "original rejected (ProgrammingError: 001003 (42000): Parser Error: syntax error at or near \"WITH\"); emulator substitute without object properties (MANAGED ACCESS / retention / comment) executed",
+   "statement_sha256": "8485cd9445f07aba439b60882ea0eb26ec7f01673e1bf8a626abad58207b87a8",
+   "statement_head": "CREATE SCHEMA SZL_EE_DB.EE_DATA WITH MANAGED ACCESS DATA_RETENTION_TIME_IN_DAYS = 1"
+  },
+  {
+   "id": "DDL11",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "original rejected (ProgrammingError: 001003 (42000): Parser Error: syntax error at or near \"WITH\"); emulator substitute without object properties (MANAGED ACCESS / retention / comment) executed",
+   "statement_sha256": "bdc72ed4065d340f4198c8d5619405c5a1538c196b28ce3107c19f0cf74f788f",
+   "statement_head": "CREATE SCHEMA SZL_EE_DB.EE_APP WITH MANAGED ACCESS DATA_RETENTION_TIME_IN_DAYS = 1"
+  },
+  {
+   "id": "DDL12",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "80917270a98c2ef90f99f000b26e7990fb2dae95210f188b2226f45f71767cd7",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.ASSETS (\n  ASSET_ID VARCHAR(64) NOT NULL,\n  PROVIDER VARCHA"
+  },
+  {
+   "id": "DDL12b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "80917270a98c2ef90f99f000b26e7990fb2dae95210f188b2226f45f71767cd7",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.ASSETS (\n  ASSET_ID VARCHAR(64) NOT NULL,\n  PROVIDER VARCHA"
+  },
+  {
+   "id": "DDL13",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "3b299e327da8a9200d28d98c0010c3e55dff41d73a011a22085536a3107151f2",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.REVISIONS (\n  REVISION_ID VARCHAR(64) NOT NULL,\n  ASSET_ID "
+  },
+  {
+   "id": "DDL13b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "3b299e327da8a9200d28d98c0010c3e55dff41d73a011a22085536a3107151f2",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.REVISIONS (\n  REVISION_ID VARCHAR(64) NOT NULL,\n  ASSET_ID "
+  },
+  {
+   "id": "DDL14",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "7bf06d776620b802f4bea8a41c5ef7e8f95405de6a581b07dd5524630db270a3",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.OBSERVATIONS (\n  OBSERVATION_ID VARCHAR(64) NOT NULL,\n  REV"
+  },
+  {
+   "id": "DDL14b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "7bf06d776620b802f4bea8a41c5ef7e8f95405de6a581b07dd5524630db270a3",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.OBSERVATIONS (\n  OBSERVATION_ID VARCHAR(64) NOT NULL,\n  REV"
+  },
+  {
+   "id": "DDL15",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "f5e7e3de7fa572260d39b5994f83369a9a7102e2bf46e2187b26968dab2959a9",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.RIGHTS_RECORDS (\n  RIGHTS_RECORD_ID VARCHAR(64) NOT NULL,\n "
+  },
+  {
+   "id": "DDL15b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "f5e7e3de7fa572260d39b5994f83369a9a7102e2bf46e2187b26968dab2959a9",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.RIGHTS_RECORDS (\n  RIGHTS_RECORD_ID VARCHAR(64) NOT NULL,\n "
+  },
+  {
+   "id": "DDL16",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "52549487a759ca56561d436efc47be5066e25b8fc9fff49d780c0679e5a5dd81",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.INGESTION_BATCHES (\n  BATCH_ID VARCHAR(64) NOT NULL,\n  INPU"
+  },
+  {
+   "id": "DDL16b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "52549487a759ca56561d436efc47be5066e25b8fc9fff49d780c0679e5a5dd81",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.INGESTION_BATCHES (\n  BATCH_ID VARCHAR(64) NOT NULL,\n  INPU"
+  },
+  {
+   "id": "DDL17",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "d0ee1f0e8861cd372a8d6fb24ed2a8e3ffd1649adb0e992a2b5f6b5e2d3a767b",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.EXCLUSIONS (\n  SOURCE_IDENTIFIER VARCHAR(200) NOT NULL,\n  E"
+  },
+  {
+   "id": "DDL17b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "d0ee1f0e8861cd372a8d6fb24ed2a8e3ffd1649adb0e992a2b5f6b5e2d3a767b",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.EXCLUSIONS (\n  SOURCE_IDENTIFIER VARCHAR(200) NOT NULL,\n  E"
+  },
+  {
+   "id": "DDL18",
+   "category": "DDL",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT are not emulated",
+   "statement_sha256": "2934366ec2fe472e0ce5f279f8a0783c1a8414f3f1a395fdb538cc91bc0402c9",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.REJECTED_ROWS (\n  REJECTED_ROW_ID VARCHAR(64) NOT NULL,\n  B"
+  },
+  {
+   "id": "DDL18b",
+   "category": "DDL_CORE",
+   "status": "PASS",
+   "detail": "statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)",
+   "statement_sha256": "2934366ec2fe472e0ce5f279f8a0783c1a8414f3f1a395fdb538cc91bc0402c9",
+   "statement_head": "CREATE TABLE SZL_EE_DB.EE_DATA.REJECTED_ROWS (\n  REJECTED_ROW_ID VARCHAR(64) NOT NULL,\n  B"
+  },
+  {
+   "id": "DDL19",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "5797d352d08e38e9e988fed312d4bfcf940a612d4f9866fe210e45a3b03f777a",
+   "statement_head": "GRANT USAGE ON DATABASE SZL_EE_DB TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL20",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "3dfa505da681243665f56146dcc368e494745d7a903a41790c36548ce1983f4f",
+   "statement_head": "GRANT USAGE ON SCHEMA SZL_EE_DB.EE_DATA TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL21",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "032e094591fe73c6a62f7a8ee54e21e036260494bf87cc7327e3d77bb2d3560b",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.ASSETS TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL22",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "ba29b7ff68c3ae86acd3fcbfc9a6a5825bfe54cccbc0429457e22ee7c5720ca9",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.REVISIONS TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL23",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "278313caba1d20fb9b8b9039025bc8343bce847b9ddfa1c0a4e6ed79d6977333",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.OBSERVATIONS TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL24",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "6f5c2e057ca74f6aa46325d91d0fc57ce52e787b4d0d5d7566027543c37bddf6",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.RIGHTS_RECORDS TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL25",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "e24cb9aadd39c646ad65d09a54d197454b714eaef37985c58f460228477381fb",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.INGESTION_BATCHES TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL26",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "1f62cfe4aab6b1a96619501def8c96d73d06a7dd0d38d04adf975dfa69df831e",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.EXCLUSIONS TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL27",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "65df8cc04a60b228099f1e3b91986eab18d841a270fec46a8cfe049b1f6da9fd",
+   "statement_head": "GRANT SELECT, INSERT ON TABLE SZL_EE_DB.EE_DATA.REJECTED_ROWS TO ROLE SZL_EE_INGEST"
+  },
+  {
+   "id": "DDL28",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "c1ff2ae9fdc2690f545e59a3a1aaadd83e5eea0d67418597708fcf50c91554d9",
+   "statement_head": "GRANT USAGE ON DATABASE SZL_EE_DB TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL29",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "d182c8ca06d38a13daf698bfb21f8a6f500aea6028a3ce5418279f0ba220dde7",
+   "statement_head": "GRANT USAGE ON SCHEMA SZL_EE_DB.EE_DATA TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL30",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "a12ceaba3651e235a22ba0f2395384e76134076c7ee0e6a1866dfe78721102bc",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.ASSETS TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL31",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "ab7c8ada14cfa227d7f61771a0c48cca9e19c4ff35a0834e826cde74e845fe86",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.REVISIONS TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL32",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "6036c19c1ceecb0f5f37ec88b78001934565f3dc54d52daa94e83cf07169e3bf",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.OBSERVATIONS TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL33",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "f0c7260f58f96b8fc5bb310f6a50cb83a22e990ca3e35739f03fa147a3438e33",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.RIGHTS_RECORDS TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL34",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "d93f39feacafd489aad7afd94227b07afab9ca6f51152b5727601074a0954b55",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.INGESTION_BATCHES TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL35",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "1d667fad30d8927853a462dc1df8710f76ff54f711cd6ab69029acadfb070e02",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.EXCLUSIONS TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL36",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "c0c229c1286d12bfc7c51e9dd06b3caa7a696c609dd02d2a380da15b9c2b3af3",
+   "statement_head": "GRANT SELECT ON TABLE SZL_EE_DB.EE_DATA.REJECTED_ROWS TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL37",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "5d3d647485537b4f52981e22cebf33ff9783b69d9f55fd33daf9c0888b039f06",
+   "statement_head": "GRANT USAGE ON SCHEMA SZL_EE_DB.EE_APP TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "DDL38",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "rejected by fakesnow parser (ProgrammingError); access control not emulated",
+   "statement_sha256": "0f254bd40fbe3f40b9021f50037978833eb59d30c2f45f64c8e653ac747209f9",
+   "statement_head": "GRANT CREATE STREAMLIT ON SCHEMA SZL_EE_DB.EE_APP TO ROLE SZL_EE_APP"
+  },
+  {
+   "id": "RG00",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "not executed meaningfully: access control not emulated",
+   "statement_sha256": "dc4b8aebc7946b621a3d74455f398f25a507fa0168fc5fda53510004862efe4a",
+   "statement_head": "USE ROLE SZL_EE_OWNER"
+  },
+  {
+   "id": "RG01",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "not executed meaningfully: access control not emulated",
+   "statement_sha256": "2bd70e74d8d0aa9aea47766c23ac4b455360bcdd01be1e627207ba64be482cc3",
+   "statement_head": "GRANT USAGE ON DATABASE SZL_EE_DB TO ROLE SZL_EE_VIEWER"
+  },
+  {
+   "id": "RG02",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "not executed meaningfully: access control not emulated",
+   "statement_sha256": "d65555f0ce64bf19bde97a8589e5a6c2e0d6d80667ec23783df5a5f87578e050",
+   "statement_head": "GRANT USAGE ON SCHEMA SZL_EE_DB.EE_APP TO ROLE SZL_EE_VIEWER"
+  },
+  {
+   "id": "RG03",
+   "category": "ROLE_OR_PRIVILEGE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "not executed meaningfully: access control not emulated",
+   "statement_sha256": "e922f5a2a0073ac366dd9a515bb47eacec654ba1ca97f0386f7186ab48cb82e3",
+   "statement_head": "GRANT USAGE ON STREAMLIT SZL_EE_DB.EE_APP.SZL_EVIDENCE_EXPLORER TO ROLE SZL_EE_VIEWER"
+  },
+  {
+   "id": "ING_EXCLUSIONS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 3 of 3 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_RIGHTS_RECORDS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 5 of 5 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_ASSETS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 7 of 7 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_REVISIONS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 7 of 7 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_OBSERVATIONS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 21 of 21 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_INGESTION_BATCHES",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 3 of 3 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_REJECTED_ROWS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "inserted 21 of 21 rows",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "ING_COUNTS",
+   "category": "INGEST_MERGE",
+   "status": "PASS",
+   "detail": "emulator counts {'EXCLUSIONS': 3, 'RIGHTS_RECORDS': 5, 'ASSETS': 7, 'REVISIONS': 7, 'OBSERVATIONS': 21, 'INGESTION_BATCHES': 3, 'REJECTED_ROWS': 21} vs LocalStore {'ASSETS': 7, 'REVISIONS': 7, 'OBSERVATIONS': 21, 'RIGHTS_RECORDS': 5, 'EXCLUSIONS': 3, 'INGESTION_BATCHES': 3, 'REJECTED_ROWS': 21}",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "RERUN",
+   "category": "IDEMPOTENT_RERUN",
+   "status": "PASS",
+   "detail": "rerun inserted 0 rows; counts unchanged=True",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "Q_asset_inventory()[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=7 ref=7 same_rows=True same_order=True",
+   "statement_sha256": "f1761e26acbf70d7d4f05bfb5526725a5d48b6be3b4e20e54065ba9c323779d9",
+   "statement_head": "/* q:asset_inventory */ SELECT a.ASSET_ID, a.PROVIDER, a.CANONICAL_LOCATOR, a.DISPOSITION,"
+  },
+  {
+   "id": "Q_asset_inventory(GITHUB)[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=3 ref=3 same_rows=True same_order=True",
+   "statement_sha256": "2ff1527da075cb5b7d3796f5cdb405a405bbe392b99d6ba86ed774666ff620f4",
+   "statement_head": "/* q:asset_inventory */ SELECT a.ASSET_ID, a.PROVIDER, a.CANONICAL_LOCATOR, a.DISPOSITION,"
+  },
+  {
+   "id": "Q_asset_inventory(RUNTIME)[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=1 ref=1 same_rows=True same_order=True",
+   "statement_sha256": "2ff1527da075cb5b7d3796f5cdb405a405bbe392b99d6ba86ed774666ff620f4",
+   "statement_head": "/* q:asset_inventory */ SELECT a.ASSET_ID, a.PROVIDER, a.CANONICAL_LOCATOR, a.DISPOSITION,"
+  },
+  {
+   "id": "Q_asset_revisions(demo-gh-evidence-kit)[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=2 ref=2 same_rows=True same_order=True",
+   "statement_sha256": "c1f2f70cf78d9d5fa6936759e65d0fad1bfd8a246d1f97a306785ed85a4d1abc",
+   "statement_head": "/* q:asset_revisions */ SELECT r.REVISION_ID, r.ASSET_ID, r.IMMUTABLE_SOURCE_REVISION, r.O"
+  },
+  {
+   "id": "Q_evidence_detail(demo-rev-kit-a)[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=5 ref=5 same_rows=True same_order=True",
+   "statement_sha256": "1ef96f477b1a51292c2fdb91b33dfe8d92705105316bc047d7b291be0585d621",
+   "statement_head": "/* q:evidence_detail */ SELECT o.OBSERVATION_ID, o.REVISION_ID, o.EVIDENCE_CLASS, o.OBSERV"
+  },
+  {
+   "id": "Q_revision_comparison(demo-rev-kit-a,demo-rev-kit-b)[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=9 ref=9 same_rows=True same_order=True",
+   "statement_sha256": "33ee73f17ea14661e56bf3238c1c032d93e34ffacdaa83bf8c9ea9d048425b09",
+   "statement_head": "/* q:revision_comparison */ SELECT o.OBSERVATION_ID, o.REVISION_ID, o.EVIDENCE_CLASS, o.OB"
+  },
+  {
+   "id": "Q_all_observations()[200]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=21 ref=21 same_rows=True same_order=True",
+   "statement_sha256": "a59cdc7fa361eda383dc8887fa10e9abb92264b69338985169d868588a256b93",
+   "statement_head": "/* q:all_observations */ SELECT o.OBSERVATION_ID, o.REVISION_ID, o.EVIDENCE_CLASS, o.OBSER"
+  },
+  {
+   "id": "Q_all_observations()[5]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=5 ref=5 same_rows=True same_order=True",
+   "statement_sha256": "2cfeef08e1af93000c067ede413a759c8be094b2dbc8c1021d23277fc7890011",
+   "statement_head": "/* q:all_observations */ SELECT o.OBSERVATION_ID, o.REVISION_ID, o.EVIDENCE_CLASS, o.OBSER"
+  },
+  {
+   "id": "Q_evidence_detail(demo-rev-kit-a)[2]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=2 ref=2 same_rows=True same_order=True",
+   "statement_sha256": "032bb9a54d3daad9f1b1c4c4d802fcb0ab3b2e65eff878b5d37b2e64e68267fa",
+   "statement_head": "/* q:evidence_detail */ SELECT o.OBSERVATION_ID, o.REVISION_ID, o.EVIDENCE_CLASS, o.OBSERV"
+  },
+  {
+   "id": "Q_ingestion_batches()[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=3 ref=3 same_rows=True same_order=True",
+   "statement_sha256": "bb90f8869143d5c168b1e23cee1af179f715d4e62229360a147d0cf0664a58fc",
+   "statement_head": "/* q:ingestion_batches */ SELECT BATCH_ID, INPUT_MANIFEST_DIGEST, SOURCE_REVISION, STARTED"
+  },
+  {
+   "id": "Q_rejected_rows()[50]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=21 ref=21 same_rows=True same_order=True",
+   "statement_sha256": "0f2a6095c96b5999de32482626cb4a04e958ac4faba60ef242a0e3f46418a26b",
+   "statement_head": "/* q:rejected_rows */ SELECT REJECTED_ROW_ID, BATCH_ID, SOURCE_TABLE, ROW_ORDINAL, REASON_"
+  },
+  {
+   "id": "Q_rejected_rows()[3]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=3 ref=3 same_rows=True same_order=True",
+   "statement_sha256": "238d0112f2767fecabced22c90f2dc8cd0deaac2a857ce7d2dfee04965700a4a",
+   "statement_head": "/* q:rejected_rows */ SELECT REJECTED_ROW_ID, BATCH_ID, SOURCE_TABLE, ROW_ORDINAL, REASON_"
+  },
+  {
+   "id": "Q_exclusions()[200]",
+   "category": "SCREEN_QUERY",
+   "status": "PASS",
+   "detail": "rows=3 ref=3 same_rows=True same_order=True",
+   "statement_sha256": "769ef879fe461ae2f107feba6f2e69be170efe87f6fc924ca50413653b27ad7c",
+   "statement_head": "/* q:exclusions */ SELECT SOURCE_IDENTIFIER, EXCLUSION_REASON, EFFECTIVE_AT_UTC, SCOPE FRO"
+  },
+  {
+   "id": "PRES_COMPARISON",
+   "category": "PRESENTATION",
+   "status": "PASS",
+   "detail": "{'CARD_FIELD': 'SAME', 'CHECKSUM_RECORD': 'ONLY_IN_A', 'ILLUSTRATIVE_SCORE': 'DIFFERENT', 'RUNTIME_PROBE': 'NOT_COMPARABLE', 'TEST_RUN_SUMMARY': 'DIFFERENT'}",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "PRES_GAPS",
+   "category": "PRESENTATION",
+   "status": "PASS",
+   "detail": "emulator gaps=10 reference gaps=10 equal=True",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "PRES_DISPLAY_EXCLUSION",
+   "category": "PRESENTATION",
+   "status": "PASS",
+   "detail": "hidden=1",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK00",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "ASSETS: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK01",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "ASSETS: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK02",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "OBSERVATIONS: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK03",
+   "category": "CHECK_PROBE",
+   "status": "UNSUPPORTED_BY_EMULATOR",
+   "detail": "OBSERVATIONS +02:00 offset accepted: DuckDB TIMESTAMPTZ does not retain the input offset (MEASURED: DATE_PART(timezone_hour) returns the session time zone's offset, not the value's), so the UTC CHECK cannot be exercised in the emulator. Snowflake behaviour UNKNOWN; evidence_core rejects non-Z timestamps before SQL (unit-tested).",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK04",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "REVISIONS: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK05",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "RIGHTS_RECORDS: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK06",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "REJECTED_ROWS: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  },
+  {
+   "id": "CK07",
+   "category": "CHECK_PROBE",
+   "status": "PASS",
+   "detail": "INGESTION_BATCHES: violating row refused (ConstraintException)",
+   "statement_sha256": null,
+   "statement_head": ""
+  }
+ ]
+}

@@ -1,0 +1,119 @@
+{
+ "target": "verify_receipt.py",
+ "summary": {
+  "KILLED": 17,
+  "SURVIVED": 0,
+  "EQUIVALENT": 1,
+  "INVALID": 0
+ },
+ "results": [
+  {
+   "id": "V01",
+   "description": "entry hash check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V02",
+   "description": "chain check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V03",
+   "description": "seq check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V04",
+   "description": "step-set check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V05",
+   "description": "NOT_RUN-as-PASS (exit 3) off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V06",
+   "description": "stage policy off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V07",
+   "description": "signature check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V08",
+   "description": "log hash check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V09",
+   "description": "input drift check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V10",
+   "description": "duplicate-key guard off",
+   "status": "EQUIVALENT",
+   "equivalence_reason": "A line with a duplicate key can never equal canonical(json.loads(line)), so the canonical-form guard (V11) rejects it first; the guard is defence in depth."
+  },
+  {
+   "id": "V11",
+   "description": "canonical-form guard off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V12",
+   "description": "truncation guard off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V13",
+   "description": "time order off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V14",
+   "description": "mutation survivors check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V15",
+   "description": "emulator label check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V16",
+   "description": "skipped-as-PASS check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V17",
+   "description": "integration log cross-check off",
+   "status": "KILLED",
+   "equivalence_reason": null
+  },
+  {
+   "id": "V18",
+   "description": "fail-closed except returns VALID",
+   "status": "KILLED",
+   "equivalence_reason": null
+  }
+ ]
+}

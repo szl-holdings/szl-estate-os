@@ -1,0 +1,92 @@
+[
+ {
+  "id": "G01",
+  "status": "KILLED",
+  "description": "child env keeps secrets"
+ },
+ {
+  "id": "G02",
+  "status": "KILLED",
+  "description": "shutdown failure ignored"
+ },
+ {
+  "id": "G03",
+  "status": "KILLED",
+  "description": "deployed flag never set"
+ },
+ {
+  "id": "G04",
+  "status": "KILLED",
+  "description": "identity check bypassed"
+ },
+ {
+  "id": "G05",
+  "status": "KILLED",
+  "description": "NOT_RUN reported as PASS"
+ },
+ {
+  "id": "G06",
+  "status": "KILLED",
+  "description": "temp credentials not removed"
+ },
+ {
+  "id": "G07",
+  "status": "KILLED",
+  "description": "verify failure not gating"
+ },
+ {
+  "id": "G08",
+  "status": "KILLED",
+  "description": "scrub disabled"
+ },
+ {
+  "id": "G09",
+  "status": "KILLED",
+  "description": "chain link dropped"
+ },
+ {
+  "id": "G10",
+  "status": "KILLED",
+  "description": "dry-run-only ignored"
+ },
+ {
+  "id": "G11",
+  "status": "KILLED",
+  "description": "unknown argv accepted"
+ },
+ {
+  "id": "G12",
+  "status": "EQUIVALENT",
+  "description": "encrypted key accepted (PKCS#8 fullmatch already rejects ENCRYPTED headers)"
+ },
+ {
+  "id": "G13",
+  "status": "KILLED",
+  "description": "no credential reported OK"
+ },
+ {
+  "id": "G14",
+  "status": "KILLED",
+  "description": "integration FAIL mapped to OK"
+ },
+ {
+  "id": "G15",
+  "status": "KILLED",
+  "description": "shutdown PARTIAL not downgrading"
+ },
+ {
+  "id": "G16",
+  "status": "KILLED",
+  "description": "deploy failure continues"
+ },
+ {
+  "id": "G17",
+  "status": "KILLED",
+  "description": "SNOWFLAKE_HOME not set before import"
+ },
+ {
+  "id": "K37",
+  "status": "KILLED",
+  "description": "kit: any role may be granted to SYSADMIN (sf_deploy_pilot.py)"
+ }
+]

@@ -1,0 +1,259 @@
+{
+ "mutants": [
+  {
+   "id": "M01",
+   "file": "sf_kit_common.py",
+   "desc": "allowlist membership check disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M02",
+   "file": "sf_kit_common.py",
+   "desc": "allowlist multi-statement check removed",
+   "result": "SURVIVED",
+   "rc": 0
+  },
+  {
+   "id": "M03",
+   "file": "sf_kit_common.py",
+   "desc": "driver error message leaked into evidence",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M04",
+   "file": "sf_kit_common.py",
+   "desc": "warehouse gate allows a SUSPENDED current warehouse",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M05",
+   "file": "sf_kit_common.py",
+   "desc": "gate closed when no current warehouse (over-restrictive)",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M06",
+   "file": "sf_kit_common.py",
+   "desc": "secret scrub removed from emit",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M07",
+   "file": "sf_kit_common.py",
+   "desc": "connect() receives a password from env",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M08",
+   "file": "sf_verify_account_readonly.py",
+   "desc": "verifier gate bypassed",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M09",
+   "file": "sf_verify_account_readonly.py",
+   "desc": "account identifier not redacted",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M10",
+   "file": "sf_verify_account_readonly.py",
+   "desc": "free-text warehouse comment kept in evidence",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M11",
+   "file": "sf_verify_account_readonly.py",
+   "desc": "verifier accepts arbitrary argv",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M12",
+   "file": "sf_deploy_pilot.py",
+   "desc": "credit cap off by one",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M13",
+   "file": "sf_deploy_pilot.py",
+   "desc": "approval accepts trailing text",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M14",
+   "file": "sf_deploy_pilot.py",
+   "desc": "approval valid on its own end date",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M15",
+   "file": "sf_deploy_pilot.py",
+   "desc": "manifest digest check disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M16",
+   "file": "sf_deploy_pilot.py",
+   "desc": "account match disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M17",
+   "file": "sf_deploy_pilot.py",
+   "desc": "existing warehouse/database check disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M18",
+   "file": "sf_deploy_pilot.py",
+   "desc": "dry-run path removed (falls through toward execution)",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M19",
+   "file": "sf_deploy_pilot.py",
+   "desc": "DROP deny token removed",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M20",
+   "file": "sf_deploy_pilot.py",
+   "desc": "ACCOUNTADMIN deny token removed",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M21",
+   "file": "sf_deploy_pilot.py",
+   "desc": "monitor-exists-before-warehouse check disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M22",
+   "file": "sf_deploy_pilot.py",
+   "desc": "monitor quota check disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M23",
+   "file": "sf_deploy_pilot.py",
+   "desc": "manifest path-escape check disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M24",
+   "file": "sf_deploy_pilot.py",
+   "desc": "warehouse created with AUTO_RESUME TRUE",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M25",
+   "file": "sf_deploy_pilot.py",
+   "desc": "INSERT-only-for-loader rule removed",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M26",
+   "file": "sf_deploy_pilot.py",
+   "desc": "grantee restriction removed",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M27",
+   "file": "sf_deploy_pilot.py",
+   "desc": "deny tokens checked inside literals (false refusals)",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M28",
+   "file": "sf_deploy_pilot.py",
+   "desc": "pre-execution digest re-check removed (TOCTOU)",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M29",
+   "file": "sf_shutdown_verify.py",
+   "desc": "shutdown W1 always PASS",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M30",
+   "file": "sf_shutdown_verify.py",
+   "desc": "shutdown T1 always PASS",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M31",
+   "file": "sf_deploy_pilot.py",
+   "desc": "approval-reference mismatch in SQL file accepted",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M32",
+   "file": "sf_deploy_pilot.py",
+   "desc": "unpinned local app import accepted",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M33",
+   "file": "sf_deploy_pilot.py",
+   "desc": "three-part name confinement disabled",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M34",
+   "file": "sf_deploy_pilot.py",
+   "desc": "monitor exact-name filter removed (LIKE wildcard)",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M35",
+   "file": "sf_deploy_pilot.py",
+   "desc": "guard token outside line 1 accepted",
+   "result": "KILLED",
+   "rc": 1
+  },
+  {
+   "id": "M36",
+   "file": "sf_deploy_pilot.py",
+   "desc": "per-file statement-type restriction removed",
+   "result": "KILLED",
+   "rc": 1
+  }
+ ],
+ "killed": 35,
+ "survived": 1,
+ "invalid": 0
+}
