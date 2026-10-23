@@ -1,0 +1,1 @@
+I approve SZL Evidence Explorer pilot 1: max <N> credits, warehouse XS, auto_suspend 60, until <UTC date>, account <locator>

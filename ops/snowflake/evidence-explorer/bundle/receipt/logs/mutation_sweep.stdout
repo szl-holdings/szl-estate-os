@@ -1,0 +1,49 @@
+{"KILLED": 48, "SURVIVED": 0, "INVALID": 0}
+M00 KILLED   BROKEN BASELINE: validate_row accepts everything
+M01 KILLED   secret field-name guard disabled
+M02 KILLED   secret value guard disabled
+M03 KILLED   unknown-field (closed schema) guard disabled
+M04 KILLED   missing-field guard disabled
+M05 KILLED   enum membership guard disabled
+M06 KILLED   future-timestamp guard disabled
+M07 KILLED   UTC-only: timestamp offsets accepted
+M08 KILLED   calendar-invalid date swallowed
+M09 KILLED   mutable revision refs accepted
+M10 KILLED   revision/provider consistency guard disabled
+M11 KILLED   content-digest comparison disabled
+M12 KILLED   digest check skipped when content absent
+M13 KILLED   batch-level manifest idempotency disabled
+M14 KILLED   identical duplicate row appended instead of skipped
+M15 KILLED   conflicting duplicate id accepted (overwrite risk)
+M16 KILLED   ingestion-time exclusion disabled
+M17 KILLED   exclusion prefix-strip disabled (git-sha1:<blob> slips through)
+M18 KILLED   display-scope exclusion disabled
+M19 KILLED   synthetic label text check disabled
+M20 KILLED   is_synthetic=TRUE check disabled
+M21 KILLED   secret rejections store a row digest
+M22 KILLED   upper LIMIT bound removed
+M23 KILLED   LIMIT exact-int check weakened to isinstance (bool accepted)
+M24 KILLED   provider filter string-concatenated instead of bound
+M25 KILLED   identifier parameter validation disabled
+M26 KILLED   ERROR state carries rows
+M27 KILLED   EMPTY reported as OK
+M28 KILLED   restricted-rights display guard disabled
+M29 KILLED   internal-only rights operand dropped
+M30 KILLED   training_allowed evidence guard disabled
+M31 KILLED   explicit-missing value consistency disabled
+M32 KILLED   rights NONE ingestion guard disabled
+M33 KILLED   row-count bound disabled
+M34 KILLED   request-size bound disabled
+M35 KILLED   cost screen accepts unsourced measurement
+M36 KILLED   stale threshold widened
+M37 KILLED   MERGE gains WHEN MATCHED UPDATE
+M38 KILLED   rejected rows not retained
+M39 KILLED   value grammar allows markup
+M40 KILLED   locator traversal guard disabled
+M41 KILLED   orphan-reference guard for revisions disabled
+M42 KILLED   bool exact-type check weakened
+M43 KILLED   all_observations reference order differs from SQL ORDER BY
+M44 KILLED   revision order compares timestamp text, not instants
+M45 KILLED   ingestion batches returned in insertion order
+M46 KILLED   latest-revision tie-break reversed vs SQL
+M47 KILLED   latest rights compares timestamp text

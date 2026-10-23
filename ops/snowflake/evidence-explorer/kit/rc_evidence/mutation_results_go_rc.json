@@ -1,0 +1,432 @@
+{
+ "started_utc": "2026-10-22T15:35:39+00:00",
+ "python": "3.11.16",
+ "runner_sha256": "696875a062c178c30e9c236446cf548f57d87f5c037ca97c2c16e8bea2d89017",
+ "tests_sha256": "94b0caaf91b6912d82335c9f4a55600ed0943d0e8a47b9b056dce08687d7a2c6",
+ "mutants": [
+  {
+   "id": "G01",
+   "description": "child env keeps secrets",
+   "old": "    env = {k: v for k, v in base.items() if not _SECRETISH.search(k)}\n",
+   "new": "    env = dict(base)\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G02",
+   "description": "shutdown failure ignored",
+   "old": "            if not shutdown_ok and code in",
+   "new": "            if False and code in",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=7)"
+  },
+  {
+   "id": "G03",
+   "description": "deployed flag never set",
+   "old": "    state[\"deployed\"] = True     # from here on",
+   "new": "    state[\"deployed\"] = False     # from here on",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=17)"
+  },
+  {
+   "id": "G04",
+   "description": "identity check bypassed",
+   "old": "        ok = acct_approved in {str(a).upper(), org_acct}\n",
+   "new": "        ok = True\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G05",
+   "description": "NOT_RUN reported as PASS",
+   "old": "{\"PASS\": EXIT_OK, \"NOT_RUN_OR_PARTIAL\": EXIT_PARTIAL}",
+   "new": "{\"PASS\": EXIT_OK, \"NOT_RUN_OR_PARTIAL\": EXIT_OK}",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G06",
+   "description": "temp credentials not removed",
+   "old": "            shutil.rmtree(tmp, ignore_errors=True)\n            gone",
+   "new": "            pass\n            gone",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=21)"
+  },
+  {
+   "id": "G07",
+   "description": "verify failure not gating",
+   "old": "    if c != 0:\n        return EXIT_NOCRED if c == 4 else EXIT_FAIL\n",
+   "new": "    if False:\n        return EXIT_NOCRED if c == 4 else EXIT_FAIL\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G08",
+   "description": "scrub disabled",
+   "old": "        if s and s in text:\n",
+   "new": "        if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G09",
+   "description": "chain link dropped",
+   "old": "\"utc\": now_utc(), \"prev_entry_sha256\": self.prev}",
+   "new": "\"utc\": now_utc(), \"prev_entry_sha256\": \"0\" * 64}",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "G10",
+   "description": "dry-run-only ignored",
+   "old": "    if \"--dry-run-only\" in flags:\n",
+   "new": "    if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G11",
+   "description": "unknown argv accepted",
+   "old": "            raise Refused(\"unknown argument (credentials are never accepted on argv)\")\n",
+   "new": "            pass\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G12",
+   "description": "explicit encrypted-key (header) check removed",
+   "old": "    if _ENCRYPTED_HEADER.search(t):\n        raise Refused(\"encrypted private keys are not supported by this runner (regenerate with -nocrypt)\")\n",
+   "new": "",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "G13",
+   "description": "no credential reported OK",
+   "old": "detail=\"no Snowflake credential in environment\")\n            return EXIT_NOCRED",
+   "new": "detail=\"no Snowflake credential in environment\")\n            return EXIT_OK",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "G14",
+   "description": "integration FAIL mapped to OK",
+   "old": ".get(res[\"overall\"], EXIT_FAIL)",
+   "new": ".get(res[\"overall\"], EXIT_OK)",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G15",
+   "description": "shutdown PARTIAL not downgrading",
+   "old": "                if shutdown_ok and partial and code == EXIT_OK:\n",
+   "new": "                if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G16",
+   "description": "deploy partial-state failure continues",
+   "old": "\"deploy_json_present\": ev is not None})\n        return EXIT_FAIL\n",
+   "new": "\"deploy_json_present\": ev is not None})\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "G17",
+   "description": "SNOWFLAKE_HOME not set before import",
+   "old": "                os.environ[\"SNOWFLAKE_HOME\"] = tmp\n",
+   "new": "                pass\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N01",
+   "description": "run id random part constant",
+   "old": "\"-\" + _secrets.token_hex(4)",
+   "new": "\"-\" + \"0\" * 8",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2, errors=2)"
+  },
+  {
+   "id": "N02",
+   "description": "run id missing from QUERY_TAG",
+   "old": "\"szl_ee_go:%s:%s\" % (run_id, key)",
+   "new": "\"szl_ee_go:%s:%s\" % (\"\", key)",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N03",
+   "description": "run id missing from receipt entries",
+   "old": "e = {\"i\": n, \"run_id\": self.run_id, ",
+   "new": "e = {\"i\": n, ",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (errors=1)"
+  },
+  {
+   "id": "N04",
+   "description": "earlier run directory reused",
+   "old": "os.makedirs(out_dir, exist_ok=False)",
+   "new": "os.makedirs(out_dir, exist_ok=True)",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N05",
+   "description": "existing pilot objects ignored",
+   "old": "    if inv[\"existing_pilot_objects\"]:\n",
+   "new": "    if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=5)"
+  },
+  {
+   "id": "N06",
+   "description": "exact-name filter loosened to prefix",
+   "old": "put(\"warehouse\", r, _name(r) == WAREHOUSE, _name(r))",
+   "new": "put(\"warehouse\", r, _name(r).startswith(WAREHOUSE), _name(r))",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N06b",
+   "description": "exact-name filter made case-sensitive",
+   "old": "    return str(r.get(col, \"\") or \"\").upper()\n",
+   "new": "    return str(r.get(col, \"\") or \"\")\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N07",
+   "description": "incomplete inventory tolerated",
+   "old": "    if not inv[\"complete\"]:\n",
+   "new": "    if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N08",
+   "description": "pre-run inventory readback not written",
+   "old": "    rec.write_json(\"inventory_pre.json\", inv)\n",
+   "new": "    pass\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=8, errors=1)"
+  },
+  {
+   "id": "N09",
+   "description": "global deadline not applied to child timeouts",
+   "old": "        return min(cap, r)\n",
+   "new": "        return cap\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N10",
+   "description": "deadline never enforced",
+   "old": "        if r <= 0:\n            raise DeadlineExceeded",
+   "new": "        if False:\n            raise DeadlineExceeded",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "N11",
+   "description": "no reserved shutdown budget",
+   "old": "sclk = _Clock(clock, SHUTDOWN_BUDGET_SECONDS)",
+   "new": "sclk = _Clock(clock, 0)",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N12",
+   "description": "automatic retry after uncertain deploy",
+   "old": "    except StepTimeout:\n        state[\"uncertain\"] = True\n        return EXIT_UNCERTAIN\n    ev = _load_json(deploy_json)\n",
+   "new": "    except StepTimeout:\n        c, so, se = run_py(\"sf_deploy_pilot.py\", [\"--execute\", \"--manifest\", manifest, \"--approval-file\", opts[\"--approval\"], \"--out\", deploy_json], kit, cenv, t, runner=runner)\n    ev = _load_json(deploy_json)\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N13",
+   "description": "uncertain resume treated as success",
+   "old": "        state[\"uncertain\"] = True\n        return EXIT_UNCERTAIN\n\n    ienv",
+   "new": "        pass\n\n    ienv",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "N14",
+   "description": "step stdout logs not written",
+   "old": "        _durable_write(os.path.join(self.logs, \"%02d_%s.stdout\" % (n, step)), so)\n",
+   "new": "",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "N15",
+   "description": "cleanup erases the run directory",
+   "old": "            shutil.rmtree(tmp, ignore_errors=True)\n            gone",
+   "new": "            shutil.rmtree(tmp, ignore_errors=True); shutil.rmtree(out_dir, ignore_errors=True); os.makedirs(rec.logs, exist_ok=True)\n            gone",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=19, errors=5)"
+  },
+  {
+   "id": "N16",
+   "description": "UNKNOWN core shutdown check accepted",
+   "old": "all(v == \"PASS\" for v in core.values())",
+   "new": "all(v in (\"PASS\", \"UNKNOWN\") for v in core.values())",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N17",
+   "description": "billable list not written",
+   "old": "    rec.write_json(\"potentially_billable.json\", billable)\n",
+   "new": "    pass\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=9, errors=1)"
+  },
+  {
+   "id": "N18",
+   "description": "runner's own readback ignored",
+   "old": "\n                and wh_state == \"SUSPENDED\")",
+   "new": ")",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N19",
+   "description": "itests PASS from exit code/status line only",
+   "old": "    elif code == 0 and all(v == \"PASS\" for v in vals) and word in (None, \"PASS\"):\n",
+   "new": "    elif code == 0 and word in (None, \"PASS\"):\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N20",
+   "description": "deploy post_checks ignored",
+   "old": "        if not checks or bad:\n",
+   "new": "        if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N21",
+   "description": "runner exception propagates (no record)",
+   "old": "            except (Exception, KeyboardInterrupt) as exc:\n                rec.add(\"runner_exception\"",
+   "new": "            except ZeroDivisionError as exc:\n                rec.add(\"runner_exception\"",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (errors=2)"
+  },
+  {
+   "id": "N22",
+   "description": "direct SQL not time-bounded",
+   "old": "    return bounded(work, DIRECT_SQL_TIMEOUT if timeout is None else timeout)\n",
+   "new": "    return work()\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N23",
+   "description": "deploy intent (STARTED) entry not written",
+   "old": "    rec.begin(\"deploy\", detail=",
+   "new": "    (lambda *a, **k: None)(\"deploy\", detail=",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=2)"
+  },
+  {
+   "id": "N24",
+   "description": "encrypted check reverted to v0.1.1 substring test",
+   "old": "    if _ENCRYPTED_HEADER.search(t):\n",
+   "new": "    if \"ENCRYPTED\" in t:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (errors=1)"
+  },
+  {
+   "id": "N25",
+   "description": "unexpected deploy exit treated as definite",
+   "old": "detail=\"unexpected exit code; effect UNKNOWN\")\n        state[\"uncertain\"] = True\n        return EXIT_UNCERTAIN\n",
+   "new": "detail=\"unexpected exit code; effect UNKNOWN\")\n        return EXIT_FAIL\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N26",
+   "description": "deploy exit 0 without evidence accepted",
+   "old": "        if ev is None:\n            rec.add(\"deploy\", \"UNKNOWN\"",
+   "new": "        if False:\n            rec.add(\"deploy\", \"UNKNOWN\"",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N27",
+   "description": "deploy refusal after changes treated as definite",
+   "old": "        if ev is None or ev.get(\"changes_begun\") is True or (\n",
+   "new": "        if ev is None or (\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  },
+  {
+   "id": "N28",
+   "description": "monitor requirement dropped",
+   "old": "    if inv[\"monitor_exact_count\"] != 1:\n",
+   "new": "    if False:\n",
+   "status": "KILLED",
+   "exit": 1,
+   "tail": "FAILED (failures=1)"
+  }
+ ],
+ "clean": {
+  "status": "PASS",
+  "exit": 0,
+  "tail": "OK",
+  "avail_gib": 5.58
+ },
+ "finished_utc": "2026-10-22T15:43:44+00:00",
+ "summary": {
+  "KILLED": 46
+ }
+}

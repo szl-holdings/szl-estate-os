@@ -1,0 +1,55 @@
+SUPERSEDED (v0.1.1 copy, kept for provenance only). Contains stale statements, e.g. test counts (54) and approval status. Authoritative: READINESS_PACKET_2026-10-22.md and the documents it pins.
+
+# MEASURED 2026-10-21T17:09:20Z on the agent sandbox (Windows, Python 3.11.16); synthetic data and fake connector only.
+$ python -I -B test_operator_kit.py
+......................................................
+----------------------------------------------------------------------
+Ran 54 tests in 0.423s
+
+OK
+exit=0
+
+$ python -I -B mutation_sweep_kit.py   (final round; JSON in mutation_results_kit.json)
+M01 KILLED    sf_kit_common.py               allowlist membership check disabled
+M02 SURVIVED  sf_kit_common.py               allowlist multi-statement check removed
+M03 KILLED    sf_kit_common.py               driver error message leaked into evidence
+M04 KILLED    sf_kit_common.py               warehouse gate allows a SUSPENDED current warehouse
+M05 KILLED    sf_kit_common.py               gate closed when no current warehouse (over-restrictive)
+M06 KILLED    sf_kit_common.py               secret scrub removed from emit
+M07 KILLED    sf_kit_common.py               connect() receives a password from env
+M08 KILLED    sf_verify_account_readonly.py  verifier gate bypassed
+M09 KILLED    sf_verify_account_readonly.py  account identifier not redacted
+M10 KILLED    sf_verify_account_readonly.py  free-text warehouse comment kept in evidence
+M11 KILLED    sf_verify_account_readonly.py  verifier accepts arbitrary argv
+M12 KILLED    sf_deploy_pilot.py             credit cap off by one
+M13 KILLED    sf_deploy_pilot.py             approval accepts trailing text
+M14 KILLED    sf_deploy_pilot.py             approval valid on its own end date
+M15 KILLED    sf_deploy_pilot.py             manifest digest check disabled
+M16 KILLED    sf_deploy_pilot.py             account match disabled
+M17 KILLED    sf_deploy_pilot.py             existing warehouse/database check disabled
+M18 KILLED    sf_deploy_pilot.py             dry-run path removed (falls through toward execution)
+M19 KILLED    sf_deploy_pilot.py             DROP deny token removed
+M20 KILLED    sf_deploy_pilot.py             ACCOUNTADMIN deny token removed
+M21 KILLED    sf_deploy_pilot.py             monitor-exists-before-warehouse check disabled
+M22 KILLED    sf_deploy_pilot.py             monitor quota check disabled
+M23 KILLED    sf_deploy_pilot.py             manifest path-escape check disabled
+M24 KILLED    sf_deploy_pilot.py             warehouse created with AUTO_RESUME TRUE
+M25 KILLED    sf_deploy_pilot.py             INSERT-only-for-loader rule removed
+M26 KILLED    sf_deploy_pilot.py             grantee restriction removed
+M27 KILLED    sf_deploy_pilot.py             deny tokens checked inside literals (false refusals)
+M28 KILLED    sf_deploy_pilot.py             pre-execution digest re-check removed (TOCTOU)
+M29 KILLED    sf_shutdown_verify.py          shutdown W1 always PASS
+M30 KILLED    sf_shutdown_verify.py          shutdown T1 always PASS
+M31 KILLED    sf_deploy_pilot.py             approval-reference mismatch in SQL file accepted
+M32 KILLED    sf_deploy_pilot.py             unpinned local app import accepted
+M33 KILLED    sf_deploy_pilot.py             three-part name confinement disabled
+M34 KILLED    sf_deploy_pilot.py             monitor exact-name filter removed (LIKE wildcard)
+M35 KILLED    sf_deploy_pilot.py             guard token outside line 1 accepted
+M36 KILLED    sf_deploy_pilot.py             per-file statement-type restriction removed
+TOTAL 36 mutants: 35 killed, 1 survived, 0 invalid
+exit=0
+
+Earlier rounds kept for honesty: mutation_results_kit_round1.json (30 mutants, 22 killed / 8 survived, before survivor tests),
+mutation_results_kit_round2.json (30 mutants, 29 killed / 1 survived, before realignment to the SQL/app track's SZL_EE_* names).
+M02 survives every round: EQUIVALENT by construction - no allowlisted statement contains ';' (checked in code), so the
+allowlist membership test already refuses multi-statement input; the explicit ';' check is defence in depth.
