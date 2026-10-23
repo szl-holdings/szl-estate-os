@@ -1,0 +1,72 @@
+# exit=0 python=3.11.16 utc=2026-10-22T15:44:07Z
+test_child_timeouts_capped_by_remaining_wall_clock (__main__.TestDeadline.test_child_timeouts_capped_by_remaining_wall_clock) ... ok
+test_deadline_after_deploy_still_suspends_and_reads_back (__main__.TestDeadline.test_deadline_after_deploy_still_suspends_and_reads_back) ... ok
+test_deadline_before_deploy_never_starts_deploy (__main__.TestDeadline.test_deadline_before_deploy_never_starts_deploy) ... ok
+test_no_secret_reaches_children_logs_or_stdout (__main__.TestDiagnostics.test_no_secret_reaches_children_logs_or_stdout) ... ok
+test_receipt_and_logs_flushed_before_each_child (__main__.TestDiagnostics.test_receipt_and_logs_flushed_before_each_child) ... ok
+test_receipt_tamper_detected (__main__.TestDiagnostics.test_receipt_tamper_detected) ... ok
+test_record_survives_temp_cleanup_on_failure (__main__.TestDiagnostics.test_record_survives_temp_cleanup_on_failure) ... ok
+test_encrypted_header_with_literal_backslash_n (__main__.TestEncryptedKeyG12.test_encrypted_header_with_literal_backslash_n) ... ok
+test_encrypted_key_refused_end_to_end_before_any_child (__main__.TestEncryptedKeyG12.test_encrypted_key_refused_end_to_end_before_any_child) ... ok
+test_encrypted_pkcs8_refused_with_specific_message (__main__.TestEncryptedKeyG12.test_encrypted_pkcs8_refused_with_specific_message) ... ok
+test_encrypted_traditional_pem_refused_with_specific_message (__main__.TestEncryptedKeyG12.test_encrypted_traditional_pem_refused_with_specific_message) ... ok
+test_unencrypted_body_containing_word_is_accepted (__main__.TestEncryptedKeyG12.test_unencrypted_body_containing_word_is_accepted) ... ok
+test_dry_run_only_never_executes (__main__.TestFlow.test_dry_run_only_never_executes) ... ok
+test_happy_path_order_and_chain (__main__.TestFlow.test_happy_path_order_and_chain) ... ok
+test_identity_mismatch_refused_before_deploy (__main__.TestFlow.test_identity_mismatch_refused_before_deploy) ... ok
+test_integration_env_binds_locator_and_ingest_role (__main__.TestFlow.test_integration_env_binds_locator_and_ingest_role) ... ok
+test_integration_failure_is_failure (__main__.TestFlow.test_integration_failure_is_failure) ... ok
+test_integration_not_run_is_never_success (__main__.TestFlow.test_integration_not_run_is_never_success) ... ok
+test_locator_in_approval_also_accepted (__main__.TestFlow.test_locator_in_approval_also_accepted) ... ok
+test_verify_failure_stops_before_deploy (__main__.TestFlow.test_verify_failure_stops_before_deploy) ... ok
+test_verify_timeout_stops_before_deploy (__main__.TestFlow.test_verify_timeout_stops_before_deploy) ... ok
+test_existing_app_and_stage_refused (__main__.TestInventory.test_existing_app_and_stage_refused) ... ok
+test_existing_database_refused (__main__.TestInventory.test_existing_database_refused) ... ok
+test_existing_role_only_refused (__main__.TestInventory.test_existing_role_only_refused) ... ok
+test_existing_warehouse_refused_and_read_back (__main__.TestInventory.test_existing_warehouse_refused_and_read_back) ... ok
+test_inventory_error_refuses (__main__.TestInventory.test_inventory_error_refuses) ... ok
+test_inventory_runs_before_children_that_change_state (__main__.TestInventory.test_inventory_runs_before_children_that_change_state) ... ok
+test_lowercase_exact_name_is_treated_as_existing (__main__.TestInventory.test_lowercase_exact_name_is_treated_as_existing) ... ok
+test_monitor_missing_or_near_match_refuses (__main__.TestInventory.test_monitor_missing_or_near_match_refuses) ... ok
+test_near_matches_reported_not_refused (__main__.TestInventory.test_near_matches_reported_not_refused) ... ok
+test_all_ok_is_pass (__main__.TestItestParser.test_all_ok_is_pass) ... ok
+test_exit0_without_per_test_lines_is_not_pass (__main__.TestItestParser.test_exit0_without_per_test_lines_is_not_pass) ... ok
+test_manual_skips_make_partial (__main__.TestItestParser.test_manual_skips_make_partial) ... ok
+test_one_failure_is_fail_even_if_exit0 (__main__.TestItestParser.test_one_failure_is_fail_even_if_exit0) ... ok
+test_real_unconfigured_output_is_eleven_not_run (__main__.TestItestParser.test_real_unconfigured_output_is_eleven_not_run) ... ok
+test_setup_module_error_is_fail_with_tests_not_run (__main__.TestItestParser.test_setup_module_error_is_fail_with_tests_not_run) ... ok
+test_real_connector_import_succeeds_and_refuses_without_credential (__main__.TestRealImportPath.test_real_connector_import_succeeds_and_refuses_without_credential)
+Real snowflake.connector import (no fake), NO credential: must stop at credentials BLOCKED ... ok
+test_malformed_approval_refused (__main__.TestRefusals.test_malformed_approval_refused) ... ok
+test_max_seconds_validated (__main__.TestRefusals.test_max_seconds_validated) ... ok
+test_mode_b_requires_ingest_connection (__main__.TestRefusals.test_mode_b_requires_ingest_connection) ... ok
+test_no_credential_blocks_everything (__main__.TestRefusals.test_no_credential_blocks_everything) ... ok
+test_only_fixed_direct_statements (__main__.TestRefusals.test_only_fixed_direct_statements) ... ok
+test_runner_statements_are_read_only_except_resume_suspend (__main__.TestRefusals.test_runner_statements_are_read_only_except_resume_suspend) ... ok
+test_unknown_argv_refused (__main__.TestRefusals.test_unknown_argv_refused) ... ok
+test_format_and_random_part_differs (__main__.TestRunId.test_format_and_random_part_differs) ... ok
+test_output_directory_never_reused (__main__.TestRunId.test_output_directory_never_reused) ... ok
+test_run_id_in_dir_receipt_query_tags_and_child_env (__main__.TestRunId.test_run_id_in_dir_receipt_query_tags_and_child_env) ... ok
+test_core_check_unknown_is_unverified (__main__.TestShutdownVerdict.test_core_check_unknown_is_unverified) ... ok
+test_metering_unknown_only_is_partial_not_pass (__main__.TestShutdownVerdict.test_metering_unknown_only_is_partial_not_pass) ... ok
+test_missing_shutdown_evidence_fails (__main__.TestShutdownVerdict.test_missing_shutdown_evidence_fails) ... ok
+test_runner_readback_disagreeing_with_verifier_fails (__main__.TestShutdownVerdict.test_runner_readback_disagreeing_with_verifier_fails) ... ok
+test_shutdown_failure_overrides_pass_and_lists_billable (__main__.TestShutdownVerdict.test_shutdown_failure_overrides_pass_and_lists_billable) ... ok
+test_shutdown_verifier_fail_exit_fails (__main__.TestShutdownVerdict.test_shutdown_verifier_fail_exit_fails) ... ok
+test_shutdown_verifier_timeout_fails (__main__.TestShutdownVerdict.test_shutdown_verifier_timeout_fails) ... ok
+test_deploy_exit0_without_evidence_is_uncertain (__main__.TestUncertainAndDeployFailures.test_deploy_exit0_without_evidence_is_uncertain) ... ok
+test_deploy_partial_state_failure_reads_back (__main__.TestUncertainAndDeployFailures.test_deploy_partial_state_failure_reads_back) ... ok
+test_deploy_post_check_failure_stops (__main__.TestUncertainAndDeployFailures.test_deploy_post_check_failure_stops) ... ok
+test_deploy_refused_after_changes_is_uncertain (__main__.TestUncertainAndDeployFailures.test_deploy_refused_after_changes_is_uncertain) ... ok
+test_deploy_refused_before_changes_is_definite (__main__.TestUncertainAndDeployFailures.test_deploy_refused_before_changes_is_definite) ... ok
+test_deploy_timeout_is_uncertain_no_retry (__main__.TestUncertainAndDeployFailures.test_deploy_timeout_is_uncertain_no_retry) ... ok
+test_deploy_unexpected_exit_is_uncertain (__main__.TestUncertainAndDeployFailures.test_deploy_unexpected_exit_is_uncertain) ... ok
+test_itests_timeout_is_uncertain (__main__.TestUncertainAndDeployFailures.test_itests_timeout_is_uncertain) ... ok
+test_resume_error_is_uncertain (__main__.TestUncertainAndDeployFailures.test_resume_error_is_uncertain) ... ok
+test_resume_hang_is_bounded_and_uncertain (__main__.TestUncertainAndDeployFailures.test_resume_hang_is_bounded_and_uncertain) ... ok
+test_runner_exception_recorded_shutdown_runs_no_raise (__main__.TestUncertainAndDeployFailures.test_runner_exception_recorded_shutdown_runs_no_raise) ... ok
+
+----------------------------------------------------------------------
+Ran 65 tests in 7.452s
+
+OK

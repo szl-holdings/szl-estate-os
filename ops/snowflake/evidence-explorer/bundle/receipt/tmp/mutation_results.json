@@ -1,0 +1,299 @@
+{
+ "target": "evidence_core.py",
+ "mutants": 48,
+ "summary": {
+  "KILLED": 48,
+  "SURVIVED": 0,
+  "INVALID": 0
+ },
+ "results": [
+  {
+   "id": "M00",
+   "description": "BROKEN BASELINE: validate_row accepts everything",
+   "status": "KILLED",
+   "detail": "FAILED (failures=21, errors=4)"
+  },
+  {
+   "id": "M01",
+   "description": "secret field-name guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=3)"
+  },
+  {
+   "id": "M02",
+   "description": "secret value guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=5)"
+  },
+  {
+   "id": "M03",
+   "description": "unknown-field (closed schema) guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M04",
+   "description": "missing-field guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=4, errors=4)"
+  },
+  {
+   "id": "M05",
+   "description": "enum membership guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=6)"
+  },
+  {
+   "id": "M06",
+   "description": "future-timestamp guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=5)"
+  },
+  {
+   "id": "M07",
+   "description": "UTC-only: timestamp offsets accepted",
+   "status": "KILLED",
+   "detail": "SyntaxError: unterminated string literal (detected at line 70)"
+  },
+  {
+   "id": "M08",
+   "description": "calendar-invalid date swallowed",
+   "status": "KILLED",
+   "detail": "FAILED (failures=5)"
+  },
+  {
+   "id": "M09",
+   "description": "mutable revision refs accepted",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M10",
+   "description": "revision/provider consistency guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=2, errors=1)"
+  },
+  {
+   "id": "M11",
+   "description": "content-digest comparison disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=4)"
+  },
+  {
+   "id": "M12",
+   "description": "digest check skipped when content absent",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M13",
+   "description": "batch-level manifest idempotency disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=3)"
+  },
+  {
+   "id": "M14",
+   "description": "identical duplicate row appended instead of skipped",
+   "status": "KILLED",
+   "detail": "FAILED (failures=3)"
+  },
+  {
+   "id": "M15",
+   "description": "conflicting duplicate id accepted (overwrite risk)",
+   "status": "KILLED",
+   "detail": "FAILED (failures=4)"
+  },
+  {
+   "id": "M16",
+   "description": "ingestion-time exclusion disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=7)"
+  },
+  {
+   "id": "M17",
+   "description": "exclusion prefix-strip disabled (git-sha1:<blob> slips through)",
+   "status": "KILLED",
+   "detail": "FAILED (failures=5)"
+  },
+  {
+   "id": "M18",
+   "description": "display-scope exclusion disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M19",
+   "description": "synthetic label text check disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M20",
+   "description": "is_synthetic=TRUE check disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=6)"
+  },
+  {
+   "id": "M21",
+   "description": "secret rejections store a row digest",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M22",
+   "description": "upper LIMIT bound removed",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M23",
+   "description": "LIMIT exact-int check weakened to isinstance (bool accepted)",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M24",
+   "description": "provider filter string-concatenated instead of bound",
+   "status": "KILLED",
+   "detail": "FAILED (failures=2)"
+  },
+  {
+   "id": "M25",
+   "description": "identifier parameter validation disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M26",
+   "description": "ERROR state carries rows",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M27",
+   "description": "EMPTY reported as OK",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M28",
+   "description": "restricted-rights display guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=2)"
+  },
+  {
+   "id": "M29",
+   "description": "internal-only rights operand dropped",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M30",
+   "description": "training_allowed evidence guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=2)"
+  },
+  {
+   "id": "M31",
+   "description": "explicit-missing value consistency disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=5)"
+  },
+  {
+   "id": "M32",
+   "description": "rights NONE ingestion guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=5)"
+  },
+  {
+   "id": "M33",
+   "description": "row-count bound disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M34",
+   "description": "request-size bound disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M35",
+   "description": "cost screen accepts unsourced measurement",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M36",
+   "description": "stale threshold widened",
+   "status": "KILLED",
+   "detail": "FAILED (failures=2)"
+  },
+  {
+   "id": "M37",
+   "description": "MERGE gains WHEN MATCHED UPDATE",
+   "status": "KILLED",
+   "detail": "FAILED (errors=1)"
+  },
+  {
+   "id": "M38",
+   "description": "rejected rows not retained",
+   "status": "KILLED",
+   "detail": "FAILED (failures=7, errors=3)"
+  },
+  {
+   "id": "M39",
+   "description": "value grammar allows markup",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M40",
+   "description": "locator traversal guard disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M41",
+   "description": "orphan-reference guard for revisions disabled",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M42",
+   "description": "bool exact-type check weakened",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M43",
+   "description": "all_observations reference order differs from SQL ORDER BY",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M44",
+   "description": "revision order compares timestamp text, not instants",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M45",
+   "description": "ingestion batches returned in insertion order",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M46",
+   "description": "latest-revision tie-break reversed vs SQL",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  },
+  {
+   "id": "M47",
+   "description": "latest rights compares timestamp text",
+   "status": "KILLED",
+   "detail": "FAILED (failures=1)"
+  }
+ ]
+}
