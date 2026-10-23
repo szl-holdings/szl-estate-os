@@ -1,0 +1,94 @@
+{
+ "label": "LOCAL STUB SMOKE - NOT A SNOWFLAKE TEST",
+ "streamlit_version": "1.66.0",
+ "python": "3.11.17",
+ "results": [
+  {
+   "check": "A_dependency_absent_visible_failure",
+   "status": "PASS",
+   "detail": {
+    "errors": [
+     "LIVE QUERY UNAVAILABLE (SNOWFLAKE_DEPENDENCY_UNAVAILABLE). This app only shows results of live Snowflake queries. No data is shown; nothing is cached or simulated."
+    ],
+    "dataframes": 0
+   }
+  },
+  {
+   "check": "B_no_active_session_visible_failure",
+   "status": "PASS",
+   "detail": {
+    "errors": [
+     "LIVE QUERY UNAVAILABLE (NO_ACTIVE_SNOWFLAKE_SESSION). This app only shows results of live Snowflake queries. No data is shown; nothing is cached or simulated."
+    ],
+    "dataframes": 0
+   }
+  },
+  {
+   "check": "C_stub_session_six_screens_render",
+   "status": "PASS",
+   "detail": {
+    "1. Asset inventory": {
+     "exception": false,
+     "dataframes": 1,
+     "errors": [],
+     "info": [],
+     "banner": true
+    },
+    "2. Evidence detail": {
+     "exception": false,
+     "dataframes": 3,
+     "errors": [],
+     "info": [],
+     "banner": true
+    },
+    "3. Revision comparison": {
+     "exception": false,
+     "dataframes": 3,
+     "errors": [],
+     "info": [],
+     "banner": true
+    },
+    "4. Missing / stale / restricted evidence": {
+     "exception": false,
+     "dataframes": 2,
+     "errors": [],
+     "info": [],
+     "banner": true
+    },
+    "5. Data quality and ingestion status": {
+     "exception": false,
+     "dataframes": 2,
+     "errors": [],
+     "info": [],
+     "banner": true
+    },
+    "6. Cost and run information": {
+     "exception": false,
+     "dataframes": 0,
+     "errors": [],
+     "info": [
+      "Cost and run information: not measured. No warehouse credits, runtime or query cost have been measured for this app; no estimate is shown in their place."
+     ],
+     "banner": true
+    }
+   }
+  },
+  {
+   "check": "C_stub_every_issued_query_parameterized",
+   "status": "PASS",
+   "detail": {
+    "queries_issued": 15
+   }
+  },
+  {
+   "check": "D_query_failure_shows_error_no_rows",
+   "status": "PASS",
+   "detail": {
+    "errors": [
+     "LIVE QUERY FAILED: RuntimeError. No data is shown; nothing is cached or simulated."
+    ],
+    "dataframes": 0
+   }
+  }
+ ]
+}

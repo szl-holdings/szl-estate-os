@@ -1,0 +1,87 @@
+DDL00                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | accepted by fakesnow as a no-op; access control not emulated
+DDL01                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL02                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL03                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL04                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL05                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL06                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL07                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL08                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | accepted by fakesnow as a no-op; access control not emulated
+DDL09                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS): object properties such as DATA_RETENTION_TIME_IN_DAYS / COMMENT ar
+DDL09b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL10                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL11                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | accepted by fakesnow as a no-op; access control not emulated
+DDL12                    UNSUPPORTED_BY_EMULATOR  DDL | original rejected (ProgrammingError: 001003 (42000): Parser Error: syntax error at or near "WITH"); emulator substitute without object properties (MAN
+DDL13                    UNSUPPORTED_BY_EMULATOR  DDL | original rejected (ProgrammingError: 001003 (42000): Parser Error: syntax error at or near "WITH"); emulator substitute without object properties (MAN
+DDL14                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL14b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL15                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL15b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL16                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL16b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL17                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL17b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL18                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL18b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL19                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL19b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL20                    UNSUPPORTED_BY_EMULATOR  DDL | executed, but fakesnow ignored part of it (COMMENT =; DATA_RETENTION_TIME_IN_DAYS; Unsupported property property): object properties such as DATA_RETE
+DDL20b                   PASS                     DDL_CORE | statement core accepted (columns, types, NOT NULL, DEFAULT, CHECKs where present)
+DDL21                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL22                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL23                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL24                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL25                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL26                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL27                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL28                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL29                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL30                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL31                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL32                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL33                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL34                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL35                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL36                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL37                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL38                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL39                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+DDL40                    UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | rejected by fakesnow parser (ProgrammingError); access control not emulated
+RG00                     UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | not executed meaningfully: access control not emulated
+RG01                     UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | not executed meaningfully: access control not emulated
+RG02                     UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | not executed meaningfully: access control not emulated
+RG03                     UNSUPPORTED_BY_EMULATOR  ROLE_OR_PRIVILEGE | not executed meaningfully: access control not emulated
+ING_EXCLUSIONS           PASS                     INGEST_MERGE | inserted 3 of 3 rows
+ING_RIGHTS_RECORDS       PASS                     INGEST_MERGE | inserted 5 of 5 rows
+ING_ASSETS               PASS                     INGEST_MERGE | inserted 7 of 7 rows
+ING_REVISIONS            PASS                     INGEST_MERGE | inserted 7 of 7 rows
+ING_OBSERVATIONS         PASS                     INGEST_MERGE | inserted 21 of 21 rows
+ING_INGESTION_BATCHES    PASS                     INGEST_MERGE | inserted 3 of 3 rows
+ING_REJECTED_ROWS        PASS                     INGEST_MERGE | inserted 21 of 21 rows
+ING_COUNTS               PASS                     INGEST_MERGE | emulator counts {'EXCLUSIONS': 3, 'RIGHTS_RECORDS': 5, 'ASSETS': 7, 'REVISIONS': 7, 'OBSERVATIONS': 21, 'INGESTION_BATCHES': 3, 'REJECTED_ROWS': 21} v
+RERUN                    PASS                     IDEMPOTENT_RERUN | rerun inserted 0 rows; counts unchanged=True
+Q_asset_inventory()[50]  PASS                     SCREEN_QUERY | rows=7 ref=7 same_rows=True same_order=True
+Q_asset_inventory(GITHUB PASS                     SCREEN_QUERY | rows=3 ref=3 same_rows=True same_order=True
+Q_asset_inventory(RUNTIM PASS                     SCREEN_QUERY | rows=1 ref=1 same_rows=True same_order=True
+Q_asset_revisions(demo-g PASS                     SCREEN_QUERY | rows=2 ref=2 same_rows=True same_order=True
+Q_evidence_detail(demo-r PASS                     SCREEN_QUERY | rows=5 ref=5 same_rows=True same_order=True
+Q_revision_comparison(de PASS                     SCREEN_QUERY | rows=9 ref=9 same_rows=True same_order=True
+Q_all_observations()[200 PASS                     SCREEN_QUERY | rows=21 ref=21 same_rows=True same_order=True
+Q_all_observations()[5]  PASS                     SCREEN_QUERY | rows=5 ref=5 same_rows=True same_order=True
+Q_evidence_detail(demo-r PASS                     SCREEN_QUERY | rows=2 ref=2 same_rows=True same_order=True
+Q_ingestion_batches()[50 PASS                     SCREEN_QUERY | rows=3 ref=3 same_rows=True same_order=True
+Q_rejected_rows()[50]    PASS                     SCREEN_QUERY | rows=21 ref=21 same_rows=True same_order=True
+Q_rejected_rows()[3]     PASS                     SCREEN_QUERY | rows=3 ref=3 same_rows=True same_order=True
+Q_exclusions()[200]      PASS                     SCREEN_QUERY | rows=3 ref=3 same_rows=True same_order=True
+PRES_COMPARISON          PASS                     PRESENTATION | {'CARD_FIELD': 'SAME', 'CHECKSUM_RECORD': 'ONLY_IN_A', 'ILLUSTRATIVE_SCORE': 'DIFFERENT', 'RUNTIME_PROBE': 'NOT_COMPARABLE', 'TEST_RUN_SUMMARY': 'DIFF
+PRES_GAPS                PASS                     PRESENTATION | emulator gaps=10 reference gaps=10 equal=True
+PRES_DISPLAY_EXCLUSION   PASS                     PRESENTATION | hidden=1
+CK00                     PASS                     CHECK_PROBE | ASSETS: violating row refused (ConstraintException)
+CK01                     PASS                     CHECK_PROBE | ASSETS: violating row refused (ConstraintException)
+CK02                     PASS                     CHECK_PROBE | OBSERVATIONS: violating row refused (ConstraintException)
+CK03                     UNSUPPORTED_BY_EMULATOR  CHECK_PROBE | OBSERVATIONS +02:00 offset accepted: DuckDB TIMESTAMPTZ does not retain the input offset (MEASURED: DATE_PART(timezone_hour) returns the session time 
+CK04                     PASS                     CHECK_PROBE | REVISIONS: violating row refused (ConstraintException)
+CK05                     PASS                     CHECK_PROBE | RIGHTS_RECORDS: violating row refused (ConstraintException)
+CK06                     PASS                     CHECK_PROBE | REJECTED_ROWS: violating row refused (ConstraintException)
+CK07                     PASS                     CHECK_PROBE | INGESTION_BATCHES: violating row refused (ConstraintException)
+{"PASS": 40, "FAIL": 0, "UNSUPPORTED_BY_EMULATOR": 46, "fakesnow_version": "0.11.22"}

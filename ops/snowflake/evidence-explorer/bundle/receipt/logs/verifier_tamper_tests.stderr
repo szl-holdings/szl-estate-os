@@ -1,0 +1,30 @@
+test_T00_control_valid_with_logs_and_inputs (__main__.Tamper.test_T00_control_valid_with_logs_and_inputs) ... ok
+test_T01_edit_without_rehash (__main__.Tamper.test_T01_edit_without_rehash) ... ok
+test_T02_edit_with_entry_rehash_breaks_chain (__main__.Tamper.test_T02_edit_with_entry_rehash_breaks_chain) ... ok
+test_T03_reorder_raw (__main__.Tamper.test_T03_reorder_raw) ... ok
+test_T03b_reorder_rechained (__main__.Tamper.test_T03b_reorder_rechained) ... ok
+test_T04_missing_step_rechained (__main__.Tamper.test_T04_missing_step_rechained) ... ok
+test_T04b_missing_step_raw (__main__.Tamper.test_T04b_missing_step_raw) ... ok
+test_T05_not_run_reported_as_pass_rechained (__main__.Tamper.test_T05_not_run_reported_as_pass_rechained) ... ok
+test_T05b_not_run_disguised_exit0_rechained_stage_policy (__main__.Tamper.test_T05b_not_run_disguised_exit0_rechained_stage_policy) ... ok
+test_T05c_not_run_as_pass_caught_by_log (__main__.Tamper.test_T05c_not_run_as_pass_caught_by_log) ... ok
+test_T06_duplicated_step_rechained (__main__.Tamper.test_T06_duplicated_step_rechained) ... ok
+test_T07_truncated_no_end (__main__.Tamper.test_T07_truncated_no_end) ... ok
+test_T07b_truncated_partial_line (__main__.Tamper.test_T07b_truncated_partial_line) ... ok
+test_T08_signature_claimed (__main__.Tamper.test_T08_signature_claimed) ... ok
+test_T09_log_edited (__main__.Tamper.test_T09_log_edited) ... ok
+test_T10_input_drift (__main__.Tamper.test_T10_input_drift) ... ok
+test_T11_duplicate_key_or_noncanonical_line (__main__.Tamper.test_T11_duplicate_key_or_noncanonical_line) ... ok
+test_T12_mutation_survivors_reported_pass (__main__.Tamper.test_T12_mutation_survivors_reported_pass) ... ok
+test_T13_time_backwards (__main__.Tamper.test_T13_time_backwards) ... ok
+test_T14_emulator_relabelled_as_measured (__main__.Tamper.test_T14_emulator_relabelled_as_measured) ... ok
+test_T15_skipped_unit_tests_reported_pass (__main__.Tamper.test_T15_skipped_unit_tests_reported_pass) ... ok
+test_T16_cli_fails_closed_on_missing_file (__main__.Tamper.test_T16_cli_fails_closed_on_missing_file) ... usage: verify_receipt.py RECEIPT [--logs DIR] [--inputs DIR] [--stage LOCAL_TESTED|ACCOUNT_VERIFIED]
+ok
+test_T17_not_run_mislabelled_fail_at_later_stage (__main__.Tamper.test_T17_not_run_mislabelled_fail_at_later_stage) ... ok
+test_T18_cli_fails_closed_on_garbage_and_does_not_echo_paths (__main__.Tamper.test_T18_cli_fails_closed_on_garbage_and_does_not_echo_paths) ... ok
+
+----------------------------------------------------------------------
+Ran 24 tests in 1.415s
+
+OK

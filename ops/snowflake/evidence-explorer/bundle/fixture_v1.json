@@ -1,0 +1,807 @@
+{
+ "as_of_utc": "2026-10-21T00:00:00Z",
+ "batches": [
+  {
+   "local_content": {
+    "demo-rev-advisory-a": "SYNTHETIC CONTENT demo-rev-advisory-a seed 20261021 nonce cbd248da7393",
+    "demo-rev-advisory-bad": "SYNTHETIC CONTENT demo-rev-advisory-bad seed 20261021 nonce eb0d4a50bef2",
+    "demo-rev-denied-a": "SYNTHETIC CONTENT demo-rev-denied-a seed 20261021 nonce 175f597ebee8",
+    "demo-rev-kit-a": "SYNTHETIC CONTENT demo-rev-kit-a seed 20261021 nonce 36c3cd605a80",
+    "demo-rev-kit-mutable": "SYNTHETIC CONTENT demo-rev-kit-mutable seed 20261021 nonce 501cfd89358d",
+    "demo-rev-probe-a": "SYNTHETIC CONTENT demo-rev-probe-a seed 20261021 nonce f334aa5dff56",
+    "demo-rev-probe-wrong": "SYNTHETIC CONTENT demo-rev-probe-wrong seed 20261021 nonce 0497e037c862",
+    "demo-rev-studio-copy": "SYNTHETIC CONTENT demo-rev-studio-copy seed 20261021 nonce 8f21a742a714",
+    "demo-rev-telemetry-a": "SYNTHETIC CONTENT demo-rev-telemetry-a seed 20261021 nonce 5a1b5ace0ca8",
+    "demo-rev-verifier-a": "SYNTHETIC CONTENT demo-rev-verifier-a seed 20261021 nonce aca8aa3181c6"
+   },
+   "payload": {
+    "source_revision": "fixture-v1-batch-1",
+    "tables": {
+     "ASSETS": [
+      {
+       "asset_id": "demo-gh-evidence-kit",
+       "canonical_locator": "mock://github/demo-org/evidence-kit-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "PILOT_ADAPTER",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "GITHUB",
+       "visibility_class": "PUBLIC"
+      },
+      {
+       "asset_id": "demo-gh-receipt-verifier",
+       "canonical_locator": "mock://github/demo-org/receipt-verifier-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "INGEST_APPROVED_METADATA",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "GITHUB",
+       "visibility_class": "PUBLIC"
+      },
+      {
+       "asset_id": "demo-hf-advisory-model",
+       "canonical_locator": "mock://huggingface/demo-org/advisory-model-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "KEEP_CANONICAL",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "HUGGINGFACE",
+       "visibility_class": "PUBLIC"
+      },
+      {
+       "asset_id": "demo-hf-telemetry-dataset",
+       "canonical_locator": "mock://huggingface/demo-org/telemetry-dataset-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "INGEST_APPROVED_METADATA",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "HUGGINGFACE",
+       "visibility_class": "RESTRICTED"
+      },
+      {
+       "asset_id": "demo-rt-health-probe",
+       "canonical_locator": "mock://runtime/demo-host/health-probe-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "PILOT_ADAPTER",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "RUNTIME",
+       "visibility_class": "PRIVATE"
+      },
+      {
+       "asset_id": "demo-gh-studio-copy",
+       "canonical_locator": "mock://github/demo-org/studio-copy-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "EXCLUDED",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "GITHUB",
+       "visibility_class": "UNKNOWN"
+      },
+      {
+       "asset_id": "demo-hf-denied-corpus",
+       "canonical_locator": "mock://huggingface/demo-org/denied-corpus-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "BLOCKED",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "HUGGINGFACE",
+       "visibility_class": "RESTRICTED"
+      },
+      {
+       "asset_id": "demo-gh-scraped-forum",
+       "canonical_locator": "mock://github/demo-org/scraped-forum-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "EXCLUDED",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "GITHUB",
+       "visibility_class": "UNKNOWN"
+      },
+      {
+       "asset_id": "demo-gl-other-forge",
+       "canonical_locator": "mock://github/demo-org/other-forge-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "UNKNOWN",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "GITLAB",
+       "visibility_class": "PUBLIC"
+      }
+     ],
+     "EXCLUSIONS": [
+      {
+       "effective_at_utc": "2026-10-01T00:00:00Z",
+       "exclusion_reason": "OWNER_EXCLUSION",
+       "scope": "ALL",
+       "source_identifier": "f75070d94bc3683a7aa18e3d111cb0dd112638c1"
+      },
+      {
+       "effective_at_utc": "2026-10-01T00:00:00Z",
+       "exclusion_reason": "OUT_OF_SCOPE",
+       "scope": "ALL",
+       "source_identifier": "mock://github/demo-org/scraped-forum-demo"
+      }
+     ],
+     "OBSERVATIONS": [
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-score",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T12:05:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/eval",
+       "summarized_value": "0.71 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-tests",
+       "observation_type": "TEST_RUN_SUMMARY",
+       "observed_at_utc": "2026-09-01T12:06:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/tests",
+       "summarized_value": "41/44 synthetic checks passed",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "REPORTED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-card",
+       "observation_type": "CARD_FIELD",
+       "observed_at_utc": "2026-09-01T12:07:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/README.md",
+       "summarized_value": "license field present",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-checksum",
+       "observation_type": "CHECKSUM_RECORD",
+       "observed_at_utc": "2026-09-01T12:08:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/SHA256SUMS",
+       "summarized_value": "sha256 recorded",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-probe",
+       "observation_type": "RUNTIME_PROBE",
+       "observed_at_utc": "2026-09-01T12:09:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/probe",
+       "summarized_value": "status=ok (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "REPORTED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-ver-a-score",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-04-02T09:31:00Z",
+       "revision_id": "demo-rev-verifier-a",
+       "source_locator": "mock://github/demo-org/receipt-verifier-demo/tree/rev-a/eval",
+       "summarized_value": "0.55 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-ver-a-tests",
+       "observation_type": "TEST_RUN_SUMMARY",
+       "observed_at_utc": "2026-04-02T09:32:00Z",
+       "revision_id": "demo-rev-verifier-a",
+       "source_locator": "mock://github/demo-org/receipt-verifier-demo/tree/rev-a/tests",
+       "summarized_value": "12/12 synthetic checks passed",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "UNKNOWN",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-ver-a-card",
+       "observation_type": "CARD_FIELD",
+       "observed_at_utc": "2026-04-02T09:33:00Z",
+       "revision_id": "demo-rev-verifier-a",
+       "source_locator": "mock://github/demo-org/receipt-verifier-demo/tree/rev-a/README.md",
+       "summarized_value": null,
+       "value_state": "MISSING"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "UNKNOWN",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-adv-score",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-10-05T08:01:00Z",
+       "revision_id": "demo-rev-advisory-a",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/blob/rev-a/eval.json",
+       "summarized_value": null,
+       "value_state": "MISSING"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "REPORTED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-adv-card",
+       "observation_type": "CARD_FIELD",
+       "observed_at_utc": "2026-10-05T08:02:00Z",
+       "revision_id": "demo-rev-advisory-a",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/blob/rev-a/README.md",
+       "summarized_value": "intended use stated",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-adv-tests",
+       "observation_type": "TEST_RUN_SUMMARY",
+       "observed_at_utc": "2026-10-05T08:03:00Z",
+       "revision_id": "demo-rev-advisory-a",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/blob/rev-a/tests",
+       "summarized_value": "9/10 synthetic checks passed",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-adv-checksum",
+       "observation_type": "CHECKSUM_RECORD",
+       "observed_at_utc": "2026-10-05T08:04:00Z",
+       "revision_id": "demo-rev-advisory-a",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/blob/rev-a/SHA256SUMS",
+       "summarized_value": "sha256 recorded",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "REPORTED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-tel-card",
+       "observation_type": "CARD_FIELD",
+       "observed_at_utc": "2026-10-06T08:01:00Z",
+       "revision_id": "demo-rev-telemetry-a",
+       "source_locator": "mock://huggingface/demo-org/telemetry-dataset-demo/blob/rev-a/README.md",
+       "summarized_value": "row count 5000 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-tel-checksum",
+       "observation_type": "CHECKSUM_RECORD",
+       "observed_at_utc": "2026-10-06T08:02:00Z",
+       "revision_id": "demo-rev-telemetry-a",
+       "source_locator": "mock://huggingface/demo-org/telemetry-dataset-demo/blob/rev-a/SHA256SUMS",
+       "summarized_value": "sha256 recorded",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-prb-probe",
+       "observation_type": "RUNTIME_PROBE",
+       "observed_at_utc": "2026-10-18T06:01:00Z",
+       "revision_id": "demo-rev-probe-a",
+       "source_locator": "mock://runtime/demo-host/health-probe-demo/build/rev-a/probe",
+       "summarized_value": "status=ok (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "UNKNOWN",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-prb-score",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-10-18T06:02:00Z",
+       "revision_id": "demo-rev-probe-a",
+       "source_locator": "mock://runtime/demo-host/health-probe-demo/build/rev-a/eval",
+       "summarized_value": null,
+       "value_state": "NOT_MEASURED"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-prb-tests",
+       "observation_type": "TEST_RUN_SUMMARY",
+       "observed_at_utc": "2026-10-18T06:03:00Z",
+       "revision_id": "demo-rev-probe-a",
+       "source_locator": "mock://runtime/demo-host/health-probe-demo/build/rev-a/tests",
+       "summarized_value": "3/3 synthetic probes passed",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-date",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-02-30T00:00:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-offset",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-10-01T10:00:00+02:00",
+       "revision_id": "demo-rev-advisory-a",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-future",
+       "observation_type": "RUNTIME_PROBE",
+       "observed_at_utc": "2027-01-01T00:00:00Z",
+       "revision_id": "demo-rev-probe-a",
+       "source_locator": "mock://runtime/demo-host/health-probe-demo/x",
+       "summarized_value": "status=ok (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "api_token": "synthetic-placeholder-not-a-token",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-secret-field",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:00:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-secret-value",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:01:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "ghp_SYNTHETICDEMONOTREAL",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "VERIFIED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-enum",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:02:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-missing",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:03:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-orphan-mutable",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-02T00:01:00Z",
+       "revision_id": "demo-rev-kit-mutable",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-orphan-studio",
+       "observation_type": "CHECKSUM_RECORD",
+       "observed_at_utc": "2026-10-01T00:01:00Z",
+       "revision_id": "demo-rev-studio-copy",
+       "source_locator": "mock://github/demo-org/studio-copy-demo/x",
+       "summarized_value": "sha256 recorded",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": false,
+       "observation_id": "demo-obs-bad-not-synthetic",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:04:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-inconsistent",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:05:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": "0.1 (illustrative)",
+       "value_state": "MISSING"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "REPORTED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-den-card",
+       "observation_type": "CARD_FIELD",
+       "observed_at_utc": "2026-10-06T08:03:00Z",
+       "revision_id": "demo-rev-denied-a",
+       "source_locator": "mock://huggingface/demo-org/denied-corpus-demo/x",
+       "summarized_value": "row count 10 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-bad-type",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T13:06:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/x",
+       "summarized_value": 0.9,
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-score",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-09-01T12:05:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/eval",
+       "summarized_value": "0.99 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-a-tests",
+       "observation_type": "TEST_RUN_SUMMARY",
+       "observed_at_utc": "2026-09-01T12:06:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a/tests",
+       "summarized_value": "41/44 synthetic checks passed",
+       "value_state": "PRESENT"
+      }
+     ],
+     "REVISIONS": [
+      {
+       "asset_id": "demo-gh-evidence-kit",
+       "content_digest": "bdf30a66cc574e3080b9aa35502b6357c951e46864298930cc03cb78b2213ce8",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "git-sha1:c0cca7fcc070113ed2398544313185b0b83439e2",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-09-01T12:00:00Z",
+       "revision_id": "demo-rev-kit-a",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-a"
+      },
+      {
+       "asset_id": "demo-gh-receipt-verifier",
+       "content_digest": "03dc109414ce35e4563bcb8127dd0feca4d70973aed9b8b5cc76d21fc5aa26a9",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "git-sha256:287a8a51882b2697610e6544fb59d7fbe14c7894be28ea57a16b80463812733d",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-04-02T09:30:00Z",
+       "revision_id": "demo-rev-verifier-a",
+       "source_locator": "mock://github/demo-org/receipt-verifier-demo/tree/rev-a"
+      },
+      {
+       "asset_id": "demo-hf-advisory-model",
+       "content_digest": "141cfcc1afaf85a44397ab56b11bf681f0e47b15d0df2bdd37f3b23b7efb2bdd",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "hf-commit:f970ac2234304538df518d705ed74ef7a34da2e7",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-05T08:00:00Z",
+       "revision_id": "demo-rev-advisory-a",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/blob/rev-a/README.md"
+      },
+      {
+       "asset_id": "demo-hf-telemetry-dataset",
+       "content_digest": "d84bcaf0bbe9ad931ad36fc258cb93cf0d03cd9b16fd9af524aa51db42bc7743",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "hf-commit:41c8926703d480cb3e8a37d7982f6ae8c58d2283",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-06T08:00:00Z",
+       "revision_id": "demo-rev-telemetry-a",
+       "source_locator": "mock://huggingface/demo-org/telemetry-dataset-demo/blob/rev-a/README.md"
+      },
+      {
+       "asset_id": "demo-rt-health-probe",
+       "content_digest": "95ce2ddd0deeef57adb5c1c692bad9f549c53c438735fbf186b69954ff4bc3dc",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "runtime-build:f4807405321ae9cb",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-18T06:00:00.250000Z",
+       "revision_id": "demo-rev-probe-a",
+       "source_locator": "mock://runtime/demo-host/health-probe-demo/build/rev-a"
+      },
+      {
+       "asset_id": "demo-hf-denied-corpus",
+       "content_digest": "d758eed7ffb4837dd184b1a21a094e8bda9ec09c2e533b051e9ca2e746acda97",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "hf-commit:b8c4c8e64b2f222d50c5c3f3523980c711f4e880",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-06T08:00:00Z",
+       "revision_id": "demo-rev-denied-a",
+       "source_locator": "mock://huggingface/demo-org/denied-corpus-demo/blob/rev-a/README.md"
+      },
+      {
+       "asset_id": "demo-gh-studio-copy",
+       "content_digest": "3851a73a42f29053f2edeec27e412be4355e1710f029daf3ef767a4c668e5d85",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "git-sha1:f75070d94bc3683a7aa18e3d111cb0dd112638c1",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-01T00:00:00Z",
+       "revision_id": "demo-rev-studio-copy",
+       "source_locator": "mock://github/demo-org/studio-copy-demo/blob/rev-a"
+      },
+      {
+       "asset_id": "demo-gh-evidence-kit",
+       "content_digest": "da0de6202e2579b25007e8e7e91fc26f938237aeb83266b0188eac9be965d167",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "main",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-09-02T00:00:00Z",
+       "revision_id": "demo-rev-kit-mutable",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/main"
+      },
+      {
+       "asset_id": "demo-hf-advisory-model",
+       "content_digest": "ebb8054cc6611bff42f15c44ff9e412cfa7dadd41d3d9bca8c2a0cb00d77bdcb",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "hf-commit:46ef2589166b1d9cf42332f22ea1018a9ef8c664",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-07T00:00:00Z",
+       "revision_id": "demo-rev-advisory-bad",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo/blob/rev-x/README.md"
+      },
+      {
+       "asset_id": "demo-rt-health-probe",
+       "content_digest": "b0d39ba638ccc217c8f9e43d452f67930fa70797bf5dee84354b301dbcd8a2ff",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "git-sha1:b5084f6aeed322ae5b53fd68447c07d0c590cfe0",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-18T07:00:00Z",
+       "revision_id": "demo-rev-probe-wrong",
+       "source_locator": "mock://runtime/demo-host/health-probe-demo/build/rev-x"
+      }
+     ],
+     "RIGHTS_RECORDS": [
+      {
+       "allowed_use": "METADATA_DISPLAY",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "is_synthetic": true,
+       "license_reference": "SPDX:Apache-2.0",
+       "redistribution_status": "ALLOWED",
+       "reviewed_at_utc": "2026-09-01T00:00:00Z",
+       "rights_record_id": "demo-rr-kit",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo",
+       "training_allowed": false,
+       "training_evidence_ref": null
+      },
+      {
+       "allowed_use": "METADATA_DISPLAY",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "is_synthetic": true,
+       "license_reference": "SPDX:MIT",
+       "redistribution_status": "ALLOWED",
+       "reviewed_at_utc": "2026-04-01T00:00:00Z",
+       "rights_record_id": "demo-rr-verifier",
+       "source_locator": "mock://github/demo-org/receipt-verifier-demo",
+       "training_allowed": false,
+       "training_evidence_ref": null
+      },
+      {
+       "allowed_use": "METADATA_DISPLAY",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "is_synthetic": true,
+       "license_reference": "SPDX:Apache-2.0",
+       "redistribution_status": "ALLOWED",
+       "reviewed_at_utc": "2026-10-01T00:00:00Z",
+       "rights_record_id": "demo-rr-advisory",
+       "source_locator": "mock://huggingface/demo-org/advisory-model-demo",
+       "training_allowed": false,
+       "training_evidence_ref": null
+      },
+      {
+       "allowed_use": "METADATA_INTERNAL",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "is_synthetic": true,
+       "license_reference": "LicenseRef:demo-restricted",
+       "redistribution_status": "PROHIBITED",
+       "reviewed_at_utc": "2026-10-01T00:00:00Z",
+       "rights_record_id": "demo-rr-telemetry",
+       "source_locator": "mock://huggingface/demo-org/telemetry-dataset-demo",
+       "training_allowed": false,
+       "training_evidence_ref": null
+      },
+      {
+       "allowed_use": "NONE",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "is_synthetic": true,
+       "license_reference": "LicenseRef:demo-denied",
+       "redistribution_status": "PROHIBITED",
+       "reviewed_at_utc": "2026-10-01T00:00:00Z",
+       "rights_record_id": "demo-rr-denied",
+       "source_locator": "mock://huggingface/demo-org/denied-corpus-demo",
+       "training_allowed": false,
+       "training_evidence_ref": null
+      },
+      {
+       "allowed_use": "METADATA_DISPLAY",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "is_synthetic": true,
+       "license_reference": "SPDX:Apache-2.0",
+       "redistribution_status": "ALLOWED",
+       "reviewed_at_utc": "2026-10-02T00:00:00Z",
+       "rights_record_id": "demo-rr-bad-training",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo",
+       "training_allowed": true,
+       "training_evidence_ref": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "local_content": {
+    "demo-rev-kit-b": "SYNTHETIC CONTENT demo-rev-kit-b seed 20261021 nonce 2380478c9622"
+   },
+   "payload": {
+    "source_revision": "fixture-v1-batch-2",
+    "tables": {
+     "ASSETS": [
+      {
+       "asset_id": "demo-gh-evidence-kit",
+       "canonical_locator": "mock://github/demo-org/evidence-kit-demo",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "disposition": "PILOT_ADAPTER",
+       "is_synthetic": true,
+       "owner_reference": "mock-owner:demo-team",
+       "provider": "GITHUB",
+       "visibility_class": "PUBLIC"
+      }
+     ],
+     "OBSERVATIONS": [
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-b-score",
+       "observation_type": "ILLUSTRATIVE_SCORE",
+       "observed_at_utc": "2026-10-15T10:05:00Z",
+       "revision_id": "demo-rev-kit-b",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-b/eval",
+       "summarized_value": "0.74 (illustrative)",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "MEASURED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-b-tests",
+       "observation_type": "TEST_RUN_SUMMARY",
+       "observed_at_utc": "2026-10-15T10:06:00Z",
+       "revision_id": "demo-rev-kit-b",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-b/tests",
+       "summarized_value": "44/44 synthetic checks passed",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "REPORTED",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-b-card",
+       "observation_type": "CARD_FIELD",
+       "observed_at_utc": "2026-10-15T10:07:00Z",
+       "revision_id": "demo-rev-kit-b",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-b/README.md",
+       "summarized_value": "license field present",
+       "value_state": "PRESENT"
+      },
+      {
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "evidence_class": "UNKNOWN",
+       "is_synthetic": true,
+       "observation_id": "demo-obs-kit-b-probe",
+       "observation_type": "RUNTIME_PROBE",
+       "observed_at_utc": "2026-10-15T10:08:00Z",
+       "revision_id": "demo-rev-kit-b",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-b/probe",
+       "summarized_value": null,
+       "value_state": "NOT_MEASURED"
+      }
+     ],
+     "REVISIONS": [
+      {
+       "asset_id": "demo-gh-evidence-kit",
+       "content_digest": "8603177028477087d8758b3f6dc04dec23a2d2e8cfa51c6484a3e99a6d499af7",
+       "content_digest_algorithm": "sha256",
+       "data_label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+       "immutable_source_revision": "git-sha1:9c22712e88f5482dab33b784395bd0d19cc2481d",
+       "is_synthetic": true,
+       "observed_at_utc": "2026-10-15T10:00:00Z",
+       "revision_id": "demo-rev-kit-b",
+       "source_locator": "mock://github/demo-org/evidence-kit-demo/tree/rev-b"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "local_content": {},
+   "payload": {
+    "source_revision": "fixture-v1-batch-3",
+    "tables": {
+     "EXCLUSIONS": [
+      {
+       "effective_at_utc": "2026-10-20T00:00:00Z",
+       "exclusion_reason": "OWNER_EXCLUSION",
+       "scope": "DISPLAY",
+       "source_identifier": "demo-obs-adv-card"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "fixture_version": "szl-ee-fixture/v1",
+ "is_synthetic": true,
+ "label": "SYNTHETIC DEMONSTRATION DATA — NOT PRODUCTION OR MODEL QUALIFICATION.",
+ "seed": 20261021
+}

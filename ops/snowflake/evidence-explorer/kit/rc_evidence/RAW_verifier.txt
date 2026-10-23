@@ -1,0 +1,14 @@
+# exit=0 python=3.11.16 utc=2026-10-22T15:44:07Z
+VALID (unsigned; signature NOT_RUN; integrity only, not authorship)
+INVALID
+- unreadable receipt: FileNotFoundError: No such file or directory
+INVALID
+- unreadable receipt: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+INVALID
+- unreadable receipt: ValueError: receipt does not end with a newline (truncated?)
+.....................usage: verify_receipt.py RECEIPT [--logs DIR] [--inputs DIR] [--stage LOCAL_TESTED|ACCOUNT_VERIFIED]
+...
+----------------------------------------------------------------------
+Ran 24 tests in 0.938s
+
+OK

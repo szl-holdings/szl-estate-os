@@ -1,0 +1,61 @@
+# exit=0 python=3.11.16 utc=2026-10-22T15:44:07Z
+M01 KILLED    sf_kit_common.py               allowlist membership check disabled
+M02 KILLED    sf_kit_common.py               allowlist multi-statement check removed
+M03 KILLED    sf_kit_common.py               driver error message leaked into evidence
+M04 KILLED    sf_kit_common.py               warehouse gate allows a SUSPENDED current warehouse
+M05 KILLED    sf_kit_common.py               gate closed when no current warehouse (over-restrictive)
+M06 KILLED    sf_kit_common.py               secret scrub removed from emit
+M07 KILLED    sf_kit_common.py               connect() receives a password from env
+M08 KILLED    sf_verify_account_readonly.py  verifier gate bypassed
+M09 KILLED    sf_verify_account_readonly.py  account identifier not redacted
+M10 KILLED    sf_verify_account_readonly.py  free-text warehouse comment kept in evidence
+M11 KILLED    sf_verify_account_readonly.py  verifier accepts arbitrary argv
+M12 KILLED    sf_deploy_pilot.py             credit cap off by one
+M13 KILLED    sf_deploy_pilot.py             approval accepts trailing text
+M14 KILLED    sf_deploy_pilot.py             approval valid on its own end date
+M15 KILLED    sf_deploy_pilot.py             manifest digest check disabled
+M16 KILLED    sf_deploy_pilot.py             account match disabled
+M17 KILLED    sf_deploy_pilot.py             existing warehouse/database check disabled
+M18 KILLED    sf_deploy_pilot.py             dry-run path removed (falls through toward execution)
+M19 KILLED    sf_deploy_pilot.py             DROP deny token removed
+M20 KILLED    sf_deploy_pilot.py             ACCOUNTADMIN deny token removed
+M21 KILLED    sf_deploy_pilot.py             monitor-exists-before-warehouse check disabled
+M22 KILLED    sf_deploy_pilot.py             monitor quota check disabled
+M23 KILLED    sf_deploy_pilot.py             manifest path-escape check disabled
+M24 KILLED    sf_deploy_pilot.py             warehouse created with AUTO_RESUME TRUE
+M27 KILLED    sf_deploy_pilot.py             deny tokens checked inside literals (false refusals)
+M28 KILLED    sf_deploy_pilot.py             pre-execution digest re-check removed (TOCTOU)
+M29 KILLED    sf_shutdown_verify.py          shutdown W1 always PASS
+M30 KILLED    sf_shutdown_verify.py          shutdown T1 always PASS
+M31 KILLED    sf_deploy_pilot.py             approval-reference mismatch in SQL file accepted
+M32 KILLED    sf_deploy_pilot.py             unpinned local app import accepted
+M33 KILLED    sf_deploy_pilot.py             three-part name confinement disabled
+M34 KILLED    sf_deploy_pilot.py             monitor exact-name filter removed (LIKE wildcard)
+M35 KILLED    sf_deploy_pilot.py             guard token outside line 1 accepted
+M36 KILLED    sf_deploy_pilot.py             per-file statement-type restriction removed
+M37 KILLED    sf_deploy_pilot.py             backslash refusal removed
+M38 KILLED    sf_deploy_pilot.py             dollar-quote refusal removed
+M39 KILLED    sf_deploy_pilot.py             unbalanced-quote refusal removed
+M40 KILLED    sf_deploy_pilot.py             non-ASCII refusal removed
+M41 KILLED    sf_deploy_pilot.py             in-statement comment refusal removed
+M42 KILLED    sf_deploy_pilot.py             quoted-identifier refusal removed
+M43 KILLED    sf_deploy_pilot.py             role-grant pair check removed (admin escalation)
+M44 KILLED    sf_deploy_pilot.py             privilege-matrix target check removed
+M45 KILLED    sf_deploy_pilot.py             privilege subset check removed
+M46 KILLED    sf_deploy_pilot.py             duplicate-privilege check removed
+M47 KILLED    sf_deploy_pilot.py             comma canonicalisation removed (over-restrictive)
+M48 KILLED    sf_deploy_pilot.py             malformed GRANT accepted
+M49 KILLED    sf_deploy_pilot.py             CREATE ROLE shape check removed
+M50 KILLED    sf_deploy_pilot.py             CREATE DATABASE shape check removed
+M51 KILLED    sf_deploy_pilot.py             CREATE SCHEMA shape check removed
+M52 KILLED    sf_deploy_pilot.py             CREATE TABLE qualification removed
+M53 KILLED    sf_deploy_pilot.py             table option deny (CLUSTER BY etc.) removed
+M54 KILLED    sf_deploy_pilot.py             table retention check removed
+M55 KILLED    sf_deploy_pilot.py             CREATE WAREHOUSE exact match removed
+M56 KILLED    sf_deploy_pilot.py             CREATE STAGE exact match removed
+M57 KILLED    sf_deploy_pilot.py             CREATE STREAMLIT exact match removed
+M58 KILLED    sf_deploy_pilot.py             PUT shape check removed
+M59 KILLED    sf_deploy_pilot.py             whole lexical pre-check removed
+M60 KILLED    sf_deploy_pilot.py             whole GRANT matrix check removed
+M61 KILLED    sf_deploy_pilot.py             monitor quota may differ from approval (only cap checked)
+TOTAL 59 mutants: 59 killed, 0 survived, 0 invalid
