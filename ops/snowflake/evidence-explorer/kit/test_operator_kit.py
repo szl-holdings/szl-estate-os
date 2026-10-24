@@ -1232,5 +1232,62 @@ class TestOwnerSheetMatchesKit(unittest.TestCase):
                 self.assertNotIn("PASSWORD", s)
 
 
+class TestGoDryRunStaysOffline(unittest.TestCase):
+    def test_dry_run_only_returns_before_connector_and_sql(self):
+        import szl_ee_go as go
+
+        class Boom:
+            def __getattr__(self, name):
+                raise AssertionError("connector used: " + name)
+
+        class Completed:
+            returncode = 0
+            stdout = b"# DRY RUN - nothing executed; the Snowflake connector was not loaded.\n"
+            stderr = b""
+
+        calls = []
+
+        def runner(argv, **kw):
+            calls.append((argv, kw.get("env") or {}))
+            joined = " ".join(argv)
+            self.assertNotIn("import snowflake", joined)
+            self.assertIn("sf_deploy_pilot.py", joined)
+            self.assertIn("--dry-run", joined)
+            self.assertNotIn("--execute", joined)
+            env = kw.get("env") or {}
+            for key in env:
+                self.assertFalse(key.startswith("SZL_EE_"), key)
+                if key.startswith("SNOWFLAKE_") and key != "SNOWFLAKE_HOME":
+                    self.fail(key)
+            return Completed()
+
+        old = go.recheck_pins
+        go.recheck_pins = lambda pins, paths: []
+        td = tempfile.TemporaryDirectory()
+        try:
+            rec = go.Receipt(td.name, [], "20261024T000000Z-0123abcd")
+            state = {"deployed": False, "connector": Boom(), "pins": {},
+                     "kit": td.name, "bundle": td.name}
+            clk = go._Clock(lambda: 0.0, 120)
+            env = {"SNOWFLAKE_ACCOUNT": "SHOULD_NOT_LEAK",
+                   "SZL_EE_EXPECTED_WAREHOUSE": "X",
+                   "SNOWFLAKE_DEPLOY_PRIVATE_KEY": "not-a-real-key"}
+            opts = {"--kit": td.name, "--bundle": td.name, "--approval": "a",
+                    "--out": td.name, "--kit-sums-sha256": "a" * 64,
+                    "--manifest-sha256": "b" * 64}
+            code = go._prereq_and_forward(
+                opts, {"--dry-run-only"}, env, runner, rec, td.name, state,
+                "ACCT", "c" * 64, clk, "20261024T000000Z-0123abcd")
+            self.assertEqual(code, go.EXIT_PARTIAL)
+            self.assertEqual(len(calls), 1)
+            steps = [entry["step"] for entry in rec.entries]
+            for banned in ("verify", "identity", "inventory", "credentials", "prerequisites"):
+                self.assertNotIn(banned, steps)
+            self.assertIn("dryrun", steps)
+        finally:
+            go.recheck_pins = old
+            td.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

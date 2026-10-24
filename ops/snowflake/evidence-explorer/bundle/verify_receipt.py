@@ -133,6 +133,8 @@ def _semantics(i, e, stage):
             errs.append("entry %d (%s): NOT_RUN/skipped work reported as PASS" % (i, step))
     if st == "NOT_RUN" and step not in ("integration_snowflake", "emulator_check"):
         errs.append("entry %d (%s): step may not be NOT_RUN" % (i, step))
+    if st == "NOT_RUN" and ((s.get("failures") or 0) or (s.get("errors") or 0)):
+        errs.append("entry %d (%s): failures/errors recorded as NOT_RUN" % (i, step))
     if step == "integration_snowflake":
         if code == 3 and st != "NOT_RUN":
             errs.append("entry %d: integration exit 3 (NOT_RUN) reported as %s" % (i, st))

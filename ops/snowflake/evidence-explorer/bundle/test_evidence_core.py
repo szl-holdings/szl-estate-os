@@ -22,6 +22,8 @@ sys.path.insert(0, HERE)
 
 import evidence_core as ec  # noqa: E402
 import make_fixture as mf  # noqa: E402
+import run_local_evidence as rle  # noqa: E402
+import test_integration_snowflake as itest  # noqa: E402
 
 FIXTURE_PATH = os.path.join(HERE, "fixture_v1.json")
 FIXTURE_SHA256 = "be43d225497b1f48d445c9c5b53130041889fec614740778cc1b14de406dac72"
@@ -949,6 +951,90 @@ class X_SqlStaticChecks(unittest.TestCase):
     def test_core_default_schema_matches_sql(self):
         self.assertEqual(ec.DEFAULT_DATA_SCHEMA, "SZL_EE_DB.EE_DATA")
         self.assertIn("CREATE SCHEMA SZL_EE_DB.EE_DATA", sql_statements("schema.sql"))
+
+
+class OfflineBoundary(unittest.TestCase):
+    def test_inherited_environment_is_not_a_live_switch(self):
+        env = {name: "synthetic" for name in itest.REQUIRED_ENV}
+        self.assertEqual(itest.classify_launch(["-v"], env), "offline")
+        self.assertEqual(itest.classify_launch(["--live-approved", "-v"], env), "live")
+        self.assertEqual(itest.classify_launch(["--live-approved"], {}), "not_configured")
+        self.assertNotIn("--live-approved", rle.integration_argv(sys.executable))
+
+    def test_runner_integration_env_drops_live_switches(self):
+        saved = {}
+        keys = ("SZL_EE_INTEGRATION_APPROVAL_REF", "SNOWFLAKE_ACCOUNT",
+                "SZL_EE_SNOWFLAKE_CONNECTION_NAME")
+        for key in keys:
+            saved[key] = os.environ.get(key)
+            os.environ[key] = "do-not-forward"
+        try:
+            env = rle.integration_child_env(tempfile.mkdtemp())
+        finally:
+            for key, old in saved.items():
+                if old is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = old
+        for key in keys:
+            self.assertNotIn(key, env)
+        self.assertEqual(env["SNOWFLAKE_HOME"], env["HOME"])
+
+    def test_failed_identity_refuses_merge(self):
+        calls = []
+
+        def boom(*_a, **_k):
+            calls.append("merge")
+            raise AssertionError("MERGE executed")
+
+        old = itest.ec.build_merge
+        previous = itest.IDENTITY_OK
+        try:
+            itest.ec.build_merge = boom
+            itest.IDENTITY_OK = False
+            with self.assertRaises(RuntimeError) as caught:
+                itest.load_fixture()
+            self.assertIn("MERGE not executed", str(caught.exception))
+            self.assertEqual(calls, [])
+        finally:
+            itest.ec.build_merge = old
+            itest.IDENTITY_OK = previous
+
+    def test_admin_role_fails_identity_before_any_write(self):
+        digest = hashlib.sha256(b"ZZ99999").hexdigest()
+        env = {"SZL_EE_EXPECTED_ACCOUNT_SHA256": digest, "SZL_EE_EXPECTED_WAREHOUSE": "SZL_EE_WH"}
+        row = {"A": "zz99999", "D": "SZL_EE_DB", "S": "EE_DATA", "W": "SZL_EE_WH",
+               "R": "ACCOUNTADMIN"}
+        self.assertFalse(itest.identity_matches(row, env))
+        row["R"] = "SZL_EE_INGEST"
+        self.assertTrue(itest.identity_matches(row, env))
+
+    def test_failures_outrank_skips(self):
+        class Failed:
+            failures = [object()]
+            errors = []
+            skipped = [object(), object(), object(), object()]
+
+            def wasSuccessful(self):
+                return False
+
+        class CleanSkip:
+            failures = []
+            errors = []
+            skipped = [object()]
+
+            def wasSuccessful(self):
+                return True
+
+        self.assertEqual(itest.integration_process_code(Failed()), 1)
+        self.assertEqual(itest.integration_process_code(CleanSkip()), 3)
+        dirty = {"not_run": 4, "failures": 1, "errors": 0, "skipped": 4, "ran": 11,
+                 "result": "FAILED"}
+        self.assertEqual(rle.decide("integration_snowflake", 1, dirty), "FAIL")
+        self.assertEqual(rle.decide("integration_snowflake", 3, dirty), "FAIL")
+        clean = {"not_run": 11, "failures": 0, "errors": 0, "skipped": 11, "ran": 11,
+                 "result": "OK"}
+        self.assertEqual(rle.decide("integration_snowflake", 3, clean), "NOT_RUN")
 
 
 if __name__ == "__main__":
