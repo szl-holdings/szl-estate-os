@@ -90,6 +90,9 @@ def parse_unittest(stderr):
 
 def decide(step, exit_code, summary):
     if step == "integration_snowflake":
+        failed = (summary.get("failures") or 0) or (summary.get("errors") or 0)
+        if failed or exit_code not in (0, 3):
+            return "FAIL"
         if exit_code == 3 and summary.get("not_run", 0) > 0:
             return "NOT_RUN"
         if exit_code == 0 and summary.get("skipped") == 0 and summary.get("not_run") == 0:
@@ -120,6 +123,29 @@ def run(argv, env, cwd):
     return r.returncode, r.stdout, r.stderr
 
 
+def integration_child_env(tmp):
+    """Environment for the integration step. Live switches and home profiles are absent."""
+    allow = ("PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "COMSPEC", "SYSTEMDRIVE",
+             "LANG", "LC_ALL", "LC_CTYPE", "PYTHONUTF8", "PYTHONIOENCODING")
+    env = {}
+    for key in allow:
+        value = os.environ.get(key)
+        if value:
+            env[key] = value
+    env["HOME"] = tmp
+    env["USERPROFILE"] = tmp
+    env["TEMP"] = tmp
+    env["TMP"] = tmp
+    env["SNOWFLAKE_HOME"] = tmp
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
+
+
+def integration_argv(py):
+    """No --live-approved. The local runner cannot open a Snowflake session."""
+    return [py, "-I", "-B", "test_integration_snowflake.py", "-v"]
+
+
 def main(args):
     out_dir = os.path.join(HERE, "receipt")
     emu = None
@@ -144,7 +170,7 @@ def main(args):
          ["<python>", "-I", "-B", "make_fixture.py", "<tmp>/fixture_rebuild.json"], 0),
         ("unit_tests", [py, "-I", "-B", "test_evidence_core.py", "-v"],
          ["<python>", "-I", "-B", "test_evidence_core.py", "-v"], 0),
-        ("integration_snowflake", [py, "-I", "-B", "test_integration_snowflake.py", "-v"],
+        ("integration_snowflake", integration_argv(py),
          ["<python>", "-I", "-B", "test_integration_snowflake.py", "-v"], 3),
         ("mutation_sweep", [py, "-I", "-B", "mutation_sweep.py",
                             os.path.join(tmp, "mutation_results.json")],
@@ -167,7 +193,8 @@ def main(args):
             summary = {"not_run_reason": "no emulator interpreter supplied"}
             label = "NOT_RUN"
         else:
-            code, so, se = run(argv, env, HERE)
+            step_env = integration_child_env(tmp) if step == "integration_snowflake" else env
+            code, so, se = run(argv, step_env, HERE)
             text_e = se.decode("utf-8", "replace")
             text_o = so.decode("utf-8", "replace")
             if step in ("unit_tests", "integration_snowflake", "verifier_tamper_tests"):

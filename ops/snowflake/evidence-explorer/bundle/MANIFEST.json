@@ -235,8 +235,8 @@
   },
   {
    "path": "run_local_evidence.py",
-   "sha256": "dd5da9e8d7ceb22e41777e00e41c0b33982c6641dc4faa11be99488d11eb596f",
-   "bytes": 10745,
+   "sha256": "0305024df3de902cc7f55e911f4e5e544a802421eb585056ce0303055d39b62f",
+   "bytes": 11721,
    "role": "tool"
   },
   {
@@ -259,20 +259,20 @@
   },
   {
    "path": "test_evidence_core.py",
-   "sha256": "8b000353fcaaab709e79d6231dd5baffee5f6b171ee0d1d407d9fa60ff8fe5f1",
-   "bytes": 48369,
+   "sha256": "3c124d93ba77468ede269c5505533b7eef662c22ecaa53c1ce6793afa94824f2",
+   "bytes": 51906,
    "role": "test"
   },
   {
    "path": "test_integration_snowflake.py",
-   "sha256": "17ded3673c20e67031c71a075799d5cbac2f0cea302b69b51bd6a37d885b7374",
-   "bytes": 6431,
+   "sha256": "f1043e4981567262a019fabe7dfd7e8a19762598803ec007308dea4bf924fae7",
+   "bytes": 9005,
    "role": "test_not_run"
   },
   {
    "path": "test_verify_receipt.py",
-   "sha256": "b80fb7eb28e0fbe4e94af2b42c572931cb263eacde6f4dc1bf9c7de8455211f3",
-   "bytes": 11725,
+   "sha256": "736c4ab63156dfbc48bb23f6e30e28d4f20fa7e1a84735f6e5163dfb3d9f0287",
+   "bytes": 12051,
    "role": "test"
   },
   {
@@ -290,8 +290,8 @@
   },
   {
    "path": "verify_receipt.py",
-   "sha256": "3839ea1f0b876af87b5faf12d83a269748285221ff6e03b0b531a73538954834",
-   "bytes": 10223,
+   "sha256": "897711e997741aeed936667206658560087df6ea0c3034015c46e9dbdd142d23",
+   "bytes": 10390,
    "role": "tool"
   }
  ],

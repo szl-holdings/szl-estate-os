@@ -246,6 +246,12 @@ class Tamper(unittest.TestCase):
         errs = self.s.check(rechain(self.e), stage="ACCOUNT_VERIFIED")
         self.assertInvalid(errs, "integration exit 3 (NOT_RUN) reported as FAIL")
 
+    def test_T19_not_run_hides_integration_failure(self):
+        i = idx(self.e, "integration_snowflake")
+        summ = dict(self.e[i]["summary"], failures=1, result="FAILED")
+        self.e[i] = dict(self.e[i], summary=summ)
+        self.assertInvalid(self.s.check(rechain(self.e)), "failures/errors recorded as NOT_RUN")
+
     def test_T18_cli_fails_closed_on_garbage_and_does_not_echo_paths(self):
         p = self.s.write(raw=b"not json\n")
         self.assertEqual(vr.main([p]), 1)

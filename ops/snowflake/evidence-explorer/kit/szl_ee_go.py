@@ -21,7 +21,7 @@ Order (fail-closed; any failure or uncertain outcome stops the forward path):
               MANIFEST.json == --manifest-sha256 and the bundle files the runner
               executes are pinned in it and match. Re-checked before every child.
   2 prereq    snowflake.snowpark importable by the interpreter that runs the live
-              tests (skipped with --dry-run-only); else BLOCKED before any credential
+              tests; else BLOCKED before any credential
   3 creds     two temporary profiles (mode A) or two owner connection names (mode B)
   4 verify    sf_verify_account_readonly.py (setup profile)
   5 identity  both profiles: approved account, distinct users, exact primary role,
@@ -33,7 +33,9 @@ Order (fail-closed; any failure or uncertain outcome stops the forward path):
   7 dryrun    sf_deploy_pilot.py --dry-run (setup profile env; no connection)
   8 deploy    sf_deploy_pilot.py --execute (setup profile); post_checks must PASS
   9 resume    USE SECONDARY ROLES SZL_EE_OPERATOR; ALTER WAREHOUSE SZL_EE_WH RESUME IF SUSPENDED
- 10 itests    test_integration_snowflake.py -v (runtime profile); parsed PER TEST
+ 10 itests    test_integration_snowflake.py --live-approved -v (runtime profile); parsed PER TEST
+--dry-run-only returns before steps 2-6. It runs step 7 in an environment with
+no inherited Snowflake credentials, does not import the connector, and sends no SQL.
   ALWAYS once step 8 has started (deadline, exception or Ctrl-C included):
  11 suspend   USE SECONDARY ROLES SZL_EE_OPERATOR; ALTER WAREHOUSE SZL_EE_WH SUSPEND
  12 readback  setup-profile object inventory + runtime-profile warehouse SHOW
@@ -775,22 +777,45 @@ def main(argv=None, env=None, connector=None, runner=subprocess.run, clock=time.
     return code
 
 
+def _offline_dry_run_only(opts, runner, rec, tmp, state, clk):
+    """Pilot plan only. No connector import, no credential resolution, no SQL."""
+    rec.add("offline_boundary", "PASS", detail={
+        "connector_imported": False, "credential_resolution": False, "sql": False})
+    manifest = os.path.join(opts["--bundle"], "MANIFEST.json")
+    cenv = child_env({}, {"HOME": tmp, "USERPROFILE": tmp, "TEMP": tmp, "TMP": tmp,
+                          "SNOWFLAKE_HOME": tmp})
+    try:
+        c, so, se = _child(rec, "dryrun", "sf_deploy_pilot.py",
+                           ["--dry-run", "--manifest", manifest],
+                           opts["--kit"], cenv, runner, clk.step_timeout(), state,
+                           _kit_paths(state, "sf_deploy_pilot.py"))
+    except StepTimeout:
+        return EXIT_FAIL
+    except Refused:
+        return EXIT_REFUSED
+    rec.add("dryrun", "PASS" if c == 0 else "FAIL", c, so, se)
+    if c != 0:
+        return EXIT_FAIL
+    return EXIT_PARTIAL
+
+
 def _prereq_and_forward(opts, flags, env, runner, rec, tmp, state, acct_approved, approval_sha, clk, run_id):
-    if "--dry-run-only" not in flags:
-        penv = child_env(env, {"SNOWFLAKE_HOME": tmp, "SZL_EE_RUN_ID": run_id})
-        try:
-            ok, why = probe_snowpark(penv, min(PROBE_CAP_SECONDS, clk.step_timeout()), runner=runner)
-        except subprocess.TimeoutExpired:
-            ok, why = False, "probe timed out"
-        except (Exception, DeadlineExceeded) as exc:
-            ok, why = False, "probe could not run: " + type(exc).__name__
-        if not ok:
-            rec.add("prerequisites", "BLOCKED", detail={
-                "reason": "snowflake.snowpark cannot be imported by %s -I -B; the live integration tests "
-                          "would be NOT_RUN, so no deploy is attempted. Nothing was installed." % sys.executable,
-                "probe_stderr_tail": why})
-            return EXIT_BLOCKED
-        rec.add("prerequisites", "PASS", detail="snowflake.snowpark importable by the live-test interpreter")
+    if "--dry-run-only" in flags:
+        return _offline_dry_run_only(opts, runner, rec, tmp, state, clk)
+    penv = child_env(env, {"SNOWFLAKE_HOME": tmp, "SZL_EE_RUN_ID": run_id})
+    try:
+        ok, why = probe_snowpark(penv, min(PROBE_CAP_SECONDS, clk.step_timeout()), runner=runner)
+    except subprocess.TimeoutExpired:
+        ok, why = False, "probe timed out"
+    except (Exception, DeadlineExceeded) as exc:
+        ok, why = False, "probe could not run: " + type(exc).__name__
+    if not ok:
+        rec.add("prerequisites", "BLOCKED", detail={
+            "reason": "snowflake.snowpark cannot be imported by %s -I -B; the live integration tests "
+                      "would be NOT_RUN, so no deploy is attempted. Nothing was installed." % sys.executable,
+            "probe_stderr_tail": why})
+        return EXIT_BLOCKED
+    rec.add("prerequisites", "PASS", detail="snowflake.snowpark importable by the live-test interpreter")
     if state["connector"] is None:
         # The connector resolves its config directory at import time and raises if none
         # exists, so SNOWFLAKE_HOME must point at the run's temp home BEFORE the import
@@ -1000,7 +1025,8 @@ def _forward(opts, flags, env, connector, runner, rec, tmp, state, acct_approved
     t = clk.step_timeout()
     rec.begin("itests", detail="runtime profile; fixture load (insert-only MERGE as SZL_EE_INGEST) inside i02/i03")
     try:
-        c, so, se = _child(rec, "itests", "test_integration_snowflake.py", ["-v"], bundle, ienv, runner, t,
+        c, so, se = _child(rec, "itests", "test_integration_snowflake.py",
+                           ["--live-approved", "-v"], bundle, ienv, runner, t,
                            state, _bundle_paths(state))
     except StepTimeout:
         state["uncertain"] = True
