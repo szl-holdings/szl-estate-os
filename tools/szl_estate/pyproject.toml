@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+requires = ["setuptools==84.2.1", "wheel==0.48.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -16,14 +16,14 @@ classifiers = ["Private :: Do Not Upload"]
 providers = [
   "requests==2.34.2",
   "httpx==0.28.1",
-  "huggingface_hub==2.2.0",
+  "huggingface_hub==2.3.0",
 ]
 presentation = [
-  "pydantic==2.14.0",
+  "pydantic==2.14.1",
   "rich==15.0.0",
   "beautifulsoup4==4.15.0",
 ]
-browser = ["playwright==1.63.0"]
+browser = ["playwright==1.64.1"]
 test = ["pytest==9.1.1"]
 
 [project.scripts]
