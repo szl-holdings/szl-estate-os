@@ -26,7 +26,7 @@ python ops/recovery/szl_vm_check.py --host <ip> --user Ubuntu --key ~/.ssh/<key>
 ```
 
 ## Evidence status (2026-10-28)
-- MEASURED (offline, synthetic): the selftest passes 26 gate tests and 43 repair tests, with 20/20 mutants killed. The offline unit tests in `tests/` were run before this commit; see the PR body for the counts. Both ran in a sandboxed Python 3 kernel, not on the laptop or a VM.
-- NOT RUN: real GitHub writes, real SSH, Windows OpenSSH handling of `-F <devnull>` and `GlobalKnownHostsFile=<devnull>`. These are UNKNOWN until run.
+- MEASURED (offline, synthetic): the selftest passes 26 gate tests and 43 repair tests, with 20/20 mutants killed, and the `tests/` suite passes 15/15. Both ran on VM1 (Linux 6.8, Python 3.10.12) and in a sandboxed Python 3 kernel, but not yet on the Windows laptop.
+- NOT RUN: real GitHub writes, a real SSH probe via `szl_vm_check.py --host`, Windows OpenSSH handling of `-F <devnull>` and `GlobalKnownHostsFile=<devnull>`. These are UNKNOWN until run.
 - CI: `ci.yml` runs only listed test files, so these tests are **not** wired into CI. Wiring them is a separate approval.
 - Supersedes 1.1.0 (sha256 `735f6572…`), whose write path must not be used: it merged on unstable/has_hooks, read only the first 100 checks, matched fingerprints by substring, and made network calls in offline mode.

@@ -580,7 +580,7 @@ def measure():
             kb = lambda k: int(info[k].strip().split()[0])
             m.update(ram_avail_gib=round(kb("MemAvailable") / 2 ** 20, 2), ram_total_gib=round(kb("MemTotal") / 2 ** 20, 1))
         except Exception:
-            pass
+            pass  # /proc/meminfo unreadable: RAM stays None, so resource_gate() fails closed (RESOURCE_UNMEASURED)
     return m
 
 
@@ -633,7 +633,7 @@ def cmd_triage(a):
                         except OSError:
                             rows.append((e.path, -1, True))
         except OSError:
-            pass
+            pass  # drive root not listable: pagefile/hiberfil sizes are simply omitted from this read-only triage
     cands = []
     for p in [HOME / "AppData" / "Local", HOME / "AppData" / "Roaming", HOME / ".claude-science", HOME / ".ollama",
               HOME / ".lmstudio", HOME / "Downloads", HOME / "Documents", HOME / ".cache", HOME / "miniconda3",
@@ -1177,8 +1177,8 @@ def cmd_status(a):
     else:
         verdict = f"OWNER_ITEMS_OPEN ({n_open_o})"
     lines += ["", f"Ledger: {why_l} (unsigned local hash chain)", f"Write items ready: {n_ready_w}", f"Verdict: {verdict}",
-              "Scope of this verdict: owner-item evidence and local ledger integrity ONLY. It does not cover write completion, "
-              "test outcomes, approval freshness or runtime health, and it is not an operational-readiness claim."]
+              ("Scope of this verdict: owner-item evidence and local ledger integrity ONLY. It does not cover write completion, "
+               "test outcomes, approval freshness or runtime health, and it is not an operational-readiness claim.")]
     out = STATE_DIR / f"status_{_dt.datetime.now(_dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.md"
     out.write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines[-4:]))
