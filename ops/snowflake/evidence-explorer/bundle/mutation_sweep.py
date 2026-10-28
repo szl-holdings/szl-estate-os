@@ -13,8 +13,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FILES = ("evidence_core.py", "make_fixture.py", "streamlit_app.py", "test_evidence_core.py",
-         "fixture_v1.json", "schema.sql", "reader_grants.sql")
+FILES = ("evidence_core.py", "make_fixture.py", "streamlit_app.py", "test_evidence_core.py", "fixture_v1.json", "schema.sql", "reader_grants.sql", "test_integration_snowflake.py", "ADR.md", "DATA_FLOW_MANIFEST.md", "mutation_sweep.py", "appstub_smoke.py", "run_local_evidence.py", "verify_receipt.py", "test_verify_receipt.py", "test_emulator_fakesnow.py", "verifier_mutation_sweep.py", "TEST_RESULTS.md", "MANIFEST.json", "emulator_results.json")
 CORE = "evidence_core.py"
 
 MUTANTS = [
