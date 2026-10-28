@@ -87,7 +87,17 @@ def reason(table, row):
 
 def read(name):
     with open(os.path.join(HERE, name), "rb") as fh:
-        return fh.read().decode("utf-8")
+        # Git may materialize these text fixtures with CRLF on Windows.  The
+        # bundle's semantic checks and approval guard are line-ending
+        # independent, so normalize the checkout representation before
+        # comparing text.
+        return fh.read().replace(b"\r\n", b"\n").decode("utf-8")
+
+
+def canonical_bytes(path):
+    """Read a repository text fixture using its LF canonical representation."""
+    with open(path, "rb") as fh:
+        return fh.read().replace(b"\r\n", b"\n")
 
 
 def sql_statements(name):
@@ -101,8 +111,7 @@ class S8_01_FixtureDeterminismAndCounts(unittest.TestCase):
         self.assertEqual(mf.render(mf.build()), mf.render(mf.build()))
 
     def test_committed_fixture_matches_generator_and_pinned_hash(self):
-        with open(FIXTURE_PATH, "rb") as fh:
-            data = fh.read()
+        data = canonical_bytes(FIXTURE_PATH)
         self.assertEqual(hashlib.sha256(data).hexdigest(), FIXTURE_SHA256)
         self.assertEqual(data, mf.render(mf.build()))
 
@@ -112,8 +121,8 @@ class S8_01_FixtureDeterminismAndCounts(unittest.TestCase):
             subprocess.run([sys.executable, "-I", "-B",
                             os.path.join(HERE, "make_fixture.py"), out],
                            check=True, capture_output=True, timeout=60)
-            with open(out, "rb") as fh:
-                self.assertEqual(hashlib.sha256(fh.read()).hexdigest(), FIXTURE_SHA256)
+            self.assertEqual(hashlib.sha256(canonical_bytes(out)).hexdigest(),
+                             FIXTURE_SHA256)
 
     def test_input_row_counts(self):
         b = fixture()["batches"]
