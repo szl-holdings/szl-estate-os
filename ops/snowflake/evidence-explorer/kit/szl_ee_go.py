@@ -1051,7 +1051,8 @@ def _shutdown(opts, state, runner, rec, clock, run_id, forward_code):
         _, _, qid = direct_sql(connector, prof["runtime"], "suspend", run_id, timeout=t_direct())
         rec.add("suspend", "PASS", detail="query_id=%s" % qid)
     except StepTimeout:
-        rec.add("suspend", "UNKNOWN", detail="suspend did not return; readback decides")
+        state["uncertain"] = True
+        rec.add("suspend", "UNKNOWN", detail="suspend still in flight; readback cannot establish final shutdown")
     except Exception as exc:   # already-suspended raises; readback decides
         rec.add("suspend", "ERROR_SEE_READBACK", detail=type(exc).__name__)
 
@@ -1082,13 +1083,19 @@ def _shutdown(opts, state, runner, rec, clock, run_id, forward_code):
     sv = _load_json(shut_json) if c is not None else None
     checks = {x.get("id"): x for x in ((sv or {}).get("checks") or []) if isinstance(x, dict)}
     core = {k: (checks.get(k) or {}).get("status", "UNKNOWN") for k in ("W1", "W2", "T1")}
-    verified = (c in (0, 2) and sv is not None and all(v == "PASS" for v in core.values())
+    # bounded() cannot cancel its daemon worker. An earlier timed-out RESUME,
+    # SUSPEND or deploy may finish after these readbacks. Preserve uncertainty
+    # until an independent reconciliation establishes that no operation remains
+    # in flight; a transient SUSPENDED snapshot cannot clear it.
+    unresolved = state.get("uncertain", False)
+    verified = (not unresolved and c in (0, 2) and sv is not None and all(v == "PASS" for v in core.values())
                 and wh_state == "SUSPENDED" and setup_wh in ("SUSPENDED", None))
     partial = verified and c == 2
     if c is not None:
         rec.add("shutdown", "PASS" if (verified and c == 0) else ("PARTIAL" if verified else "FAIL"), c, so, se,
                 detail={"core_checks": core, "runner_readback_warehouse_state": wh_state,
-                        "setup_readback_warehouse_state": setup_wh, "shutdown_json_present": sv is not None})
+                        "setup_readback_warehouse_state": setup_wh, "shutdown_json_present": sv is not None,
+                        "unresolved_operation": unresolved})
 
     def chk(k):
         return (checks.get(k) or {}).get("detail")
@@ -1101,7 +1108,8 @@ def _shutdown(opts, state, runner, rec, clock, run_id, forward_code):
             {"type": "warehouse", "name": WAREHOUSE, "owner": WAREHOUSE_OWNER,
              "state_runtime_readback": wh_state, "state_setup_readback": setup_wh,
              "state_shutdown_verifier": chk("W1"), "auto_resume": chk("W2"),
-             "potentially_billing_now": wh_state not in ("SUSPENDED", "ABSENT"),
+             "potentially_billing_now": unresolved or wh_state not in ("SUSPENDED", "ABSENT"),
+             "unresolved_operation": unresolved,
              "charge": "compute credits while STARTED/RESUMING",
              "if_not_suspended": "the runtime role can only OPERATE; the owner (ACCOUNTADMIN) must suspend it"},
             {"type": "streamlit", "name": APP_FQN,

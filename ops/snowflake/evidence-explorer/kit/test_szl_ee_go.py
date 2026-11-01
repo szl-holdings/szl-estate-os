@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest import mock
 
@@ -236,6 +237,65 @@ class RunnerContracts(unittest.TestCase):
         now[0] = 60
         with self.assertRaises(go.DeadlineExceeded):
             clock.step_timeout()
+
+    def shutdown(self, uncertain=False, suspend_error=None):
+        rec = go.Receipt(str(self.root / "shutdown-receipt"), [], go.new_run_id())
+        state = {"connector": mock.Mock(), "prof": {"setup": {}, "runtime": {}},
+                 "pins": {}, "kit": str(self.kit), "cenv_runtime": {}, "uncertain": uncertain}
+        inv = {"warehouse_state": "SUSPENDED", "complete": True, "errors": {},
+               "existing_pilot_objects": []}
+
+        def verifier(*args, **kwargs):
+            (Path(rec.out_dir) / "shutdown.json").write_text(json.dumps({"checks": [
+                {"id": name, "status": "PASS", "detail": "synthetic readback"}
+                for name in ("W1", "W2", "T1")]}))
+            return 0, "", ""
+
+        with mock.patch.object(go, "direct_sql", side_effect=suspend_error,
+                               return_value=([], [], "synthetic-query-id")), \
+             mock.patch.object(go, "take_inventory", return_value=inv), \
+             mock.patch.object(go, "recheck_pins", return_value=[]), \
+             mock.patch.object(go, "run_py", side_effect=verifier):
+            verdict = go._shutdown({"--kit": str(self.kit)}, state, mock.Mock(), rec,
+                                   go.time.monotonic, rec.run_id, go.EXIT_UNCERTAIN if uncertain else go.EXIT_OK)
+        billable = json.loads((Path(rec.out_dir) / "potentially_billable.json").read_text())
+        return verdict, billable
+
+    def test_known_completed_shutdown_can_be_verified(self):
+        verdict, billable = self.shutdown()
+        self.assertEqual(verdict, (True, False))
+        self.assertFalse(billable["resources"][0]["potentially_billing_now"])
+
+    def test_uncertain_forward_operation_prevents_verified_shutdown(self):
+        verdict, billable = self.shutdown(uncertain=True)
+        self.assertEqual(verdict, (False, False))
+        self.assertFalse(billable["shutdown_verified"])
+        self.assertTrue(billable["resources"][0]["potentially_billing_now"])
+
+    def test_timed_out_suspend_prevents_verified_shutdown(self):
+        verdict, billable = self.shutdown(suspend_error=go.StepTimeout("synthetic timeout"))
+        self.assertEqual(verdict, (False, False))
+        self.assertTrue(billable["uncertain_outcome"])
+
+    def test_delayed_resume_cannot_be_cleared_by_earlier_readback(self):
+        release, finished = threading.Event(), threading.Event()
+
+        def late_resume():
+            release.wait(5)
+            finished.set()
+
+        try:
+            with self.assertRaises(go.StepTimeout):
+                go.bounded(late_resume, 0.01)
+            self.assertFalse(finished.is_set())
+            verdict, billable = self.shutdown(uncertain=True)
+            self.assertFalse(verdict[0])
+            self.assertTrue(billable["resources"][0]["unresolved_operation"])
+            release.set()
+            self.assertTrue(finished.wait(1))
+        finally:
+            release.set()
+            finished.wait(1)
 
 
 if __name__ == "__main__":

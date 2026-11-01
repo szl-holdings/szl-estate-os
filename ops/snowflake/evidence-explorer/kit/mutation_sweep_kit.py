@@ -15,8 +15,11 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import mutation_support
 FILES = ("sf_kit_common.py", "sf_verify_account_readonly.py", "sf_deploy_pilot.py",
-         "sf_shutdown_verify.py", "test_operator_kit.py", "SNOWSIGHT_SETUP.sql")   # v0.3.0: owner sheet is read by tests
+         "sf_shutdown_verify.py", "test_operator_kit.py", "SNOWSIGHT_SETUP.sql",
+         "szl_ee_go.py")  # test_operator_kit imports the runner's offline boundary
 C, V, D, S = FILES[:4]
 MUTANTS = [
     ("M01", C, 'if n not in allowed:', 'if False:', "allowlist membership check disabled"),
@@ -136,15 +139,13 @@ MUTANTS = [
 def run_suite(d):
     env = dict(os.environ)
     env.setdefault("SZL_KIT_TEST_TMP", d)
-    try:
-        r = subprocess.run([sys.executable, "-I", "-B", "test_operator_kit.py"], cwd=d, capture_output=True,
-                           text=True, timeout=120, env=env)
-        return r.returncode
-    except subprocess.TimeoutExpired:
-        return "TIMEOUT"
+    return mutation_support.run_suite("test_operator_kit.py", d, env, 120)
 
 
-def main():
+def main(out_path=None):
+    out = out_path or os.path.join(HERE, "mutation_results_kit.json")
+    if os.path.exists(out):
+        raise SystemExit("refusing to reuse an existing result; choose a new output path")
     base_tmp = os.environ.get("SZL_KIT_TEST_TMP") or None
     results = []
     with tempfile.TemporaryDirectory(dir=base_tmp) as root:
@@ -152,9 +153,9 @@ def main():
         os.makedirs(clean)
         for f in FILES:
             shutil.copy2(os.path.join(HERE, f), clean)
-        rc = run_suite(clean)
-        if rc != 0:
-            print("CLEAN SUITE FAILED (rc=%s); sweep aborted" % rc)
+        baseline = run_suite(clean)
+        if not mutation_support.baseline_passed(baseline):
+            print("CLEAN SUITE FAILED (%s); sweep aborted" % baseline)
             return 2
         for mid, fname, old, new, desc in MUTANTS:
             with open(os.path.join(HERE, fname), encoding="utf-8") as fh:
@@ -169,21 +170,22 @@ def main():
                 shutil.copy2(os.path.join(HERE, f), d)
             with open(os.path.join(d, fname), "w", encoding="utf-8", newline="\n") as fh:
                 fh.write(src.replace(old, new))
-            rc = run_suite(d)
+            run = run_suite(d)
             results.append({"id": mid, "file": fname, "desc": desc,
-                            "result": "KILLED" if rc != 0 else "SURVIVED", "rc": rc})
+                            "result": mutation_support.classification(run, baseline["tests"]),
+                            "rc": run["exit"], "run": run})
     k = sum(r["result"] == "KILLED" for r in results)
     sv = sum(r["result"] == "SURVIVED" for r in results)
     inv = sum(r["result"].startswith("INVALID") for r in results)
     for r in results:
         print("%s %-9s %-30s %s" % (r["id"], r["result"], r["file"], r["desc"]))
     print("TOTAL %d mutants: %d killed, %d survived, %d invalid" % (len(results), k, sv, inv))
-    out = os.path.join(HERE, "mutation_results_kit.json")
-    if not os.path.exists(out):
-        with open(out, "x", encoding="utf-8", newline="\n") as fh:
-            json.dump({"mutants": results, "killed": k, "survived": sv, "invalid": inv}, fh, indent=1)
-    return 0
+    with open(out, "x", encoding="utf-8", newline="\n") as fh:
+        json.dump({"mutants": results, "killed": k, "survived": sv, "invalid": inv,
+                   "baseline": baseline}, fh, indent=1)
+    # An exit-zero process must not hide an incomplete qualification result.
+    return 0 if results and k == len(MUTANTS) and not sv and not inv else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else None))
