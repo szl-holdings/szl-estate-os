@@ -5,8 +5,10 @@ and runs `python -I -B test_evidence_core.py`. KILLED = suite fails;
 SURVIVED = suite still passes (a real gap). The clean copy must pass first.
 Usage: python -I -B mutation_sweep.py [results.json]
 """
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -34,7 +36,7 @@ MUTANTS = [
     ("M06", "future-timestamp guard disabled",
      "        if when > as_of:", "        if False:"),
     ("M07", "UTC-only: timestamp offsets accepted",
-     r'(\.\d{1,6})?Z")', r'(\.\d{1,6})?(Z|[+-]\d{2}:\d{2}))'),
+     r'(\.\d{1,6})?Z")', r'(\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})")'),
     ("M08", "calendar-invalid date swallowed",
      '    except ValueError:\n        raise Rejection("MALFORMED_TIMESTAMP")',
      '    except ValueError:\n        out = _dt.datetime(2000, 1, 1, tzinfo=_dt.timezone.utc)'),
@@ -113,7 +115,7 @@ MUTANTS = [
      "STALE_AFTER_DAYS = 90", "STALE_AFTER_DAYS = 9000"),
     ("M37", "MERGE gains WHEN MATCHED UPDATE",
      '           "WHEN NOT MATCHED THEN INSERT (%s) VALUES (%s)"',
-     '           "WHEN MATCHED THEN UPDATE SET t.%s = s.%s WHEN NOT MATCHED THEN INSERT (%s) VALUES (%s)"'),
+     '           "WHEN MATCHED THEN UPDATE SET t.ASSET_ID = s.ASSET_ID WHEN NOT MATCHED THEN INSERT (%s) VALUES (%s)"'),
     ("M38", "rejected rows not retained",
      "        store._rejected.extend(rejected)", "        pass"),
     ("M39", "value grammar allows markup",
@@ -147,22 +149,46 @@ MUTANTS = [
 
 
 def run_suite(d):
-    r = subprocess.run([sys.executable, "-I", "-B", "test_evidence_core.py"], cwd=d,
-                       capture_output=True, timeout=600)
-    tail = r.stderr.decode("utf-8", "replace").strip().splitlines()[-1:] or [""]
-    return r.returncode, tail[0]
+    try:
+        r = subprocess.run([sys.executable, "-I", "-B", "test_evidence_core.py"], cwd=d,
+                           capture_output=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        return {"exit_code": None, "tests": 0, "failures": 0, "errors": 0,
+                "detail": "TIMEOUT"}
+    stderr = r.stderr.decode("utf-8", "replace")
+    count = re.search(r"^Ran (\d+) tests? in ", stderr, re.M)
+    tail = (stderr.strip().splitlines() or [""])[-1]
+    failures = re.search(r"failures=(\d+)", tail)
+    errors = re.search(r"errors=(\d+)", tail)
+    return {"exit_code": r.returncode, "tests": int(count.group(1)) if count else 0,
+            "failures": int(failures.group(1)) if failures else 0,
+            "errors": int(errors.group(1)) if errors else 0, "detail": tail}
 
 
-def main(out_path):
+def classify_run(run, baseline_tests):
+    # Import/syntax errors, timeouts, signals, and error-only crashes are not
+    # behavioral kills. At least one assertion must reject the mutant, after
+    # the same complete test suite has run.
+    if run["tests"] != baseline_tests or baseline_tests < 1:
+        return "INVALID"
+    if run["exit_code"] == 0 and run["failures"] == 0 and run["errors"] == 0:
+        return "SURVIVED"
+    if run["exit_code"] == 1 and run["failures"] > 0:
+        return "KILLED"
+    return "INVALID"
+
+
+def _sweep(out_path):
     with open(os.path.join(HERE, CORE), "rb") as fh:
         clean = fh.read().decode("utf-8")
     results = []
     with tempfile.TemporaryDirectory() as tmp:
         for f in FILES:
             shutil.copy2(os.path.join(HERE, f), os.path.join(tmp, f))
-        rc, tail = run_suite(tmp)
-        if rc != 0:
-            raise SystemExit("clean copy does not pass: %s" % tail)
+        baseline = run_suite(tmp)
+        if (baseline["exit_code"] != 0 or baseline["tests"] < 1
+                or baseline["failures"] or baseline["errors"]):
+            raise SystemExit("clean copy does not pass: %s" % baseline["detail"])
         for mid, desc, old, new in MUTANTS:
             n = clean.count(old)
             if n != 1:
@@ -170,24 +196,50 @@ def main(out_path):
                                 "detail": "anchor matched %d times" % n})
                 continue
             mutated = clean.replace(old, new)
+            try:
+                compile(mutated, CORE, "exec")
+            except SyntaxError:
+                results.append({"id": mid, "description": desc, "status": "INVALID",
+                                "detail": "mutant does not compile"})
+                continue
             with open(os.path.join(tmp, CORE), "wb") as fh:
                 fh.write(mutated.encode("utf-8"))
-            rc, tail = run_suite(tmp)
+            run = run_suite(tmp)
             results.append({"id": mid, "description": desc,
-                            "status": "KILLED" if rc != 0 else "SURVIVED",
-                            "detail": tail})
+                            "status": classify_run(run, baseline["tests"]),
+                            "detail": run["detail"], "run": run})
         with open(os.path.join(tmp, CORE), "wb") as fh:
             fh.write(clean.encode("utf-8"))
     summary = {s: sum(1 for r in results if r["status"] == s)
                for s in ("KILLED", "SURVIVED", "INVALID")}
-    doc = {"target": CORE, "mutants": len(results), "summary": summary, "results": results}
+    inputs = {}
+    for name in FILES:
+        with open(os.path.join(HERE, name), "rb") as fh:
+            inputs[name] = hashlib.sha256(fh.read()).hexdigest()
+    doc = {"target": CORE, "mutants": len(results), "summary": summary, "results": results,
+           "baseline": baseline, "input_sha256": inputs}
     with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(doc, fh, indent=1)
         fh.write("\n")
     sys.stdout.write(json.dumps(summary) + "\n")
     for r in results:
         sys.stdout.write("%s %-8s %s\n" % (r["id"], r["status"], r["description"]))
+    return 0 if (len(results) == len(MUTANTS) and summary["KILLED"] == len(MUTANTS)
+                 and not summary["SURVIVED"] and not summary["INVALID"]) else 1
+
+
+def main(out_path):
+    try:
+        return _sweep(out_path)
+    except (Exception, SystemExit) as exc:
+        # CI uploads this path even when the clean baseline/import/subprocess
+        # fails. An error record is evidence of failure, never a passing sweep.
+        with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
+            json.dump({"target": CORE, "status": "ERROR", "completed": False,
+                       "error_type": type(exc).__name__, "detail": str(exc)[:2000]}, fh, indent=1)
+            fh.write("\n")
+        raise
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "mutation_results.json"))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "mutation_results.json")))

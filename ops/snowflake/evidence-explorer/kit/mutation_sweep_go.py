@@ -21,6 +21,10 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mutation_support
 
 MIN_RAM_GIB, MIN_DISK_GB = 2.0, 15.0
 
@@ -206,17 +210,19 @@ def gates(path):
 
 
 def run_suite(d, env):
-    r = subprocess.run([sys.executable, "-I", "-B", "test_szl_ee_go.py"], cwd=d, capture_output=True,
-                       env=env, timeout=900)
-    tail = r.stderr.decode("utf-8", "replace").strip().splitlines()[-1:]
-    return r.returncode, (tail[0] if tail else "")
+    return mutation_support.run_suite("test_szl_ee_go.py", d, env, 900)
 
 
 def main():
     src_dir, out_json = sys.argv[1], sys.argv[2]
+    if os.path.exists(out_json):
+        raise SystemExit("refusing to overwrite an existing result; choose a new output path")
     base = os.path.dirname(os.path.abspath(out_json))
-    work = os.path.join(base, "mutants")
-    os.makedirs(work, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="ee-runner-mutants-", dir=base) as work:
+        return run_sweep(src_dir, out_json, base, work)
+
+
+def run_sweep(src_dir, out_json, base, work):
     with open(os.path.join(src_dir, "szl_ee_go.py"), encoding="utf-8") as fh:
         clean = fh.read()
     with open(os.path.join(src_dir, "test_szl_ee_go.py"), "rb") as fh:
@@ -242,8 +248,9 @@ def main():
     if not ok:
         results["clean"] = dict(status="BLOCKED", **g)
     else:
-        rc, tail = run_suite(stage("clean", clean), env)
-        results["clean"] = dict(status="PASS" if rc == 0 else "FAIL", exit=rc, tail=tail, **g)
+        baseline = run_suite(stage("clean", clean), env)
+        results["clean"] = dict(status="PASS" if mutation_support.baseline_passed(baseline) else "FAIL",
+                                **baseline, **g)
     ids = [m[0] for m in MUTANTS]
     if len(ids) != len(set(ids)):
         raise SystemExit("duplicate mutant id")
@@ -259,20 +266,22 @@ def main():
                 row.update(status="BLOCKED", **g)
             else:
                 try:
-                    rc, tail = run_suite(stage(mid, clean.replace(old, new)), env)
-                    row.update(status="KILLED" if rc != 0 else "SURVIVED", exit=rc, tail=tail)
+                    run = run_suite(stage(mid, clean.replace(old, new)), env)
+                    row.update(status=mutation_support.classification(run, baseline["tests"]), **run)
                 except subprocess.TimeoutExpired:
-                    row.update(status="KILLED_TIMEOUT")
+                    row.update(status="INVALID_TIMEOUT")
                 shutil.rmtree(os.path.join(work, mid), ignore_errors=True)   # keep disk use flat
         results["mutants"].append(row)
         print(mid, row["status"], row.get("tail", ""), flush=True)
     results["finished_utc"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     st = [m["status"] for m in results["mutants"]]
     results["summary"] = {s: st.count(s) for s in sorted(set(st))}
-    with open(out_json, "w", encoding="utf-8", newline="\n") as fh:
+    with open(out_json, "x", encoding="utf-8", newline="\n") as fh:
         json.dump(results, fh, indent=1)
     print(json.dumps(results["summary"]))
+    return 0 if (results["clean"]["status"] == "PASS" and st
+                 and len(st) == len(MUTANTS) and all(s == "KILLED" for s in st)) else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
