@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest import mock
+import unittest.mock as mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mutation_sweep as sweep
@@ -77,10 +77,23 @@ class MutationEvidence(unittest.TestCase):
         self.assertEqual(len(doc["input_sha256"]["evidence_core.py"]), 64)
 
     def test_failed_baseline_stops_before_mutants(self):
-        with mock.patch.object(sweep, "run_suite", return_value=result(1, failures=1)) as run:
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.object(sweep, "run_suite", return_value=result(1, failures=1)) as run:
+            output = Path(tmp) / "failed.json"
             with self.assertRaises(SystemExit):
-                sweep.main("unused.json")
+                sweep.main(str(output))
             self.assertEqual(run.call_count, 1)
+            self.assertEqual(json.loads(output.read_text())["status"], "ERROR")
+
+    def test_unexpected_subprocess_error_preserves_failure_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.object(sweep, "run_suite", side_effect=OSError("synthetic launch failure")):
+            output = Path(tmp) / "failed.json"
+            with self.assertRaises(OSError):
+                sweep.main(str(output))
+            doc = json.loads(output.read_text())
+            self.assertFalse(doc["completed"])
+            self.assertEqual(doc["error_type"], "OSError")
 
 
 if __name__ == "__main__":

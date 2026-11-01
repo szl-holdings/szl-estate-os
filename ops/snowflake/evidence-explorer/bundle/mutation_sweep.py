@@ -178,7 +178,7 @@ def classify_run(run, baseline_tests):
     return "INVALID"
 
 
-def main(out_path):
+def _sweep(out_path):
     with open(os.path.join(HERE, CORE), "rb") as fh:
         clean = fh.read().decode("utf-8")
     results = []
@@ -226,6 +226,19 @@ def main(out_path):
         sys.stdout.write("%s %-8s %s\n" % (r["id"], r["status"], r["description"]))
     return 0 if (len(results) == len(MUTANTS) and summary["KILLED"] == len(MUTANTS)
                  and not summary["SURVIVED"] and not summary["INVALID"]) else 1
+
+
+def main(out_path):
+    try:
+        return _sweep(out_path)
+    except (Exception, SystemExit) as exc:
+        # CI uploads this path even when the clean baseline/import/subprocess
+        # fails. An error record is evidence of failure, never a passing sweep.
+        with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
+            json.dump({"target": CORE, "status": "ERROR", "completed": False,
+                       "error_type": type(exc).__name__, "detail": str(exc)[:2000]}, fh, indent=1)
+            fh.write("\n")
+        raise
 
 
 if __name__ == "__main__":

@@ -156,6 +156,9 @@ def main(out_path=None):
         baseline = run_suite(clean)
         if not mutation_support.baseline_passed(baseline):
             print("CLEAN SUITE FAILED (%s); sweep aborted" % baseline)
+            with open(out, "x", encoding="utf-8", newline="\n") as fh:
+                json.dump({"status": "BASELINE_FAILED", "completed": False,
+                           "baseline": baseline, "mutants": []}, fh, indent=1)
             return 2
         for mid, fname, old, new, desc in MUTANTS:
             with open(os.path.join(HERE, fname), encoding="utf-8") as fh:
