@@ -238,7 +238,7 @@ class RunnerContracts(unittest.TestCase):
         with self.assertRaises(go.DeadlineExceeded):
             clock.step_timeout()
 
-    def shutdown(self, uncertain=False, suspend_error=None):
+    def shutdown(self, uncertain=False, suspend_error=None, forward_code=None):
         rec = go.Receipt(str(self.root / "shutdown-receipt"), [], go.new_run_id())
         state = {"connector": mock.Mock(), "prof": {"setup": {}, "runtime": {}},
                  "pins": {}, "kit": str(self.kit), "cenv_runtime": {}, "uncertain": uncertain}
@@ -257,7 +257,8 @@ class RunnerContracts(unittest.TestCase):
              mock.patch.object(go, "recheck_pins", return_value=[]), \
              mock.patch.object(go, "run_py", side_effect=verifier):
             verdict = go._shutdown({"--kit": str(self.kit)}, state, mock.Mock(), rec,
-                                   go.time.monotonic, rec.run_id, go.EXIT_UNCERTAIN if uncertain else go.EXIT_OK)
+                                   go.time.monotonic, rec.run_id, forward_code if forward_code is not None
+                                   else (go.EXIT_UNCERTAIN if uncertain else go.EXIT_OK))
         billable = json.loads((Path(rec.out_dir) / "potentially_billable.json").read_text())
         return verdict, billable
 
@@ -276,6 +277,12 @@ class RunnerContracts(unittest.TestCase):
         verdict, billable = self.shutdown(suspend_error=go.StepTimeout("synthetic timeout"))
         self.assertEqual(verdict, (False, False))
         self.assertTrue(billable["uncertain_outcome"])
+
+    def test_uncertain_exit_cannot_be_cleared_by_missing_state_flag(self):
+        verdict, billable = self.shutdown(forward_code=go.EXIT_UNCERTAIN)
+        self.assertFalse(verdict[0])
+        self.assertTrue(billable["uncertain_outcome"])
+        self.assertTrue(billable["resources"][0]["potentially_billing_now"])
 
     def test_delayed_resume_cannot_be_cleared_by_earlier_readback(self):
         release, finished = threading.Event(), threading.Event()

@@ -8,11 +8,10 @@ live integration tests.
 - bundle/: Evidence Explorer bundle v4 (schema v4 without SYSADMIN hierarchy grants). The bundle receipt predates schema v4 and is marked STALE.
 - READINESS_PACKET_2026-10-22.md: approval scope, privilege diff, cost-control limits, failure map, test evidence, open decisions. Artifact links inside it resolve only in the originating workspace.
 
-Current offline checks (Python 3.12, 2026-11-01): the exact bundle CI command
-runs 140 tests, with 129 passed and 11 live tests skipped (including 11
-mutation-gate and 8 integration-boundary regressions in that total); operator kit 78 passed; reconstructed
-runner contracts 29 passed; shared kit/runner evidence and output-isolation
-regressions 10 passed. Total: 246 passed, 11 skipped. The repaired core
+The offline CI job runs the evidence core, receipt verifier, integration launch
+boundary, mutation-gate, operator-kit, runner-contract and shared mutation
+support tests. The exact counts are recorded in the hosted logs for each commit;
+the 11 credential-gated live tests remain skipped, not passed. The core
 mutation sweep has 48 behavioral kills, 0 survivors, and 0 invalid results.
 The operator-kit sweep now includes the runner module its clean baseline imports,
 and has 88 behavioral kills, 0 survivors, and 0 invalid results.
@@ -46,9 +45,9 @@ Remaining qualification gaps: the reconstructed runner suite is not the
 withheld historical 65/98-test harness and does not establish the full live
 deploy/shutdown state machine. Full runner mutation qualification,
 v4 emulator/receipt regeneration, and all eleven live integration tests still
-need separate current evidence. The current reconstructed runner sweep exits 1:
+need separate current evidence. The preceding reconstructed-runner qualification probe exited 1:
 25 behavioral kills, 52 survivors, and 6 invalid results across 83 mutations.
-These are coverage/fixture gaps, not a successful qualification; the runner
+That probe predates the final additional uncertain-exit regression. These are coverage/fixture gaps, not a successful qualification; the runner
 sweep is deliberately not advertised as passing in the offline CI job.
 Timed-out operations now keep shutdown
 unverified and the warehouse potentially billable, even after a SUSPENDED
@@ -70,3 +69,4 @@ Fixture writes require the SZL_EE_INGEST primary role, readable available roles,
 and no available admin/setup/owner/app roles. Each load rechecks identity; failed
 identity stays refused. The duplicate-load check is skipped if the initial
 fixture load or deterministic validation fails, so a failed load is not retried.
+Eight synthetic regression tests cover these boundaries.

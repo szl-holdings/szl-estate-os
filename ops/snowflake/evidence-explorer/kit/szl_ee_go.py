@@ -1087,7 +1087,7 @@ def _shutdown(opts, state, runner, rec, clock, run_id, forward_code):
     # SUSPEND or deploy may finish after these readbacks. Preserve uncertainty
     # until an independent reconciliation establishes that no operation remains
     # in flight; a transient SUSPENDED snapshot cannot clear it.
-    unresolved = state.get("uncertain", False)
+    unresolved = state.get("uncertain", False) or forward_code == EXIT_UNCERTAIN
     verified = (not unresolved and c in (0, 2) and sv is not None and all(v == "PASS" for v in core.values())
                 and wh_state == "SUSPENDED" and setup_wh in ("SUSPENDED", None))
     partial = verified and c == 2
@@ -1102,7 +1102,7 @@ def _shutdown(opts, state, runner, rec, clock, run_id, forward_code):
     present = {o["type"]: o for o in inv["existing_pilot_objects"]}
     billable = {
         "run_id": run_id, "utc": now_utc(), "shutdown_verified": verified,
-        "forward_exit_code": forward_code, "uncertain_outcome": state.get("uncertain", False),
+        "forward_exit_code": forward_code, "uncertain_outcome": unresolved,
         "label": "MEASURED by this run's readbacks where a value is present; UNKNOWN otherwise",
         "resources": [
             {"type": "warehouse", "name": WAREHOUSE, "owner": WAREHOUSE_OWNER,
