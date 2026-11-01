@@ -11,9 +11,13 @@ when argv contains --live-approved AND all four variables below are set:
 run_local_evidence.py does not pass --live-approved and does not forward those
 variables. A failed identity check raises before any MERGE. Failures and errors
 exit 1 even when later checks skip. A skipped test is NOT_RUN. It is never a pass.
+Fixture writes require SZL_EE_INGEST and no available admin/setup/owner/app roles.
+Identity is rechecked before each load. The duplicate check requires a successful
+initial load and validation; it must not retry a failed or partial load.
 Run: python -I -B test_integration_snowflake.py -v
 """
 import hashlib
+import json
 import os
 import sys
 import unittest
@@ -26,7 +30,12 @@ import make_fixture as mf  # noqa: E402
 REQUIRED_ENV = ("SZL_EE_INTEGRATION_APPROVAL_REF", "SZL_EE_SNOWFLAKE_CONNECTION_NAME",
                 "SZL_EE_EXPECTED_ACCOUNT_SHA256", "SZL_EE_EXPECTED_WAREHOUSE")
 LIVE_SWITCH = "--live-approved"
-FORBIDDEN_ROLES = ("ACCOUNTADMIN", "SECURITYADMIN", "SYSADMIN", "ORGADMIN")
+EXPECTED_ROLE = "SZL_EE_INGEST"
+FORBIDDEN_ROLES = frozenset({"ACCOUNTADMIN", "SECURITYADMIN", "SYSADMIN", "USERADMIN", "ORGADMIN",
+                            "SZL_EE_SETUP", "SZL_EE_OWNER", "SZL_EE_APP"})
+IDENTITY_SQL = ("SELECT CURRENT_ACCOUNT() AS A, CURRENT_DATABASE() AS D, "
+                "CURRENT_SCHEMA() AS S, CURRENT_WAREHOUSE() AS W, CURRENT_ROLE() AS R, "
+                "CURRENT_AVAILABLE_ROLES() AS AR")
 
 
 def _consume_live_switch(argv):
@@ -51,7 +60,7 @@ def classify_launch(argv, env):
 
 
 def identity_matches(row, env):
-    """True only for the approved account, schema, warehouse and a non-admin role."""
+    """Require the approved ingest identity with no available privileged roles."""
     try:
         digest = hashlib.sha256(str(row.get("A", "")).upper().encode()).hexdigest()
         if digest != env.get("SZL_EE_EXPECTED_ACCOUNT_SHA256"):
@@ -60,7 +69,15 @@ def identity_matches(row, env):
             return False
         if row.get("W") != env.get("SZL_EE_EXPECTED_WAREHOUSE"):
             return False
-        if row.get("R") in FORBIDDEN_ROLES:
+        if row.get("R") != EXPECTED_ROLE:
+            return False
+        roles = row.get("AR")
+        if isinstance(roles, str):
+            roles = json.loads(roles)
+        if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+            return False
+        available = {role.upper() for role in roles}
+        if EXPECTED_ROLE not in available or available & FORBIDDEN_ROLES:
             return False
         return True
     except Exception:
@@ -95,10 +112,12 @@ else:
 MANUAL = "NOT_RUN: requires manual, owner-observed evidence; cannot be asserted from code"
 SESSION = None
 IDENTITY_OK = None
+FIXTURE_VALIDATED = False
 
 
 def setUpModule():
-    global SESSION
+    global SESSION, IDENTITY_OK, FIXTURE_VALIDATED
+    SESSION, IDENTITY_OK, FIXTURE_VALIDATED = None, None, False
     if BLOCKER is not None:
         return
     from snowflake.snowpark import Session
@@ -129,13 +148,12 @@ def local_store():
 
 
 def ensure_identity():
-    """One identity read. A failed or uncertain result forbids later MERGEs."""
+    """Recheck before each load; a failed or uncertain identity stays refused."""
     global IDENTITY_OK
-    if IDENTITY_OK is not None:
-        return IDENTITY_OK
+    if IDENTITY_OK is False:
+        return False
     try:
-        row = q("SELECT CURRENT_ACCOUNT() AS A, CURRENT_DATABASE() AS D, "
-                "CURRENT_SCHEMA() AS S, CURRENT_WAREHOUSE() AS W, CURRENT_ROLE() AS R")[0]
+        row = q(IDENTITY_SQL)[0]
     except Exception:
         IDENTITY_OK = False
         return False
@@ -165,17 +183,20 @@ def counts():
 @unittest.skipIf(BLOCKER is not None, BLOCKER or "")
 class I_SnowflakeIntegration(unittest.TestCase):
     def test_i01_exact_identity(self):
-        row = q("SELECT CURRENT_ACCOUNT() AS A, CURRENT_DATABASE() AS D, "
-                "CURRENT_SCHEMA() AS S, CURRENT_WAREHOUSE() AS W, CURRENT_ROLE() AS R")[0]
-        self.assertTrue(identity_matches(row, os.environ))
+        self.assertTrue(ensure_identity())
 
     def test_i02_expected_rows_and_deterministic_queries(self):
+        global FIXTURE_VALIDATED
+        FIXTURE_VALIDATED = False
         store = load_fixture()
         self.assertEqual(counts(), store.counts())
         for spec in (ec.q_asset_inventory(), ec.q_all_observations(), ec.q_exclusions()):
             self.assertEqual(len(run_spec(spec)), len(ec.local_execute(store, spec)), spec.name)
+        FIXTURE_VALIDATED = True
 
     def test_i03_duplicate_safe_rerun(self):
+        if not FIXTURE_VALIDATED:
+            self.skipTest("NOT_RUN: initial fixture load and validation did not pass; no automatic retry")
         before = counts()
         load_fixture()
         self.assertEqual(counts(), before)
