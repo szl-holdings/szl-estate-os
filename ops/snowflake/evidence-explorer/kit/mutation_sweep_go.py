@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Mutation sweep for szl_ee_go.py v0.3.0 DRAFT: one textual mutant per guard.
+"""Offline mutation sweep for the reconstructed synthetic runner contracts.
 
-WRITTEN, NOT YET RUN. Run on the VM only:
+No account access or live Snowflake operations are performed by these tests:
   python -I -B mutation_sweep_go.py <dir with szl_ee_go.py, test_szl_ee_go.py, itest_output_no_env.txt> <out.json>
 
 Each mutant replaces one exact snippet (which must occur exactly once in the clean
 source, else INVALID), copies the mutated runner plus the unchanged test file and
-fixture into a fresh directory under <dir of out.json>/mutants, runs
-`python -I -B test_szl_ee_go.py` and records KILLED (suite failed) or SURVIVED.
+fixture into an isolated temporary directory, runs
+`python -I -B test_szl_ee_go.py` and records KILLED only for a full suite with
+an assertion failure. Errors, signals and incomplete runs are INVALID.
+Inputs are snapshotted once so recorded digests describe every staged run.
 The clean copy must pass first. Before every run two gates are read: available
 physical RAM (GlobalMemoryStatusEx on Windows, /proc/meminfo on Linux) must be
 >= 2 GiB and free disk space at the output location must be >= 15 GB (the owner's
@@ -46,8 +48,9 @@ MUTANTS = [
     ("G08", "scrub disabled", "        if s and s in text:\n", "        if False:\n"),
     ("G09", "chain link dropped", "\"utc\": now_utc(), \"prev_entry_sha256\": self.prev}",
      "\"utc\": now_utc(), \"prev_entry_sha256\": \"0\" * 64}"),
-    ("G10", "dry-run-only ignored", "    if \"--dry-run-only\" in flags:\n        return EXIT_PARTIAL\n",
-     "    if False:\n        return EXIT_PARTIAL\n"),
+    ("G10", "public dry-run-only boundary ignored",
+     "    if \"--dry-run-only\" in flags:\n        return _offline_dry_run_only(opts, runner, rec, tmp, state, clk)\n",
+     "    if False:\n        return _offline_dry_run_only(opts, runner, rec, tmp, state, clk)\n"),
     ("G11", "unknown argv accepted",
      "            raise Refused(\"unknown argument (credentials are never accepted on argv)\")\n", "            pass\n"),
     ("G12", "explicit encrypted-key (header) check removed",
@@ -145,13 +148,15 @@ MUTANTS = [
     ("P12", "malformed/escaping sums lines accepted",
      "        if not m or not _safe_rel(m.group(\"p\")):\n", "        if not m:\n"),
     # --- v0.3: live-test prerequisite (Q) ---
-    ("Q01", "snowpark probe result ignored", "        if not ok:\n            rec.add(\"prerequisites\", \"BLOCKED\"",
-     "        if False:\n            rec.add(\"prerequisites\", \"BLOCKED\""),
-    ("Q02", "probe timeout treated as importable", "            ok, why = False, \"probe timed out\"\n",
-     "            ok, why = True, \"probe timed out\"\n"),
-    ("Q03", "probe skipped", "    if \"--dry-run-only\" not in flags:\n", "    if False:\n"),
+    ("Q01", "snowpark probe result ignored", "    if not ok:\n        rec.add(\"prerequisites\", \"BLOCKED\"",
+     "    if False:\n        rec.add(\"prerequisites\", \"BLOCKED\""),
+    ("Q02", "probe timeout treated as importable", "        ok, why = False, \"probe timed out\"\n",
+     "        ok, why = True, \"probe timed out\"\n"),
+    ("Q03", "probe skipped",
+     "        ok, why = probe_snowpark(penv, min(PROBE_CAP_SECONDS, clk.step_timeout()), runner=runner)\n",
+     "        ok, why = True, \"probe skipped\"\n"),
     ("Q04", "probe failure classed FAIL instead of BLOCKED",
-     "probe_stderr_tail\": why})\n            return EXIT_BLOCKED\n", "probe_stderr_tail\": why})\n            return EXIT_FAIL\n"),
+     "probe_stderr_tail\": why})\n        return EXIT_BLOCKED\n", "probe_stderr_tail\": why})\n        return EXIT_FAIL\n"),
     # --- v0.3: two identities (A) ---
     ("A01", "setup profile names an admin role", "SETUP_PROFILE, acct, du, fs, SETUP_ROLE,",
      "SETUP_PROFILE, acct, du, fs, \"SYSADMIN\","),
@@ -218,20 +223,35 @@ def main():
     if os.path.exists(out_json):
         raise SystemExit("refusing to overwrite an existing result; choose a new output path")
     base = os.path.dirname(os.path.abspath(out_json))
-    with tempfile.TemporaryDirectory(prefix="ee-runner-mutants-", dir=base) as work:
-        return run_sweep(src_dir, out_json, base, work)
+    try:
+        with tempfile.TemporaryDirectory(prefix="ee-runner-mutants-", dir=base) as work:
+            return run_sweep(src_dir, out_json, base, work)
+    except Exception as exc:
+        # An infrastructure failure must leave a non-passing CI artifact. Do
+        # not leak exception text or overwrite a concurrent/prior report.
+        try:
+            with open(out_json, "x", encoding="utf-8", newline="\n") as fh:
+                json.dump({"status": "ERROR", "completed": False,
+                           "error_type": type(exc).__name__}, fh, indent=1)
+                fh.write("\n")
+        except OSError as write_error:
+            print("could not preserve runner evidence: " + type(write_error).__name__, file=sys.stderr)
+        return 1
 
 
 def run_sweep(src_dir, out_json, base, work):
-    with open(os.path.join(src_dir, "szl_ee_go.py"), encoding="utf-8") as fh:
-        clean = fh.read()
-    with open(os.path.join(src_dir, "test_szl_ee_go.py"), "rb") as fh:
-        tests_sha = hashlib.sha256(fh.read()).hexdigest()
+    inputs = {}
+    for name in ("szl_ee_go.py", "test_szl_ee_go.py", "itest_output_no_env.txt"):
+        with open(os.path.join(src_dir, name), "rb") as fh:
+            inputs[name] = fh.read()
+    clean = inputs["szl_ee_go.py"].decode("utf-8")
+    digests = {name: hashlib.sha256(data).hexdigest() for name, data in inputs.items()}
     env = {k: v for k, v in os.environ.items()
            if not (k.startswith("SNOWFLAKE") or k.startswith("SZL_") or "TOKEN" in k.upper() or "SECRET" in k.upper())}
     results = {"started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
                "python": sys.version.split()[0], "platform": sys.platform,
-               "runner_sha256": hashlib.sha256(clean.encode("utf-8")).hexdigest(), "tests_sha256": tests_sha,
+               "runner_sha256": digests["szl_ee_go.py"], "tests_sha256": digests["test_szl_ee_go.py"],
+               "input_sha256": digests,
                "gates": {"min_ram_gib": MIN_RAM_GIB, "min_free_disk_gb": MIN_DISK_GB}, "mutants": []}
 
     def stage(name, text):
@@ -241,7 +261,8 @@ def run_sweep(src_dir, out_json, base, work):
         with open(os.path.join(d, "szl_ee_go.py"), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(text)
         for f in ("test_szl_ee_go.py", "itest_output_no_env.txt"):
-            shutil.copyfile(os.path.join(src_dir, f), os.path.join(d, f))
+            with open(os.path.join(d, f), "wb") as fh:
+                fh.write(inputs[f])
         return d
 
     ok, g = gates(base)
