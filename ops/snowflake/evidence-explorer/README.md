@@ -11,8 +11,8 @@ live integration tests.
 Current offline checks (Python 3.12, 2026-11-01): the exact bundle CI command
 runs 132 tests, with 121 passed and 11 live tests skipped (including the 11
 mutation-gate regressions in that total); operator kit 78 passed; reconstructed
-runner contracts 29 passed; shared kit/runner evidence and output-isolation
-regressions 10 passed. Total: 238 passed, 11 skipped. The repaired core
+runner contracts 30 passed; shared kit/runner evidence and output-isolation
+regressions 10 passed. Total: 239 passed, 11 skipped. The repaired core
 mutation sweep has 48 behavioral kills, 0 survivors, and 0 invalid results.
 The operator-kit sweep now includes the runner module its clean baseline imports,
 and has 88 behavioral kills, 0 survivors, and 0 invalid results.
@@ -46,9 +46,9 @@ Remaining qualification gaps: the reconstructed runner suite is not the
 withheld historical 65/98-test harness and does not establish the full live
 deploy/shutdown state machine. Full runner mutation qualification,
 v4 emulator/receipt regeneration, and all eleven live integration tests still
-need separate current evidence. The current reconstructed runner sweep exits 1:
+need separate current evidence. The preceding reconstructed-runner qualification probe exited 1:
 25 behavioral kills, 52 survivors, and 6 invalid results across 83 mutations.
-These are coverage/fixture gaps, not a successful qualification; the runner
+That probe predates the final additional uncertain-exit regression. These are coverage/fixture gaps, not a successful qualification; the runner
 sweep is deliberately not advertised as passing in the offline CI job.
 Timed-out operations now keep shutdown
 unverified and the warehouse potentially billable, even after a SUSPENDED
