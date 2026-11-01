@@ -13,6 +13,65 @@ import mutation_sweep_kit as kit_sweep
 
 
 class EvidenceClassification(unittest.TestCase):
+    def test_runner_launch_error_preserves_sanitized_failure_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "failed.json"
+            with mock.patch.object(sys, "argv", ["sweep", tmp, str(output)]), \
+                 mock.patch.object(runner_sweep, "run_sweep", side_effect=OSError("private exception detail")):
+                self.assertEqual(runner_sweep.main(), 1)
+            doc = json.loads(output.read_text())
+            self.assertEqual(doc, {"status": "ERROR", "completed": False, "error_type": "OSError"})
+
+    def test_runner_error_cannot_overwrite_a_concurrent_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "result.json"
+
+            def race(*args):
+                output.write_text("other writer's report")
+                raise OSError("synthetic")
+
+            with mock.patch.object(sys, "argv", ["sweep", tmp, str(output)]), \
+                 mock.patch.object(runner_sweep, "run_sweep", side_effect=race):
+                self.assertEqual(runner_sweep.main(), 1)
+            self.assertEqual(output.read_text(), "other writer's report")
+
+    def test_runner_uses_the_same_snapshotted_tests_for_every_mutant(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, work = root / "source", root / "work"
+            source.mkdir()
+            work.mkdir()
+            (source / "szl_ee_go.py").write_text("value = True\n")
+            (source / "test_szl_ee_go.py").write_text("# original tests\n")
+            (source / "itest_output_no_env.txt").write_text("original fixture\n")
+            seen = []
+
+            def run(directory, env):
+                seen.append((Path(directory) / "test_szl_ee_go.py").read_bytes())
+                (source / "test_szl_ee_go.py").write_text("changed while running\n")
+                return {"exit": 0 if len(seen) == 1 else 1, "tests": 1,
+                        "failures": 0 if len(seen) == 1 else 1, "errors": 0, "tail": "synthetic"}
+
+            output = root / "report.json"
+            with mock.patch.object(runner_sweep, "gates", return_value=(True, {})), \
+                 mock.patch.object(runner_sweep, "MUTANTS", [("SYNTH", "synthetic", "True", "False")]), \
+                 mock.patch.object(runner_sweep, "run_suite", side_effect=run):
+                self.assertEqual(runner_sweep.run_sweep(str(source), str(output), str(root), str(work)), 0)
+            self.assertEqual(seen, [b"# original tests\n", b"# original tests\n"])
+            doc = json.loads(output.read_text())
+            import hashlib
+            self.assertEqual(doc["tests_sha256"], hashlib.sha256(seen[0]).hexdigest())
+            self.assertEqual(set(doc["input_sha256"]), {"szl_ee_go.py", "test_szl_ee_go.py", "itest_output_no_env.txt"})
+
+    def test_runner_mutants_have_unique_ids_anchors_and_valid_syntax(self):
+        source = Path(__file__).with_name("szl_ee_go.py").read_text()
+        self.assertEqual(len(runner_sweep.MUTANTS), 83)
+        self.assertEqual(len({item[0] for item in runner_sweep.MUTANTS}), 83)
+        for name, _, old, new in runner_sweep.MUTANTS:
+            with self.subTest(mutant=name):
+                self.assertEqual(source.count(old), 1)
+                compile(source.replace(old, new), "szl_ee_go.py", "exec")
+
     def run_script(self, text, timeout=5):
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "suite.py").write_text(text)

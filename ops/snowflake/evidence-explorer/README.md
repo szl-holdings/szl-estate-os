@@ -21,11 +21,21 @@ timeouts, signals, incomplete suites, and error-only crashes are INVALID, never
 counted as behavioral kills. M07 and M37 now exercise valid code instead of
 syntax/string-formatting failures.
 
-The `snowflake-evidence-explorer` CI job runs all those checks and preserves the
-new core and kit mutation result artifacts, including baseline-failure diagnostics. A survivor or invalid result exits
-nonzero. Kit and runner sweeps refuse to overwrite an existing report, and the
-runner sweep uses a unique temporary directory so concurrent runs do not share
-or delete one another's working files.
+The `snowflake-evidence-explorer` CI job also gates all 83 documented runner
+mutations against the reconstructed 65-test synthetic runner suite. These tests
+exercise the real orchestrator with fake process/SQL boundaries: identity and
+inventory refusals, deployment timeouts, uncertain outcomes, shutdown readbacks,
+pin changes, cleanup, and retained receipt evidence. Four stale prerequisite
+mutations now target the current code; the dry-run mutation targets the public
+offline boundary. Mutation anchors and syntax are checked separately.
+
+CI preserves core, kit and runner mutation artifacts, including failure
+diagnostics. A survivor, invalid result or resource-blocked runner sweep exits
+nonzero. Kit and runner sweeps refuse to overwrite an existing report. The runner
+snapshots its inputs once and records their SHA-256 digests; concurrent source
+edits cannot change the tests midway through a sweep. Unique temporary directories
+isolate runs, and unexpected runner-sweep errors produce sanitized failure records.
+The runner sweep retains the minimum 2 GiB available RAM and 15 GB free disk gates.
 Run locally from this directory:
 
 ```bash
@@ -34,6 +44,7 @@ Run locally from this directory:
 (cd kit && python -I -B test_mutation_support.py -v)
 (cd bundle && python -I -B mutation_sweep.py /tmp/ee-mutation-results.json)
 (cd kit && python -I -B mutation_sweep_kit.py /tmp/ee-kit-mutation-results.json)
+(cd kit && python -I -B mutation_sweep_go.py . /tmp/ee-runner-mutation-results.json)
 ```
 
 The real `szl_ee_go.py --dry-run-only` path also completed its file-pin check,
@@ -43,12 +54,10 @@ an isolated environment with a synthetic approval account. Its exit code is 2
 
 Remaining qualification gaps: the reconstructed runner suite is not the
 withheld historical 65/98-test harness and does not establish the full live
-deploy/shutdown state machine. Full runner mutation qualification,
-v4 emulator/receipt regeneration, and all eleven live integration tests still
-need separate current evidence. The preceding reconstructed-runner qualification probe exited 1:
-25 behavioral kills, 52 survivors, and 6 invalid results across 83 mutations.
-That probe predates the final additional uncertain-exit regression. These are coverage/fixture gaps, not a successful qualification; the runner
-sweep is deliberately not advertised as passing in the offline CI job.
+deploy/shutdown state machine. Passing the 83 documented mutations qualifies
+that bounded synthetic guard set, not every possible runner defect. Live account
+and privilege verification, v4 emulator/receipt regeneration, and all eleven live
+integration tests still need separate current evidence.
 Timed-out operations now keep shutdown
 unverified and the warehouse potentially billable, even after a SUSPENDED
 readback; the delayed-completion regression covers this. Automatic cancellation
