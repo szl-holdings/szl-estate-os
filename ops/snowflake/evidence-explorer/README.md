@@ -8,21 +8,22 @@ live integration tests.
 - bundle/: Evidence Explorer bundle v4 (schema v4 without SYSADMIN hierarchy grants). The bundle receipt predates schema v4 and is marked STALE.
 - READINESS_PACKET_2026-10-22.md: approval scope, privilege diff, cost-control limits, failure map, test evidence, open decisions. Artifact links inside it resolve only in the originating workspace.
 
-Current offline checks (Python 3.12, 2026-11-01): bundle 139 tests discovered,
-128 passed and 11 live tests skipped (including 10 mutation-gate and 8 integration-boundary regressions); operator kit 78 passed; reconstructed
-runner contracts 29 passed; shared
-kit/runner evidence classification and output-isolation regressions 9 passed. The repaired core
+Current offline checks (Python 3.12, 2026-11-01): the exact bundle CI command
+runs 140 tests, with 129 passed and 11 live tests skipped (including 11
+mutation-gate and 8 integration-boundary regressions in that total); operator kit 78 passed; reconstructed
+runner contracts 29 passed; shared kit/runner evidence and output-isolation
+regressions 10 passed. Total: 246 passed, 11 skipped. The repaired core
 mutation sweep has 48 behavioral kills, 0 survivors, and 0 invalid results.
 The operator-kit sweep now includes the runner module its clean baseline imports,
 and has 88 behavioral kills, 0 survivors, and 0 invalid results.
-Each clean baseline runs before its mutants; input SHA-256 digests and per-mutant
+Its clean baseline runs before the mutants; input SHA-256 digests and per-mutant
 test counts are recorded in the result artifact. Syntax/import failures,
 timeouts, signals, incomplete suites, and error-only crashes are INVALID, never
 counted as behavioral kills. M07 and M37 now exercise valid code instead of
 syntax/string-formatting failures.
 
 The `snowflake-evidence-explorer` CI job runs all those checks and preserves the
-new core and kit mutation result artifacts. A survivor or invalid result exits
+new core and kit mutation result artifacts, including baseline-failure diagnostics. A survivor or invalid result exits
 nonzero. Kit and runner sweeps refuse to overwrite an existing report, and the
 runner sweep uses a unique temporary directory so concurrent runs do not share
 or delete one another's working files.

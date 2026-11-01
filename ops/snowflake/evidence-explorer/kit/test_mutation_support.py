@@ -3,7 +3,8 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest import mock
+import unittest.mock as mock
+import json
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mutation_support as support
@@ -50,6 +51,16 @@ class EvidenceClassification(unittest.TestCase):
                 kit_sweep.main(str(output))
             run.assert_not_called()
             self.assertEqual(output.read_text(), "historical evidence")
+
+    def test_kit_baseline_failure_preserves_artifact(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "failed.json"
+            with mock.patch.object(kit_sweep, "run_suite", return_value={
+                    "exit": 1, "tests": 0, "errors": 0, "failures": 0, "tail": "synthetic import failure"}):
+                self.assertEqual(kit_sweep.main(str(output)), 2)
+            doc = json.loads(output.read_text())
+            self.assertEqual(doc["status"], "BASELINE_FAILED")
+            self.assertFalse(doc["completed"])
 
     def test_runner_refuses_existing_result_before_running(self):
         with tempfile.TemporaryDirectory() as tmp:

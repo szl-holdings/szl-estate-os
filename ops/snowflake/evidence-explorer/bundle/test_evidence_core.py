@@ -1099,7 +1099,7 @@ class IntegrationWriteBoundary(unittest.TestCase):
     def test_failed_initial_load_prevents_duplicate_write(self):
         case = itest.I_SnowflakeIntegration("test_i02_expected_rows_and_deterministic_queries")
         with mock.patch.object(itest, "FIXTURE_VALIDATED", True, create=True), \
-             mock.patch.object(itest, "load_fixture", side_effect=RuntimeError("partial fixture")) as load, \
+             mock.patch.object(itest, "load_fixture", side_effect=[RuntimeError("partial fixture"), None]) as load, \
              mock.patch.object(itest, "counts") as count:
             with self.assertRaisesRegex(RuntimeError, "partial fixture"):
                 case.test_i02_expected_rows_and_deterministic_queries()
