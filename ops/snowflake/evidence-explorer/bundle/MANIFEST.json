@@ -259,8 +259,8 @@
   },
   {
    "path": "test_evidence_core.py",
-   "sha256": "df687df57d0adec92ec2c2e24bd770b1c8e5e729a34d68dcf91c555fa5cdc82a",
-   "bytes": 57630,
+   "sha256": "39e2b4ec4d965e77f3dbee0c52b1e60ecd04639d89c47931f795ff9c40ababd4",
+   "bytes": 57633,
    "role": "test"
   },
   {

@@ -16,7 +16,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest import mock
+import unittest.mock as mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
