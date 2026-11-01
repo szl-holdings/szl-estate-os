@@ -508,8 +508,8 @@ class RunnerContracts(unittest.TestCase):
     def test_unexpected_deploy_exception_is_recorded_and_shut_down(self):
         try:
             code, summary, _ = self.simulate_run(deploy_error=RuntimeError("synthetic failure"))
-        except RuntimeError:
-            self.fail("runner exception escaped instead of returning a recorded uncertain outcome")
+        except RuntimeError as exc:
+            raise AssertionError("runner exception escaped instead of returning a recorded uncertain outcome") from exc
         self.assertEqual(code, go.EXIT_UNCERTAIN)
         self.assertIn(["runner_exception", "UNKNOWN"], summary["steps"])
         self.assertIn(["suspend", "PASS"], summary["steps"])
@@ -656,8 +656,8 @@ class RunnerContracts(unittest.TestCase):
         body = "A" * 100 + "ENCRYPTED" + "B" * 100
         try:
             value = go.normalize_pem("-----BEGIN PRIVATE KEY-----\n" + body + "\n-----END PRIVATE KEY-----")
-        except go.Refused:
-            self.fail("an unencrypted PEM body was mistaken for an encrypted header")
+        except go.Refused as exc:
+            raise AssertionError("an unencrypted PEM body was mistaken for an encrypted header") from exc
         self.assertIn("ENCRYPTED", value)
 
     def test_connector_home_is_set_before_import(self):
