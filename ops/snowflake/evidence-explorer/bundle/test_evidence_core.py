@@ -16,6 +16,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -1013,7 +1014,7 @@ class OfflineBoundary(unittest.TestCase):
         digest = hashlib.sha256(b"ZZ99999").hexdigest()
         env = {"SZL_EE_EXPECTED_ACCOUNT_SHA256": digest, "SZL_EE_EXPECTED_WAREHOUSE": "SZL_EE_WH"}
         row = {"A": "zz99999", "D": "SZL_EE_DB", "S": "EE_DATA", "W": "SZL_EE_WH",
-               "R": "ACCOUNTADMIN"}
+               "R": "ACCOUNTADMIN", "AR": '["PUBLIC", "SZL_EE_INGEST", "SZL_EE_OPERATOR"]'}
         self.assertFalse(itest.identity_matches(row, env))
         row["R"] = "SZL_EE_INGEST"
         self.assertTrue(itest.identity_matches(row, env))
@@ -1044,6 +1045,94 @@ class OfflineBoundary(unittest.TestCase):
         clean = {"not_run": 11, "failures": 0, "errors": 0, "skipped": 11, "ran": 11,
                  "result": "OK"}
         self.assertEqual(rle.decide("integration_snowflake", 3, clean), "NOT_RUN")
+
+
+class IntegrationWriteBoundary(unittest.TestCase):
+    """Synthetic identity and failure injection; never a live Snowflake session."""
+
+    def setUp(self):
+        self.env = {"SZL_EE_EXPECTED_ACCOUNT_SHA256": hashlib.sha256(b"SYNTHETIC").hexdigest(),
+                    "SZL_EE_EXPECTED_WAREHOUSE": "SZL_EE_WH"}
+        self.row = {"A": "SYNTHETIC", "D": "SZL_EE_DB", "S": "EE_DATA", "W": "SZL_EE_WH",
+                    "R": "SZL_EE_INGEST", "AR": '["PUBLIC", "SZL_EE_INGEST", "SZL_EE_OPERATOR"]'}
+
+    def test_only_ingest_primary_role_can_write(self):
+        for role in ("USERADMIN", "ACCOUNTADMIN", "SYSADMIN", "SECURITYADMIN", "ORGADMIN",
+                     "PUBLIC", "SZL_EE_VIEWER", "SZL_EE_SETUP", "SZL_EE_OWNER", "SZL_EE_APP",
+                     "SZL_EE_OPERATOR", "", None):
+            with self.subTest(role=role):
+                self.assertFalse(itest.identity_matches(dict(self.row, R=role), self.env))
+        self.assertTrue(itest.identity_matches(self.row, self.env))
+
+    def test_inherited_privileged_roles_refuse_write(self):
+        for role in ("USERADMIN", "ACCOUNTADMIN", "SYSADMIN", "SECURITYADMIN", "ORGADMIN",
+                     "SZL_EE_SETUP", "SZL_EE_OWNER", "SZL_EE_APP"):
+            with self.subTest(role=role):
+                row = dict(self.row, AR=json.dumps(["SZL_EE_INGEST", role]))
+                self.assertFalse(itest.identity_matches(row, self.env))
+
+    def test_available_roles_must_be_readable_and_include_ingest(self):
+        for roles in (None, "", "broken-json", "null", "{}", '"SZL_EE_INGEST"',
+                      '[]', '["PUBLIC"]', '[null]', '[1]', '["SZL_EE_INGEST", 1]'):
+            with self.subTest(roles=roles):
+                self.assertFalse(itest.identity_matches(dict(self.row, AR=roles), self.env))
+        self.assertTrue(itest.identity_matches(dict(self.row, AR=["SZL_EE_INGEST"]), self.env))
+
+    def test_each_fixture_load_rechecks_successful_identity(self):
+        with mock.patch.object(itest, "IDENTITY_OK", True), \
+             mock.patch.dict(os.environ, self.env), \
+             mock.patch.object(itest, "q", return_value=[dict(self.row, R="USERADMIN")]) as query, \
+             mock.patch.object(itest.ec, "build_merge") as merge:
+            with self.assertRaisesRegex(RuntimeError, "MERGE not executed"):
+                itest.load_fixture()
+            self.assertEqual(query.call_count, 1)
+            self.assertIn("CURRENT_AVAILABLE_ROLES()", query.call_args.args[0])
+            merge.assert_not_called()
+
+    def test_identity_read_failure_latches_refusal(self):
+        with mock.patch.object(itest, "IDENTITY_OK", None), \
+             mock.patch.object(itest, "q", side_effect=RuntimeError("synthetic failure")) as query:
+            self.assertFalse(itest.ensure_identity())
+            self.assertFalse(itest.ensure_identity())
+            self.assertEqual(query.call_count, 1)
+
+    def test_failed_initial_load_prevents_duplicate_write(self):
+        case = itest.I_SnowflakeIntegration("test_i02_expected_rows_and_deterministic_queries")
+        with mock.patch.object(itest, "FIXTURE_VALIDATED", True, create=True), \
+             mock.patch.object(itest, "load_fixture", side_effect=RuntimeError("partial fixture")) as load, \
+             mock.patch.object(itest, "counts") as count:
+            with self.assertRaisesRegex(RuntimeError, "partial fixture"):
+                case.test_i02_expected_rows_and_deterministic_queries()
+            with self.assertRaises(unittest.SkipTest):
+                case.test_i03_duplicate_safe_rerun()
+            self.assertEqual(load.call_count, 1)
+            count.assert_not_called()
+
+    def test_failed_initial_validation_prevents_duplicate_write(self):
+        store = mock.Mock()
+        store.counts.return_value = {"ASSETS": 7}
+        case = itest.I_SnowflakeIntegration("test_i02_expected_rows_and_deterministic_queries")
+        with mock.patch.object(itest, "FIXTURE_VALIDATED", True, create=True), \
+             mock.patch.object(itest, "load_fixture", return_value=store) as load, \
+             mock.patch.object(itest, "counts", return_value={"ASSETS": 6}):
+            with self.assertRaises(AssertionError):
+                case.test_i02_expected_rows_and_deterministic_queries()
+            with self.assertRaises(unittest.SkipTest):
+                case.test_i03_duplicate_safe_rerun()
+            self.assertEqual(load.call_count, 1)
+
+    def test_successful_validation_enables_one_duplicate_check(self):
+        store = mock.Mock()
+        store.counts.return_value = {"ASSETS": 7}
+        case = itest.I_SnowflakeIntegration("test_i02_expected_rows_and_deterministic_queries")
+        with mock.patch.object(itest, "FIXTURE_VALIDATED", False, create=True), \
+             mock.patch.object(itest, "load_fixture", return_value=store) as load, \
+             mock.patch.object(itest, "counts", return_value={"ASSETS": 7}), \
+             mock.patch.object(itest, "run_spec", return_value=[]), \
+             mock.patch.object(itest.ec, "local_execute", return_value=[]):
+            case.test_i02_expected_rows_and_deterministic_queries()
+            case.test_i03_duplicate_safe_rerun()
+            self.assertEqual(load.call_count, 2)
 
 
 if __name__ == "__main__":
