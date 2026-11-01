@@ -95,14 +95,20 @@ jobs:
           mkdir -p "$SNOWFLAKE_HOME"
           python -B -m unittest -v test_operator_kit
           python -I -B test_szl_ee_go.py -v
+          python -I -B test_mutation_support.py -v
       - name: Require complete behavioral mutation evidence
         working-directory: ops/snowflake/evidence-explorer/bundle
         run: python -I -B mutation_sweep.py "$RUNNER_TEMP/ee-mutation-results.json"
+      - name: Require complete operator-kit mutation evidence
+        working-directory: ops/snowflake/evidence-explorer/kit
+        run: python -I -B mutation_sweep_kit.py "$RUNNER_TEMP/ee-kit-mutation-results.json"
       - name: Preserve mutation evidence on success or failure
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: snowflake-core-mutations-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ee-mutation-results.json
+          path: |
+            ${{ runner.temp }}/ee-mutation-results.json
+            ${{ runner.temp }}/ee-kit-mutation-results.json
           if-no-files-found: error
           retention-days: 14
