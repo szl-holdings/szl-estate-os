@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import verify_estate_readiness as readiness
 from build_remediation_queue import build_queue
 from verify_estate_readiness import (
     PRODUCTION_EVIDENCE_INDEX_SCHEMA,
@@ -2830,7 +2829,7 @@ class EvidenceReadBoundaryTests(unittest.TestCase):
         from estate import evidence_contract as evidence
         self.readers = (
             (evidence, "MAX_EVIDENCE_BYTES"),
-            (readiness, "MAX_PRODUCTION_ARTIFACT_BYTES"),
+            (sys.modules[verify_readiness.__module__], "MAX_PRODUCTION_ARTIFACT_BYTES"),
         )
 
     def test_exact_limit_artifact_remains_verifiable(self):
