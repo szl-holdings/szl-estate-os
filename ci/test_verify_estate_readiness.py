@@ -2832,6 +2832,97 @@ class EvidenceReadBoundaryTests(unittest.TestCase):
             (sys.modules[verify_readiness.__module__], "MAX_PRODUCTION_ARTIFACT_BYTES"),
         )
 
+    def test_json_null_byte_path_returns_failure_without_disclosing_path(self):
+        value = json.loads(r'{"artifact_path":"PRIVATE_PATH_SENTINEL\u0000.json"}')
+        with tempfile.TemporaryDirectory() as directory:
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__):
+                    data, detail = reader.load_evidence_bytes(
+                        value["artifact_path"], hashlib.sha256(b"x").hexdigest(),
+                        Path(directory), label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("unavailable", detail)
+                    self.assertNotIn("PRIVATE_PATH_SENTINEL", detail)
+
+    def test_symlink_loop_path_returns_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            try:
+                (root / "loop").symlink_to("loop")
+            except (OSError, NotImplementedError):
+                self.skipTest("symbolic links are unavailable on this test host")
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__):
+                    data, detail = reader.load_evidence_bytes(
+                        "loop", hashlib.sha256(b"x").hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("unavailable", detail)
+
+    def test_path_resolution_permission_error_returns_failure(self):
+        for reader, _ in self.readers:
+            with self.subTest(reader=reader.__name__), mock.patch.object(
+                Path, "resolve", side_effect=PermissionError("PRIVATE_PATH_SENTINEL")
+            ):
+                data, detail = reader.load_evidence_bytes(
+                    "artifact.json", hashlib.sha256(b"x").hexdigest(),
+                    Path("audit-root"), label="artifact",
+                )
+                self.assertIsNone(data)
+                self.assertIn("PermissionError", detail)
+                self.assertNotIn("PRIVATE_PATH_SENTINEL", detail)
+
+    def test_non_string_paths_are_not_coerced_to_existing_filenames(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for value in (123, True, ["artifact.json"], {}):
+                (root / str(value)).write_bytes(b"x")
+                for reader, _ in self.readers:
+                    with self.subTest(reader=reader.__name__, value=value):
+                        data, detail = reader.load_evidence_bytes(
+                            value, hashlib.sha256(b"x").hexdigest(), root,
+                            label="artifact",
+                        )
+                        self.assertIsNone(data)
+                        self.assertTrue(detail)
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__, valid_numeric_string=True):
+                    data, detail = reader.load_evidence_bytes(
+                        "123", hashlib.sha256(b"x").hexdigest(), root, label="artifact",
+                    )
+                    self.assertEqual(data, b"x")
+                    self.assertIn("verified", detail)
+
+    def test_parent_escape_still_fails_even_with_matching_digest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "audit"
+            root.mkdir()
+            (parent / "outside.json").write_bytes(b"x")
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__):
+                    data, detail = reader.load_evidence_bytes(
+                        "../outside.json", hashlib.sha256(b"x").hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("escapes", detail)
+
+    def test_malformed_report_path_becomes_a_failed_check(self):
+        reader = sys.modules[verify_readiness.__module__]
+        with tempfile.TemporaryDirectory() as directory:
+            state, detail = reader.report_file_state(
+                {"report_path": "PRIVATE_PATH_SENTINEL\x00.json",
+                 "report_sha256": hashlib.sha256(b"{}").hexdigest()},
+                Path(directory), label="report", expected_schema="test-report/v1",
+                binding_fields=set(),
+            )
+            self.assertEqual(state, "FAIL")
+            self.assertIn("unavailable", detail)
+            self.assertNotIn("PRIVATE_PATH_SENTINEL", detail)
+
     def test_exact_limit_artifact_remains_verifiable(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

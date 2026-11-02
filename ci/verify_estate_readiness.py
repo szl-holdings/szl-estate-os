@@ -992,11 +992,16 @@ def load_evidence_bytes(
     *,
     label: str,
 ) -> tuple[bytes | None, str]:
-    relative = Path(str(relative_value or ""))
+    if not isinstance(relative_value, str) or not relative_value:
+        return None, f"{label}_path is missing or invalid"
+    relative = Path(relative_value)
     if evidence_root is None or not relative.parts or relative.is_absolute():
         return None, f"{label}_path must be relative to the audit directory"
-    root = evidence_root.resolve()
-    evidence_path = (root / relative).resolve()
+    try:
+        root = evidence_root.resolve()
+        evidence_path = (root / relative).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        return None, f"{label} unavailable error={type(exc).__name__}"
     try:
         evidence_path.relative_to(root)
     except ValueError:
