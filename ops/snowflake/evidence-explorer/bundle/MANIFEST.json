@@ -297,8 +297,8 @@
   {
    "path": "test_streamlit_exclusions.py",
    "role": "test",
-   "sha256": "567112cff52f93407498955bf5e4d9e4f746ba577963132ee6a8190b63fe3787",
-   "bytes": 7573
+   "sha256": "c352b76da16bab1cc3825b195c6abc75ef1ff46ab824ef36aa108139c188c0dc",
+   "bytes": 7729
   }
  ],
  "changes_from_v3": "schema.sql v4: no CREATE ROLE / GRANT ROLE / TO ROLE SYSADMIN; database created by SZL_EE_SETUP; roles, warehouse and warehouse grants owner-run in kit v0.3.0 SNOWSIGHT_SETUP.sql D0. test_evidence_core.py updated to match (not run). ADR.md banner. V4_DRAFT_NOTES.md added. Manifest now covers every file incl. receipt/tmp/*."

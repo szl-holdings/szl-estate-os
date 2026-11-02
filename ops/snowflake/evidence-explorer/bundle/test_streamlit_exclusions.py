@@ -99,6 +99,8 @@ def render(session, screen):
         try:
             runpy.run_path(str(APP), run_name="__exclusion_regression__")
         except StopDisplay:
+            # The fake st.stop intentionally terminates rendering; inspect its
+            # captured output below, just as the framework stops the script.
             pass
     return [row for frame in frames for row in frame], errors, choices
 
