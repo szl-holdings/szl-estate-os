@@ -8,8 +8,8 @@ live integration tests.
 - bundle/: Evidence Explorer bundle v4 (schema v4 without SYSADMIN hierarchy grants). The bundle receipt predates schema v4 and is marked STALE.
 - READINESS_PACKET_2026-10-22.md: approval scope, privilege diff, cost-control limits, failure map, test evidence, open decisions. Artifact links inside it resolve only in the originating workspace.
 
-The offline CI job runs the evidence core, receipt verifier, integration launch
-boundary, mutation-gate, operator-kit, runner-contract and shared mutation
+The offline CI job runs the evidence core, display-exclusion UI regressions,
+receipt verifier, integration launch boundary, mutation-gate, operator-kit, runner-contract and shared mutation
 support tests. The exact counts are recorded in the hosted logs for each commit;
 the 11 credential-gated live tests remain skipped, not passed. The core
 mutation sweep has 48 behavioral kills, 0 survivors, and 0 invalid results.
@@ -39,13 +39,23 @@ The runner sweep retains the minimum 2 GiB available RAM and 15 GB free disk gat
 Run locally from this directory:
 
 ```bash
-(cd bundle && python -B -m unittest -v test_evidence_core test_verify_receipt test_integration_snowflake test_mutation_sweep)
+(cd bundle && python -B -m unittest -v test_evidence_core test_verify_receipt test_integration_snowflake test_mutation_sweep test_streamlit_exclusions)
 (cd kit && python -B -m unittest -v test_operator_kit && python -I -B test_szl_ee_go.py -v)
 (cd kit && python -I -B test_mutation_support.py -v)
 (cd bundle && python -I -B mutation_sweep.py /tmp/ee-mutation-results.json)
 (cd kit && python -I -B mutation_sweep_kit.py /tmp/ee-kit-mutation-results.json)
 (cd kit && python -I -B mutation_sweep_go.py . /tmp/ee-runner-mutation-results.json)
 ```
+
+Asset inventory, evidence detail, revision comparison, and evidence-gap screens
+load display exclusions before showing data or selectors. A failed exclusion
+query stops those screens. Reaching the 200-row exclusion query limit also stops
+them, including exactly 200 returned rows: the bounded query cannot prove that
+the result is complete. Complete results filter inventory and revision selectors
+as well as observation rows. Restoring availability beyond this boundary requires
+verified complete policy retrieval or server-side exclusion enforcement, not
+ignoring the truncation flag. The regression suite executes the application with
+synthetic UI/session adapters; it does not qualify Streamlit or live Snowflake.
 
 The real `szl_ee_go.py --dry-run-only` path also completed its file-pin check,
 plan generation, receipt-chain validation, and temporary-directory cleanup in
@@ -62,8 +72,10 @@ Timed-out operations now keep shutdown
 unverified and the warehouse potentially billable, even after a SUSPENDED
 readback; the delayed-completion regression covers this. Automatic cancellation
 and final-state reconciliation are not implemented. Historical package checksums and
-receipts remain historical. The bundle manifest hashes and byte sizes match all 41 current entries;
-that integrity check does not refresh historical receipts or establish deployment authorization.
+receipts remain historical. The bundle manifest now lists 42 entries. The changed
+application and new regression test hashes and byte sizes were verified; other
+pins and historical evidence were retained, not refreshed. These integrity checks
+do not establish deployment authorization.
 
 Last measured suites (v0.2.0-rc1 + v3 bundle, 2026-10-22): kit 64 OK, runner 65 OK, mutants 59/59 and 46/46 killed, bundle 80 OK, verifier 24 OK.
 
