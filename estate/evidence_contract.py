@@ -210,12 +210,16 @@ def load_indexed_artifact_set(
 
 
 def _valid_nonnegative_number(value: Any) -> bool:
-    return (
-        not isinstance(value, bool)
-        and isinstance(value, (int, float))
-        and math.isfinite(value)
-        and value >= 0
-    )
+    try:
+        return (
+            not isinstance(value, bool)
+            and isinstance(value, (int, float))
+            and math.isfinite(value)
+            and value >= 0
+        )
+    except OverflowError:
+        # JSON integers can exceed the floating-point range used for durations.
+        return False
 
 
 def _valid_nonnegative_int(value: Any) -> bool:

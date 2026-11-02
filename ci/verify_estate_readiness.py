@@ -1068,12 +1068,16 @@ def production_policies(manifest: dict[str, Any]) -> tuple[dict[str, Any] | None
         return None, "production policy shape is invalid"
     for field in required:
         value = policies.get(field)
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(value)
-            or value <= 0
-        ):
+        try:
+            valid = (
+                not isinstance(value, bool)
+                and isinstance(value, (int, float))
+                and math.isfinite(value)
+                and value > 0
+            )
+        except OverflowError:
+            valid = False
+        if not valid:
             return None, f"production policy {field} is invalid"
     return policies, "production policies verified"
 
@@ -1549,12 +1553,16 @@ def production_artifact_state(
             return freshness_state, freshness_detail
         for field in ("rto_seconds", "rpo_seconds"):
             value = artifact.get(field)
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-                or value < 0
-            ):
+            try:
+                valid = (
+                    not isinstance(value, bool)
+                    and isinstance(value, (int, float))
+                    and math.isfinite(value)
+                    and value >= 0
+                )
+            except OverflowError:
+                valid = False
+            if not valid:
                 return "FAIL", f"{field} is missing or invalid"
         observed_rto_seconds = (service_restored - failure_started).total_seconds()
         observed_rpo_seconds = (failure_started - recovery_point).total_seconds()
