@@ -75,13 +75,43 @@ SCREENS = ("1. Asset inventory", "2. Evidence detail", "3. Revision comparison",
 screen = st.sidebar.radio("Screen", SCREENS)
 st.header(screen)
 
+# Exclusions are policy input, so an incomplete result cannot authorize display.
+# Fetch them before rendering inventory, selectors, revisions, or observations.
+DISPLAY_EXCLUSIONS = []
+if screen in SCREENS[:4]:
+    exclusions = run(core.q_exclusions())
+    if exclusions.state == "ERROR":
+        st.error(exclusions.message)
+        st.stop()
+    if exclusions.truncated:
+        st.error("DISPLAY EXCLUSIONS INCOMPLETE: result limit reached. No asset, "
+                 "revision, or observation data is shown until a complete "
+                 "exclusion result is available.")
+        st.stop()
+    DISPLAY_EXCLUSIONS = exclusions.rows
+
+
+def run_visible(spec):
+    """Filter inventory and revision rows before rendering or selection."""
+    state = run(spec)
+    if state.state == "ERROR":
+        return state
+    rows, _ = core.apply_display_exclusions(state.rows, DISPLAY_EXCLUSIONS)
+    visible = core.screen_state(rows, None, None)
+    if state.truncated:
+        visible = visible._replace(
+            truncated=True,
+            message=visible.message + " Source result limit reached; more may exist.")
+    return visible
+
+
 if screen == SCREENS[0]:
     provider = st.selectbox("Provider", ("ALL",) + core.PROVIDERS)
     spec = core.q_asset_inventory(None if provider == "ALL" else provider)
-    show(run(spec), spec)
+    show(run_visible(spec), spec)
 
 elif screen in (SCREENS[1], SCREENS[2]):
-    inv = run(core.q_asset_inventory())
+    inv = run_visible(core.q_asset_inventory())
     if show(inv):
         candidates = [r["asset_id"] for r in inv.rows
                       if screen == SCREENS[1] or (r["revision_count"] or 0) >= 2]
@@ -89,20 +119,17 @@ elif screen in (SCREENS[1], SCREENS[2]):
             st.info("No asset has two accepted revisions; nothing to compare.")
         else:
             asset_id = st.selectbox("Asset", candidates)
-            revs = run(core.q_asset_revisions(asset_id))
+            revs = run_visible(core.q_asset_revisions(asset_id))
             if show(revs):
                 rev_ids = [r["revision_id"] for r in revs.rows]
-                excl = run(core.q_exclusions())
-                if excl.state == "ERROR":
-                    st.error(excl.message)
-                elif screen == SCREENS[1]:
+                if screen == SCREENS[1]:
                     rid = st.selectbox("Revision", rev_ids)
                     spec = core.q_evidence_detail(rid)
                     detail = run(spec)
                     if detail.state == "OK":
                         try:
                             shown, hidden = core.apply_display_exclusions(
-                                core.present_joined(detail.rows, now_utc()), excl.rows)
+                                core.present_joined(detail.rows, now_utc()), DISPLAY_EXCLUSIONS)
                         except Exception as exc:
                             st.error("PRESENTATION FAILED: %s" % type(exc).__name__)
                         else:
@@ -120,7 +147,7 @@ elif screen in (SCREENS[1], SCREENS[2]):
                         both = run(spec)
                         if both.state == "OK":
                             p = core.present_joined(both.rows, now_utc())
-                            p, hidden = core.apply_display_exclusions(p, excl.rows)
+                            p, hidden = core.apply_display_exclusions(p, DISPLAY_EXCLUSIONS)
                             cmp = core.compare_revisions(
                                 [x for x in p if x["revision_id"] == a],
                                 [x for x in p if x["revision_id"] == b])
@@ -133,14 +160,13 @@ elif screen in (SCREENS[1], SCREENS[2]):
 elif screen == SCREENS[3]:
     obs_spec = core.q_all_observations()
     obs = run(obs_spec)
-    inv = run(core.q_asset_inventory(limit=core.MAX_QUERY_LIMIT))
-    excl = run(core.q_exclusions())
-    failed = [s for s in (obs, inv, excl) if s.state == "ERROR"]
+    inv = run_visible(core.q_asset_inventory(limit=core.MAX_QUERY_LIMIT))
+    failed = [s for s in (obs, inv) if s.state == "ERROR"]
     if failed:
         st.error(failed[0].message)
     else:
         presented = core.present_joined(obs.rows, now_utc())
-        presented, hidden = core.apply_display_exclusions(presented, excl.rows)
+        presented, hidden = core.apply_display_exclusions(presented, DISPLAY_EXCLUSIONS)
         if obs.truncated or inv.truncated:
             st.warning("Result limit reached: this gap list may be incomplete.")
         st.subheader("Observation-level gaps")
