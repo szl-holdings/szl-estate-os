@@ -4,12 +4,18 @@ import base64
 import hashlib
 import io
 import json
+import sys
 import tempfile
 import unittest
 from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import verify_estate_readiness as readiness
 from build_remediation_queue import build_queue
 from verify_estate_readiness import (
     PRODUCTION_EVIDENCE_INDEX_SCHEMA,
@@ -2820,25 +2826,30 @@ class ReadinessTests(unittest.TestCase):
 
 
 class EvidenceReadBoundaryTests(unittest.TestCase):
-    def test_exact_limit_artifact_remains_verifiable(self):
+    def setUp(self):
         from estate import evidence_contract as evidence
+        self.readers = (
+            (evidence, "MAX_EVIDENCE_BYTES"),
+            (readiness, "MAX_PRODUCTION_ARTIFACT_BYTES"),
+        )
 
+    def test_exact_limit_artifact_remains_verifiable(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "artifact.json"
             content = b"x" * 32
             path.write_bytes(content)
-            with mock.patch.object(evidence, "MAX_EVIDENCE_BYTES", len(content)):
-                data, detail = evidence.load_evidence_bytes(
-                    path.name, hashlib.sha256(content).hexdigest(), root,
-                    label="artifact",
-                )
-            self.assertEqual(data, content)
-            self.assertIn("verified", detail)
+            for reader, limit_name in self.readers:
+                with self.subTest(reader=reader.__name__), \
+                     mock.patch.object(reader, limit_name, len(content)):
+                    data, detail = reader.load_evidence_bytes(
+                        path.name, hashlib.sha256(content).hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertEqual(data, content)
+                    self.assertIn("verified", detail)
 
     def test_file_growth_during_open_cannot_bypass_byte_limit(self):
-        from estate import evidence_contract as evidence
-
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "artifact.json"
@@ -2852,18 +2863,19 @@ class EvidenceReadBoundaryTests(unittest.TestCase):
                         stream.write(changed)
                 return original_open(target, *args, **kwargs)
 
-            with mock.patch.object(evidence, "MAX_EVIDENCE_BYTES", 32), \
-                 mock.patch.object(Path, "open", open_changed):
-                data, detail = evidence.load_evidence_bytes(
-                    path.name, hashlib.sha256(changed).hexdigest(), root,
-                    label="artifact",
-                )
-            self.assertIsNone(data)
-            self.assertIn("exceeds byte limit", detail)
+            for reader, limit_name in self.readers:
+                path.write_bytes(b"x")
+                with self.subTest(reader=reader.__name__), \
+                     mock.patch.object(reader, limit_name, 32), \
+                     mock.patch.object(Path, "open", open_changed):
+                    data, detail = reader.load_evidence_bytes(
+                        path.name, hashlib.sha256(changed).hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("exceeds byte limit", detail)
 
     def test_file_truncated_during_open_is_rejected_as_empty(self):
-        from estate import evidence_contract as evidence
-
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "artifact.json"
@@ -2876,13 +2888,16 @@ class EvidenceReadBoundaryTests(unittest.TestCase):
                         pass
                 return original_open(target, *args, **kwargs)
 
-            with mock.patch.object(Path, "open", open_truncated):
-                data, detail = evidence.load_evidence_bytes(
-                    path.name, hashlib.sha256(b"").hexdigest(), root,
-                    label="artifact",
-                )
-            self.assertIsNone(data)
-            self.assertIn("is empty", detail)
+            for reader, _ in self.readers:
+                path.write_bytes(b"x")
+                with self.subTest(reader=reader.__name__), \
+                     mock.patch.object(Path, "open", open_truncated):
+                    data, detail = reader.load_evidence_bytes(
+                        path.name, hashlib.sha256(b"").hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("is empty", detail)
 
 
 if __name__ == "__main__":
