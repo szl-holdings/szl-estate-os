@@ -131,14 +131,16 @@ def load_evidence_bytes(
     try:
         if not evidence_path.is_file():
             return None, f"{label} is not a regular file"
-        size = evidence_path.stat().st_size
-        if size <= 0:
-            return None, f"{label} is empty"
-        if size > MAX_EVIDENCE_BYTES:
-            return None, f"{label} exceeds byte limit size={size}"
-        evidence_bytes = evidence_path.read_bytes()
+        # Bound the actual read: a file may grow or shrink after metadata checks.
+        # One extra byte distinguishes an exact-limit file from an oversized one.
+        with evidence_path.open("rb") as stream:
+            evidence_bytes = stream.read(MAX_EVIDENCE_BYTES + 1)
     except OSError as exc:
         return None, f"{label} unavailable error={type(exc).__name__}"
+    if not evidence_bytes:
+        return None, f"{label} is empty"
+    if len(evidence_bytes) > MAX_EVIDENCE_BYTES:
+        return None, f"{label} exceeds byte limit limit={MAX_EVIDENCE_BYTES}"
     observed_digest = sha256_bytes(evidence_bytes)
     if not hmac.compare_digest(observed_digest, expected_sha256):
         return None, f"{label} digest mismatch observed={observed_digest}"
