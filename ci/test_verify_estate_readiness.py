@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -2815,6 +2817,72 @@ class ReadinessTests(unittest.TestCase):
         ):
             self.assertIn(endpoint, workflow)
         self.assertNotIn("ESTATE_HF_TOKEN", workflow)
+
+
+class EvidenceReadBoundaryTests(unittest.TestCase):
+    def test_exact_limit_artifact_remains_verifiable(self):
+        from estate import evidence_contract as evidence
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "artifact.json"
+            content = b"x" * 32
+            path.write_bytes(content)
+            with mock.patch.object(evidence, "MAX_EVIDENCE_BYTES", len(content)):
+                data, detail = evidence.load_evidence_bytes(
+                    path.name, hashlib.sha256(content).hexdigest(), root,
+                    label="artifact",
+                )
+            self.assertEqual(data, content)
+            self.assertIn("verified", detail)
+
+    def test_file_growth_during_open_cannot_bypass_byte_limit(self):
+        from estate import evidence_contract as evidence
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "artifact.json"
+            path.write_bytes(b"x")
+            changed = b"x" * 33
+            original_open = Path.open
+
+            def open_changed(target, *args, **kwargs):
+                if target == path:
+                    with io.open(path, "wb") as stream:
+                        stream.write(changed)
+                return original_open(target, *args, **kwargs)
+
+            with mock.patch.object(evidence, "MAX_EVIDENCE_BYTES", 32), \
+                 mock.patch.object(Path, "open", open_changed):
+                data, detail = evidence.load_evidence_bytes(
+                    path.name, hashlib.sha256(changed).hexdigest(), root,
+                    label="artifact",
+                )
+            self.assertIsNone(data)
+            self.assertIn("exceeds byte limit", detail)
+
+    def test_file_truncated_during_open_is_rejected_as_empty(self):
+        from estate import evidence_contract as evidence
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "artifact.json"
+            path.write_bytes(b"x")
+            original_open = Path.open
+
+            def open_truncated(target, *args, **kwargs):
+                if target == path:
+                    with io.open(path, "wb"):
+                        pass
+                return original_open(target, *args, **kwargs)
+
+            with mock.patch.object(Path, "open", open_truncated):
+                data, detail = evidence.load_evidence_bytes(
+                    path.name, hashlib.sha256(b"").hexdigest(), root,
+                    label="artifact",
+                )
+            self.assertIsNone(data)
+            self.assertIn("is empty", detail)
 
 
 if __name__ == "__main__":
