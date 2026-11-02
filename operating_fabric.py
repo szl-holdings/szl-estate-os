@@ -135,8 +135,13 @@ def _strict_transport_security_state(value: Any) -> tuple[bool, str]:
     if (
         len(max_age_values) != 1
         or re.fullmatch(r"[0-9]+", max_age_values[0]) is None
-        or int(max_age_values[0]) < HSTS_MIN_MAX_AGE_SECONDS
     ):
+        return False, "strict-transport-security max-age policy is insufficient"
+    # HTTP delta-seconds is decimal text. Compare its magnitude without an int
+    # conversion, which can raise on an externally supplied long digit string.
+    max_age = max_age_values[0].lstrip("0") or "0"
+    minimum = str(HSTS_MIN_MAX_AGE_SECONDS)
+    if (len(max_age), max_age) < (len(minimum), minimum):
         return False, "strict-transport-security max-age policy is insufficient"
     return True, "strict-transport-security max-age policy is satisfied"
 
