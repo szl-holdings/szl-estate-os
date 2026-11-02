@@ -1002,12 +1002,15 @@ def load_evidence_bytes(
     except ValueError:
         return None, f"{label}_path escapes the audit directory"
     try:
-        size = evidence_path.stat().st_size
-        if size > MAX_PRODUCTION_ARTIFACT_BYTES:
-            return None, f"{label} exceeds byte limit size={size}"
-        evidence_bytes = evidence_path.read_bytes()
+        # Metadata may change before open; bound the bytes actually read.
+        with evidence_path.open("rb") as stream:
+            evidence_bytes = stream.read(MAX_PRODUCTION_ARTIFACT_BYTES + 1)
     except OSError as exc:
         return None, f"{label} unavailable error={type(exc).__name__}"
+    if not evidence_bytes:
+        return None, f"{label} is empty"
+    if len(evidence_bytes) > MAX_PRODUCTION_ARTIFACT_BYTES:
+        return None, f"{label} exceeds byte limit limit={MAX_PRODUCTION_ARTIFACT_BYTES}"
     observed_digest = hashlib.sha256(evidence_bytes).hexdigest()
     if not hmac.compare_digest(observed_digest, expected_sha256):
         return None, f"{label} digest mismatch observed={observed_digest}"
