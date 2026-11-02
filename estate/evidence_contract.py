@@ -122,8 +122,11 @@ def load_evidence_bytes(
         return None, f"{label}_path must be relative to the audit directory"
     if SHA256_PATTERN.fullmatch(expected_sha256) is None:
         return None, f"{label}_sha256 is missing or invalid"
-    root = evidence_root.resolve()
-    evidence_path = (root / relative).resolve()
+    try:
+        root = evidence_root.resolve()
+        evidence_path = (root / relative).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        return None, f"{label} unavailable error={type(exc).__name__}"
     try:
         evidence_path.relative_to(root)
     except ValueError:
