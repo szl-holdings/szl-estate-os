@@ -5,8 +5,10 @@ import json
 import importlib.util
 import contextlib
 import io
+from importlib import metadata
 from pathlib import Path
 import py_compile
+import tomllib
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -15,7 +17,7 @@ import pytest
 from szl_estate.access import AccessError, _observation
 from szl_estate.model import EvidenceCode, EvidenceStatus, EvidenceValidationError
 from szl_estate.setup import (
-    LOCAL_CHECKS, SetupCheck, SetupReport, TestEvidence as OfflineEvidence,
+    EXPECTED_PYTEST_VERSION, LOCAL_CHECKS, SetupCheck, SetupReport, TestEvidence as OfflineEvidence,
     _check_source, _manifest, _run_tests, not_run_access, run_setup,
 )
 from szl_estate.cli import main
@@ -118,6 +120,47 @@ def test_untrusted_source_blocks_test_execution(tmp_path):
         report = run_setup(tmp_path, tmp_path / "out")
     runner.assert_not_called()
     assert not report.setup_ready
+
+
+@pytest.mark.parametrize("version", ["9.2.0", "9.1.1", "9.2.1", "10.0.0", "9.2.0rc1", None])
+def test_setup_executes_tests_only_with_the_exact_reviewed_pytest(tmp_path, version):
+    for name in ("src/szl_estate", "tests/fixtures", "evidence"):
+        (tmp_path / name).mkdir(parents=True)
+    manifest = {"files": {}}
+    evidence = setup_fixture().tests
+    with patch("szl_estate.setup._manifest", return_value=manifest), \
+         patch("szl_estate.setup._check_source", return_value="b" * 64), \
+         patch("szl_estate.setup.metadata.version", return_value=version,
+               side_effect=metadata.PackageNotFoundError("pytest") if version is None else None) as installed_version, \
+         patch("szl_estate.setup._run_tests", return_value=evidence) as runner, \
+         patch("szl_estate.setup.collect_access", return_value=not_run_access()) as access:
+        report = run_setup(tmp_path, tmp_path / "out")
+    installed_version.assert_called_once_with("pytest")
+    access.assert_called_once_with()
+    offline = next(check for check in report.checks if check.name == "offline_tests")
+    if version == "9.2.0":
+        runner.assert_called_once_with(tmp_path.resolve(), "b" * 64, manifest)
+        assert report.tests == evidence and offline.status is EvidenceStatus.PASS
+        assert offline.code == "NONE"
+    else:
+        runner.assert_not_called()
+        assert report.tests is None and offline.status is EvidenceStatus.FAIL
+        assert offline.code == "TESTS_NOT_RUN_OR_EVIDENCE_INVALID"
+    assert all(check.status is EvidenceStatus.PASS for check in report.checks if check.name != "offline_tests")
+    assert all(row.status is EvidenceStatus.NOT_RUN for row in report.access)
+    assert not report.setup_ready and report.to_dict()["estate_ready"] is False
+
+
+@pytest.mark.parametrize("filename", ["pyproject.toml", "requirements.txt", "requirements-dev.txt"])
+def test_declared_pytest_pins_match_the_strict_runtime_gate(filename):
+    root = Path(__file__).resolve().parent.parent
+    assert EXPECTED_PYTEST_VERSION == "9.2.0"
+    raw = (root / filename).read_text(encoding="utf-8")
+    if filename == "pyproject.toml":
+        pins = tomllib.loads(raw)["project"]["optional-dependencies"]["test"]
+    else:
+        pins = [line.strip() for line in raw.splitlines() if line.strip().startswith("pytest")]
+    assert pins == [f"pytest=={EXPECTED_PYTEST_VERSION}"]
 
 
 def test_receipt_failure_blocks_setup_even_with_fresh_access(tmp_path):
