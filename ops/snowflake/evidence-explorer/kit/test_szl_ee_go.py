@@ -17,6 +17,11 @@ import unittest.mock as mock
 import types
 import builtins
 
+if sys.version_info < (3, 11):
+    sys.stderr.write("REFUSED: test_szl_ee_go.py requires Python 3.11 or newer (found %d.%d); "
+                     "this is not a pass and not a skip\n" % tuple(sys.version_info[:2]))
+    sys.exit(2)
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import szl_ee_go as go
 
@@ -682,6 +687,23 @@ class RunnerContracts(unittest.TestCase):
             go._prereq_and_forward(opts, flags, {}, mock.Mock(), rec, self.tmp.name, state, ACCOUNT,
                                    "synthetic", go._Clock(go.time.monotonic, 60), rec.run_id)
         self.assertEqual(observed, [self.tmp.name])
+
+
+class PythonVersionGate(unittest.TestCase):
+    def test_python_supported_boundary(self):
+        self.assertFalse(go.python_supported((3, 10, 12)))
+        self.assertTrue(go.python_supported((3, 11, 0)))
+        self.assertTrue(go.python_supported((3, 12, 4)))
+
+    def test_main_refuses_old_python_before_any_work(self):
+        out = io.StringIO()
+        with mock.patch.object(go, "python_supported", return_value=False), \
+                mock.patch.object(go, "parse_args", side_effect=AssertionError("argument parsing ran")), \
+                mock.patch.object(go, "new_run_id", side_effect=AssertionError("run started")):
+            with contextlib.redirect_stdout(out):
+                code = go.main([])
+        self.assertEqual(code, go.EXIT_REFUSED)
+        self.assertIn("requires Python 3.11 or newer", out.getvalue())
 
 
 if __name__ == "__main__":
