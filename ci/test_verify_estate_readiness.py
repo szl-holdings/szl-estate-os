@@ -2937,6 +2937,113 @@ class ReadinessTests(unittest.TestCase):
         self.assertNotIn("ESTATE_HF_TOKEN", workflow)
 
 
+class NumericAdmissionTests(unittest.TestCase):
+    INVALID_NUMBERS = (10**1000, -(10**1000), True, False, -1, float("nan"),
+                       float("inf"), float("-inf"), "300", None)
+
+    def test_policy_numbers_fail_closed_in_public_verifier(self):
+        value = audit()
+        sign(value)
+        for field in manifest()["production_policies"]:
+            for number in self.INVALID_NUMBERS + (0,):
+                with self.subTest(field=field, number=str(number)[:24]):
+                    contract = manifest()
+                    contract["production_policies"][field] = number
+                    report = verify(value, contract, "production")
+                    observation = check(report, "production.audit_freshness")
+                    self.assertEqual(observation["state"], "FAIL")
+                    self.assertEqual(observation["detail"], f"production policy {field} is invalid")
+
+    def test_policy_positive_integer_and_float_values_remain_valid(self):
+        from verify_estate_readiness import production_policies
+
+        for number in (1, 1.5, 10**300):
+            contract = manifest()
+            contract["production_policies"] = dict.fromkeys(
+                contract["production_policies"], number
+            )
+            with self.subTest(number=number):
+                policies, detail = production_policies(contract)
+                self.assertEqual(policies, contract["production_policies"], detail)
+
+    def test_restore_numbers_fail_closed_in_public_verifier(self):
+        requirement = "restore_and_failure_domain_drill"
+        for field in ("rto_seconds", "rpo_seconds"):
+            for number in self.INVALID_NUMBERS + (300, 300.0):
+                with self.subTest(field=field, number=str(number)[:24]), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    artifact = restore_artifact(*write_report(root, "restore-report.json"))
+                    artifact[field] = number
+                    value = audit()
+                    add_audited_deployment(value)
+                    value["production_evidence"] = indexed_evidence({
+                        "credential_backed_deployment_witness": write_artifact(
+                            root, "deployment.json", deployment_witness()
+                        ),
+                        requirement: write_artifact(root, "restore.json", artifact),
+                    })
+                    sign(value)
+                    report = verify(
+                        value,
+                        single_deployment_manifest(
+                            {"independent_asymmetric_evidence": True, requirement: True}
+                        ),
+                        "production",
+                        evidence_root=root,
+                    )
+                    observation = check(report, f"production.requirement.{requirement}")
+                    if type(number) in (int, float) and number == 300:
+                        self.assertEqual(observation["state"], "PASS", observation)
+                    else:
+                        self.assertEqual(observation["state"], "FAIL")
+                        self.assertIn(f"{field} is missing or invalid", observation["detail"])
+
+    def test_measurement_numbers_fail_closed_in_public_validator(self):
+        from estate.evidence_contract import validate_restore_measurement
+
+        absent_file = dict.fromkeys(("sha256", "size_bytes", "mtime_ns", "device_id", "file_id"))
+        absent_file["exists"] = False
+        measurement = {
+            "schema": "szl.sqlite-restore-measurement/v2", "status": "PASS",
+            "run_id": "restore-numeric-test", "tool_sha256": "a" * 64,
+            "recovery_point_at": "2026-08-01T17:55:00Z",
+            "started_at": "2026-08-01T18:00:00Z",
+            "completed_at": "2026-08-01T18:05:00Z",
+            "rto_seconds": 300, "rpo_seconds": 300,
+            "source": {
+                "database_sha256_before": "b" * 64, "database_sha256_after": "b" * 64,
+                "size_bytes_before": 1, "size_bytes_after": 1,
+                "mtime_ns_before": 1, "mtime_ns_after": 1,
+                "data_version_before": 1, "data_version_after": 1,
+                "sidecars": {suffix: {"before": absent_file, "after": absent_file}
+                             for suffix in ("-wal", "-shm", "-journal")},
+                "query_only": True, "unchanged": True,
+            },
+            "backup": {"sha256": "b" * 64, "size_bytes": 1,
+                       "created_at": "2026-08-01T17:58:00Z"},
+            "restore_target": {"isolation": "EPHEMERAL_TEMP_DIRECTORY", "loopback_only": True,
+                               "production_writes": 0, "path_disclosed": False, "cleaned_up": True},
+            "validation": {
+                "integrity_check": "ok", "foreign_key_violation_count": 0,
+                "source_schema_sha256": "c" * 64, "restored_schema_sha256": "c" * 64,
+                "source_content_sha256": "d" * 64, "restored_content_sha256": "d" * 64,
+                "source_row_counts": {"receipt": 1}, "restored_row_counts": {"receipt": 1},
+                "receipt_chain_valid": True, "receipt_count": 1,
+            },
+            "failure_scenarios": {"corrupt_backup_rejected": True, "missing_backup_rejected": True},
+        }
+        self.assertEqual(validate_restore_measurement(measurement)[0], "PASS")
+        for field in ("rto_seconds", "rpo_seconds"):
+            for number in self.INVALID_NUMBERS + (300, 300.0):
+                with self.subTest(field=field, number=str(number)[:24]):
+                    state, detail = validate_restore_measurement({**measurement, field: number})
+                    if type(number) in (int, float) and number == 300:
+                        self.assertEqual(state, "PASS", detail)
+                    else:
+                        self.assertEqual(state, "FAIL")
+                        self.assertEqual(detail, "restore measurement RTO/RPO is missing or invalid")
+
+
 class EvidenceReadBoundaryTests(unittest.TestCase):
     def setUp(self):
         from estate import evidence_contract as evidence
@@ -2944,6 +3051,97 @@ class EvidenceReadBoundaryTests(unittest.TestCase):
             (evidence, "MAX_EVIDENCE_BYTES"),
             (sys.modules[verify_readiness.__module__], "MAX_PRODUCTION_ARTIFACT_BYTES"),
         )
+
+    def test_json_null_byte_path_returns_failure_without_disclosing_path(self):
+        value = json.loads(r'{"artifact_path":"PRIVATE_PATH_SENTINEL\u0000.json"}')
+        with tempfile.TemporaryDirectory() as directory:
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__):
+                    data, detail = reader.load_evidence_bytes(
+                        value["artifact_path"], hashlib.sha256(b"x").hexdigest(),
+                        Path(directory), label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("unavailable", detail)
+                    self.assertNotIn("PRIVATE_PATH_SENTINEL", detail)
+
+    def test_symlink_loop_path_returns_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            try:
+                (root / "loop").symlink_to("loop")
+            except (OSError, NotImplementedError):
+                self.skipTest("symbolic links are unavailable on this test host")
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__):
+                    data, detail = reader.load_evidence_bytes(
+                        "loop", hashlib.sha256(b"x").hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("unavailable", detail)
+
+    def test_path_resolution_permission_error_returns_failure(self):
+        for reader, _ in self.readers:
+            with self.subTest(reader=reader.__name__), mock.patch.object(
+                Path, "resolve", side_effect=PermissionError("PRIVATE_PATH_SENTINEL")
+            ):
+                data, detail = reader.load_evidence_bytes(
+                    "artifact.json", hashlib.sha256(b"x").hexdigest(),
+                    Path("audit-root"), label="artifact",
+                )
+                self.assertIsNone(data)
+                self.assertIn("PermissionError", detail)
+                self.assertNotIn("PRIVATE_PATH_SENTINEL", detail)
+
+    def test_non_string_paths_are_not_coerced_to_existing_filenames(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for value in (123, True, ["artifact.json"], {}):
+                (root / str(value)).write_bytes(b"x")
+                for reader, _ in self.readers:
+                    with self.subTest(reader=reader.__name__, value=value):
+                        data, detail = reader.load_evidence_bytes(
+                            value, hashlib.sha256(b"x").hexdigest(), root,
+                            label="artifact",
+                        )
+                        self.assertIsNone(data)
+                        self.assertTrue(detail)
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__, valid_numeric_string=True):
+                    data, detail = reader.load_evidence_bytes(
+                        "123", hashlib.sha256(b"x").hexdigest(), root, label="artifact",
+                    )
+                    self.assertEqual(data, b"x")
+                    self.assertIn("verified", detail)
+
+    def test_parent_escape_still_fails_even_with_matching_digest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "audit"
+            root.mkdir()
+            (parent / "outside.json").write_bytes(b"x")
+            for reader, _ in self.readers:
+                with self.subTest(reader=reader.__name__):
+                    data, detail = reader.load_evidence_bytes(
+                        "../outside.json", hashlib.sha256(b"x").hexdigest(), root,
+                        label="artifact",
+                    )
+                    self.assertIsNone(data)
+                    self.assertIn("escapes", detail)
+
+    def test_malformed_report_path_becomes_a_failed_check(self):
+        reader = sys.modules[verify_readiness.__module__]
+        with tempfile.TemporaryDirectory() as directory:
+            state, detail = reader.report_file_state(
+                {"report_path": "PRIVATE_PATH_SENTINEL\x00.json",
+                 "report_sha256": hashlib.sha256(b"{}").hexdigest()},
+                Path(directory), label="report", expected_schema="test-report/v1",
+                binding_fields=set(),
+            )
+            self.assertEqual(state, "FAIL")
+            self.assertIn("unavailable", detail)
+            self.assertNotIn("PRIVATE_PATH_SENTINEL", detail)
 
     def test_exact_limit_artifact_remains_verifiable(self):
         with tempfile.TemporaryDirectory() as directory:

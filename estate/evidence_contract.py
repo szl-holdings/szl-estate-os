@@ -122,8 +122,11 @@ def load_evidence_bytes(
         return None, f"{label}_path must be relative to the audit directory"
     if SHA256_PATTERN.fullmatch(expected_sha256) is None:
         return None, f"{label}_sha256 is missing or invalid"
-    root = evidence_root.resolve()
-    evidence_path = (root / relative).resolve()
+    try:
+        root = evidence_root.resolve()
+        evidence_path = (root / relative).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        return None, f"{label} unavailable error={type(exc).__name__}"
     try:
         evidence_path.relative_to(root)
     except ValueError:
@@ -210,12 +213,16 @@ def load_indexed_artifact_set(
 
 
 def _valid_nonnegative_number(value: Any) -> bool:
-    return (
-        not isinstance(value, bool)
-        and isinstance(value, (int, float))
-        and math.isfinite(value)
-        and value >= 0
-    )
+    try:
+        return (
+            not isinstance(value, bool)
+            and isinstance(value, (int, float))
+            and math.isfinite(value)
+            and value >= 0
+        )
+    except OverflowError:
+        # JSON integers can exceed the floating-point range used for durations.
+        return False
 
 
 def _valid_nonnegative_int(value: Any) -> bool:

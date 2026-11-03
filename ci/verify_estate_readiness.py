@@ -998,11 +998,16 @@ def load_evidence_bytes(
     *,
     label: str,
 ) -> tuple[bytes | None, str]:
-    relative = Path(str(relative_value or ""))
+    if not isinstance(relative_value, str) or not relative_value:
+        return None, f"{label}_path is missing or invalid"
+    relative = Path(relative_value)
     if evidence_root is None or not relative.parts or relative.is_absolute():
         return None, f"{label}_path must be relative to the audit directory"
-    root = evidence_root.resolve()
-    evidence_path = (root / relative).resolve()
+    try:
+        root = evidence_root.resolve()
+        evidence_path = (root / relative).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        return None, f"{label} unavailable error={type(exc).__name__}"
     try:
         evidence_path.relative_to(root)
     except ValueError:
@@ -1074,12 +1079,16 @@ def production_policies(manifest: dict[str, Any]) -> tuple[dict[str, Any] | None
         return None, "production policy shape is invalid"
     for field in required:
         value = policies.get(field)
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(value)
-            or value <= 0
-        ):
+        try:
+            valid = (
+                not isinstance(value, bool)
+                and isinstance(value, (int, float))
+                and math.isfinite(value)
+                and value > 0
+            )
+        except OverflowError:
+            valid = False
+        if not valid:
             return None, f"production policy {field} is invalid"
     return policies, "production policies verified"
 
@@ -1555,12 +1564,16 @@ def production_artifact_state(
             return freshness_state, freshness_detail
         for field in ("rto_seconds", "rpo_seconds"):
             value = artifact.get(field)
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-                or value < 0
-            ):
+            try:
+                valid = (
+                    not isinstance(value, bool)
+                    and isinstance(value, (int, float))
+                    and math.isfinite(value)
+                    and value >= 0
+                )
+            except OverflowError:
+                valid = False
+            if not valid:
                 return "FAIL", f"{field} is missing or invalid"
         observed_rto_seconds = (service_restored - failure_started).total_seconds()
         observed_rpo_seconds = (failure_started - recovery_point).total_seconds()
