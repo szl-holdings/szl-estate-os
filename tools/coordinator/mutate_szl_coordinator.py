@@ -117,6 +117,7 @@ def main():
     legacy = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
     mdir = HERE / "_mutants" / uuid.uuid4().hex[:8]
     os.makedirs(mdir)
+    shutil.copy(HERE / "szl_lane_lease.py", mdir)  # 2.3.0 loads the lease module from beside itself
     results = {}
     if not disk_ok():
         print(json.dumps({"state": "DISK_FLOOR", "note": "free disk below floor; nothing run"}))
