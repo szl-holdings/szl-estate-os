@@ -19,6 +19,12 @@ from typing import Any
 
 from build_remediation_queue import ContractError, validate_identifier
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from operating_fabric import assess_web_security_headers
+
 
 ALIGNMENT_READY = {"EXACT_RUNTIME_HEAD"}
 BASELINE_SIGNATURE_STATES = {
@@ -2020,21 +2026,20 @@ def verify(
 
         if asset_id.startswith("domain:route:"):
             metadata = asset.get("metadata")
-            configured_headers = (
-                metadata.get("security_headers") if isinstance(metadata, dict) else None
-            )
-            headers = configured_headers if isinstance(configured_headers, dict) else {}
             configured_values = (
                 metadata.get("security_header_values") if isinstance(metadata, dict) else None
             )
             header_values = (
                 configured_values if isinstance(configured_values, dict) else {}
             )
+            # Re-evaluate the raw observation with the collector's canonical
+            # validators. Cached summary flags are claims, not header evidence.
+            assessment = assess_web_security_headers(header_values)
+            assert assessment is not None
             missing = [
                 header
                 for header in required_security_headers
-                if not headers.get(header)
-                and not (
+                if not (
                     isinstance(header_values.get(header), str)
                     and header_values[header].strip()
                 )
@@ -2042,9 +2047,7 @@ def verify(
             invalid = [
                 header
                 for header in required_security_headers
-                if not headers.get(header)
-                and isinstance(header_values.get(header), str)
-                and header_values[header].strip()
+                if header not in missing and not assessment.get(header, {}).get("passed")
             ]
             checks.append(
                 result(
