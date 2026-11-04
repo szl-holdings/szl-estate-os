@@ -594,6 +594,8 @@ class ReadinessTests(unittest.TestCase):
         }
         metadata["security_header_values"] = {
             "content-security-policy": "frame-ancestors 'self'",
+            "strict-transport-security": "max-age=31536000; includeSubDomains",
+            "x-content-type-options": "nosniff",
         }
         report = verify(value, manifest(), "baseline")
         finding = check(report, f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}")
@@ -602,6 +604,117 @@ class ReadinessTests(unittest.TestCase):
             finding["detail"],
             "missing=referrer-policy; invalid=content-security-policy",
         )
+
+    def test_raw_header_evidence_overrules_cached_summary_flags(self) -> None:
+        valid_headers = {
+            "content-security-policy": (
+                "default-src 'self'; base-uri 'self'; form-action 'self'; "
+                "object-src 'none'; frame-ancestors 'self'"
+            ),
+            "referrer-policy": "strict-origin-when-cross-origin",
+            "strict-transport-security": "max-age=31536000; includeSubDomains",
+            "x-content-type-options": "nosniff",
+        }
+        invalid_headers = {
+            "content-security-policy": "frame-ancestors 'self'",
+            "referrer-policy": "unsafe-url",
+            "strict-transport-security": "max-age=1",
+            "x-content-type-options": "no",
+        }
+        for header, invalid_value in invalid_headers.items():
+            for summary_value in (True, 1, "false", {"passed": True}):
+                with self.subTest(header=header, summary=summary_value):
+                    value = audit()
+                    add_audited_deployment(value)
+                    domain = next(
+                        asset for asset in value["assets"]
+                        if asset["asset_id"] == PRIMARY_DEPLOYMENT_ASSET_ID
+                    )
+                    domain["metadata"].update({
+                        "security_headers": {name: summary_value for name in valid_headers},
+                        "security_header_values": {**valid_headers, header: invalid_value},
+                    })
+                    finding = check(
+                        verify(value, manifest(), "baseline"),
+                        f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}",
+                    )
+                    self.assertEqual(finding["state"], "FAIL")
+                    self.assertEqual(finding["detail"], f"invalid={header}")
+
+        for summary in (None, {}, {name: False for name in valid_headers}):
+            with self.subTest(valid_raw_headers=True, summary=summary):
+                value = audit()
+                add_audited_deployment(value)
+                domain = next(
+                    asset for asset in value["assets"]
+                    if asset["asset_id"] == PRIMARY_DEPLOYMENT_ASSET_ID
+                )
+                domain["metadata"].update({
+                    "security_headers": summary,
+                    "security_header_values": valid_headers,
+                })
+                finding = check(
+                    verify(value, manifest(), "baseline"),
+                    f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}",
+                )
+                self.assertEqual(finding["state"], "PASS")
+
+    def test_long_hsts_decimal_is_evaluated_without_integer_conversion(self) -> None:
+        cases = (
+            ("0" * 5000, "FAIL"),
+            ("0" * 5000 + "1", "FAIL"),
+            ("9" * 5000, "PASS"),
+            ("0" * 5000 + "31536000", "PASS"),
+        )
+        for index, (max_age, expected) in enumerate(cases):
+            with self.subTest(case=index):
+                value = audit()
+                add_audited_deployment(value)
+                domain = next(
+                    asset for asset in value["assets"]
+                    if asset["asset_id"] == PRIMARY_DEPLOYMENT_ASSET_ID
+                )
+                domain["metadata"].update({
+                    "security_headers": {"strict-transport-security": True},
+                    "security_header_values": {
+                        "content-security-policy": (
+                            "default-src 'self'; base-uri 'self'; form-action 'self'; "
+                            "object-src 'none'; frame-ancestors 'self'"
+                        ),
+                        "referrer-policy": "strict-origin-when-cross-origin",
+                        "strict-transport-security": f"max-age={max_age}",
+                        "x-content-type-options": "nosniff",
+                    },
+                })
+                finding = check(
+                    verify(value, manifest(), "baseline"),
+                    f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}",
+                )
+                self.assertEqual(finding["state"], expected)
+
+    def test_summary_flags_cannot_replace_missing_raw_header_evidence(self) -> None:
+        for raw_values in (None, {}, [], "nosniff", {"content-security-policy": True}):
+            with self.subTest(raw_values=raw_values):
+                value = audit()
+                add_audited_deployment(value)
+                domain = next(
+                    asset for asset in value["assets"]
+                    if asset["asset_id"] == PRIMARY_DEPLOYMENT_ASSET_ID
+                )
+                domain["metadata"].update({
+                    "security_headers": {
+                        name: True for name in manifest()["baseline"]["required_security_headers"]
+                    },
+                    "security_header_values": raw_values,
+                })
+                finding = check(
+                    verify(value, manifest(), "baseline"),
+                    f"headers.{PRIMARY_DEPLOYMENT_ASSET_ID}",
+                )
+                self.assertEqual(finding["state"], "FAIL")
+                self.assertTrue(finding["detail"].startswith("missing="))
+                for name in manifest()["baseline"]["required_security_headers"]:
+                    self.assertIn(name, finding["detail"])
 
     def test_baseline_accepts_only_known_local_evidence(self) -> None:
         self.assertEqual(signature_state("HMAC_SHA256", "baseline"), "PASS")
