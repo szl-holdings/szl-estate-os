@@ -71,6 +71,14 @@ import tempfile
 import threading
 import time
 
+MIN_PYTHON = (3, 11)
+
+
+def python_supported(version_info=None):
+    """The kit and its tests rely on Python 3.11+ (e.g. tomllib); older interpreters are refused."""
+    v = sys.version_info if version_info is None else version_info
+    return tuple(v[:2]) >= MIN_PYTHON
+
 RUNNER_VERSION = "0.3.0-draft-20261022"
 EXIT_OK, EXIT_FAIL, EXIT_PARTIAL, EXIT_REFUSED, EXIT_BLOCKED, EXIT_UNCERTAIN = 0, 1, 2, 3, 4, 6
 EXIT_NOCRED = EXIT_BLOCKED
@@ -697,6 +705,9 @@ class _Clock:
 # ---------------------------------------------------------------- main
 
 def main(argv=None, env=None, connector=None, runner=subprocess.run, clock=time.monotonic):
+    if not python_supported():
+        sys.stdout.write(json.dumps({"exit_code": EXIT_REFUSED, "refusal": "Python %d.%d is not supported; the runner requires Python 3.11 or newer" % tuple(sys.version_info[:2])}) + "\n")
+        return EXIT_REFUSED
     env = dict(os.environ if env is None else env)
     try:
         opts, flags, max_seconds = parse_args(sys.argv[1:] if argv is None else argv)
