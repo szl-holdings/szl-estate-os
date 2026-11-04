@@ -2,3 +2,5 @@ _scratch/
 _mutants/
 szl_execution_receipts/
 *.key
+mutation_results.json
+_scratch_lease/

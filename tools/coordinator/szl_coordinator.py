@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SZL Holdings full-estate coordinator, payload 2.2.0 (2.1.0 + optional signed HEAD).
+SZL Holdings full-estate coordinator, payload 2.3.0 (2.2.0 signed HEAD + lane-lease ownership gate).
 
 Safe default: read-only reconciliation and evidence collection.
 It never pushes, merges, deploys, spends, deletes, changes credentials/security,
@@ -24,6 +24,16 @@ Exit codes
   5 SIGNING    key unreadable/invalid, or unsigned run on a signed chain; nothing written
   6 LOCKED     receipt chain lock not acquired; no receipt written (never stolen)
   1 VERIFY_FAIL  verify found a broken, tampered or orphaned receipt
+
+Ownership reconciliation (2.2.0): the step is PASS only when szl_lane_lease.py,
+loaded from beside this file, returns PASS for the configured lease
+(required: SZL_LEASES_DIR, SZL_LEASE_REPO, SZL_LEASE_PATHS comma-separated,
+SZL_LEASE_CLAIMANT; optional: SZL_LEASE_BASE_SHA). The current base sha is read
+from git in WORK_ROOT (`git rev-parse <lease base_branch>`, repo root only); if
+SZL_LEASE_BASE_SHA is also given and git is readable they must agree (else
+STALE_BASE). Without SZL_LEASE_BASE_SHA an unreadable git base is BLOCKED.
+Unconfigured, partially configured, module missing, or any non-PASS verdict
+records BLOCKED (fail closed; exit 2).
 """
 
 from __future__ import annotations
@@ -45,7 +55,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 COORDINATOR_ID = "01a13ef6-a9a1-7175-a711-8152b79100ed"
-PAYLOAD_VERSION = "2.2.0"
+PAYLOAD_VERSION = "2.3.0"
 PAYLOAD_TYPE = "application/vnd.szl.coordinator-head+json"
 CHAIN_SCHEMA = "szl.coordinator.receipt-chain/v1"
 EVIDENCE_KEEP = 4000          # characters of redacted evidence stored per step
@@ -54,6 +64,10 @@ BLOCKING = {"FAIL", "BLOCKED"}
 OPEN = {"HOLD", "PENDING", "UNKNOWN"}
 EXIT = {"PREPARED": 0, "VERIFY_FAIL": 1, "BLOCKED": 2, "HELD": 3,
         "REDACTION": 4, "SIGNING": 5, "LOCKED": 6}
+LEASE_MODULE = "szl_lane_lease.py"   # loaded only from beside this file
+LEASE_REQUIRED = ("SZL_LEASES_DIR", "SZL_LEASE_REPO", "SZL_LEASE_PATHS",
+                  "SZL_LEASE_CLAIMANT")
+LEASE_ENV = LEASE_REQUIRED + ("SZL_LEASE_BASE_SHA",)   # base sha optional: read from git
 
 
 @dataclass
@@ -337,12 +351,61 @@ class Coordinator:
         self.verify_repo_root()
         self.record("cleanup_coordinator", "PENDING", COORDINATOR_ID,
                     evidence="Reconcile existing coordinator; never create a competing writer.")
-        self.record("ownership_reconciliation", "PENDING", "pinned and recent SZL sessions",
-                    evidence="Require current owner, lease, target, revision, and disjointness.")
+        self.ownership_reconciliation()
         self.record("pending_approvals", "PENDING", "all accessible SZL work",
                     evidence="Broad green-light language is not action-specific approval.")
         self.record("active_jobs", "PENDING", "VM, desktop, cloud, and CI jobs",
                     evidence="Do not stop or restart jobs during this audit.")
+
+    def ownership_reconciliation(self):
+        """Require current owner, lease, target, revision, and disjointness.
+
+        PASS only on a lane-lease check PASS; every other outcome is BLOCKED."""
+        step, started = "ownership_reconciliation", now()
+        cfg = {k: os.environ.get(k, "").strip() for k in LEASE_ENV}
+        if not any(cfg.values()):
+            self.record(step, "BLOCKED", "lane lease", started=started,
+                        evidence="LEASE_NOT_CONFIGURED: set " + ", ".join(LEASE_REQUIRED),
+                        limitations=["No lease configured; ownership is unverified, not assumed."])
+            return
+        missing = [k for k in LEASE_REQUIRED if not cfg[k]]
+        if missing:
+            self.record(step, "BLOCKED", "lane lease", started=started,
+                        evidence="LEASE_CONFIG_INCOMPLETE: missing " + ", ".join(missing),
+                        limitations=["Partial lease configuration is refused, never defaulted."])
+            return
+        target = f"{cfg['SZL_LEASE_REPO']}:{cfg['SZL_LEASE_PATHS']}"
+        try:
+            lease = _load_lease_module()
+        except Exception as e:
+            self.record(step, "BLOCKED", target, started=started,
+                        evidence=f"LEASE_MODULE_UNAVAILABLE: {type(e).__name__}",
+                        limitations=["Lease checker could not be loaded; fail closed."])
+            return
+        try:
+            v = lease.check(cfg["SZL_LEASES_DIR"], cfg["SZL_LEASE_REPO"],
+                            [p.strip() for p in cfg["SZL_LEASE_PATHS"].split(",")],
+                            cfg["SZL_LEASE_CLAIMANT"], cfg["SZL_LEASE_BASE_SHA"] or None,
+                            datetime.now(timezone.utc), git_dir=str(self.root))
+            ok = (v.get("verdict") == "PASS" and v.get("reason_codes") == []
+                  and bool(v.get("lease")))
+            ev = json.dumps({"verdict": v.get("verdict"), "reason_codes": v.get("reason_codes"),
+                             "lease": v.get("lease"), "claimant": v.get("claimant_session"),
+                             "current_base_sha": v.get("current_base_sha"),
+                             "base_sha_source": v.get("base_sha_source"),
+                             "lease_module_sha256": lease.SZL_MODULE_SHA256}, sort_keys=True)
+        except Exception as e:
+            self.record(step, "BLOCKED", target, started=started,
+                        evidence=f"LEASE_CHECK_ERROR: {type(e).__name__}",
+                        limitations=["Lease check raised; fail closed."])
+            return
+        src_note = {"GIT": "Base sha read from git in WORK_ROOT.",
+                    "GIT_AND_SUPPLIED": "Base sha read from git and equal to SZL_LEASE_BASE_SHA.",
+                    "SUPPLIED_UNVERIFIED": ("Base sha is caller-asserted (SZL_LEASE_BASE_SHA); "
+                                            "git in WORK_ROOT was not readable to confirm it.")}
+        self.record(step, "PASS" if ok else "BLOCKED", target, started=started, evidence=ev,
+                    limitations=[src_note.get(v.get("base_sha_source"),
+                                              "Base sha source unknown.")])
 
     def safe_git_snapshot(self):
         if self.verify_repo_root():
@@ -400,6 +463,20 @@ class Coordinator:
                 "Signing, when used, covers HEAD.json, which pins the newest receipt and through it the chain.",
             ],
         }
+
+
+def _load_lease_module():
+    """Load szl_lane_lease.py from beside this file only (never sys.path or env).
+    The bytes that are hashed are the bytes that are executed."""
+    import importlib.util
+    p = Path(__file__).resolve().parent / LEASE_MODULE
+    data = p.read_bytes()
+    spec = importlib.util.spec_from_file_location("szl_lane_lease", p)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    exec(compile(data, str(p), "exec"), mod.__dict__)
+    mod.SZL_MODULE_SHA256 = hashlib.sha256(data).hexdigest()
+    return mod
 
 
 def _self_sha256() -> str:
