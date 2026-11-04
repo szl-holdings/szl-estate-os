@@ -1943,6 +1943,7 @@ def probe_domain_route(
         for key in (
             "strict-transport-security",
             "content-security-policy",
+            "content-security-policy-report-only",
             "x-content-type-options",
             "referrer-policy",
             "permissions-policy",

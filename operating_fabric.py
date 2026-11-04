@@ -64,6 +64,37 @@ CSP_UNSAFE_SOURCE_TOKENS = {
     "https:",
 }
 
+HF_EMBED_FRAME_ANCESTOR_HOST_TOKENS = {
+    "https://huggingface.co",
+    "https://*.huggingface.co",
+    "https://*.hf.space",
+}
+
+
+def _parse_csp_directives(value: str) -> dict[str, list[str]] | None:
+    directives: dict[str, list[str]] = {}
+    for segment in value.split(";"):
+        parts = segment.strip().split()
+        if not parts:
+            continue
+        name = parts[0].lower()
+        if name in directives or re.fullmatch(r"[a-z][a-z0-9-]*", name) is None:
+            return None
+        directives[name] = [token.lower() for token in parts[1:]]
+    return directives
+
+
+def _is_hf_embed_frame_ancestors(directives: dict[str, list[str]]) -> bool:
+    """Product surfaces embedded on Hugging Face Spaces use an allow-list."""
+    if set(directives) != {"frame-ancestors"}:
+        return False
+    sources = directives["frame-ancestors"]
+    if "'self'" not in sources:
+        return False
+    hosts = {token for token in sources if token != "'self'"}
+    return bool(hosts) and hosts <= HF_EMBED_FRAME_ANCESTOR_HOST_TOKENS
+
+
 
 def _value(item: Any, key: str, default: Any = None) -> Any:
     if isinstance(item, dict):
@@ -80,18 +111,33 @@ def _asset_id(item: Any) -> str:
     return str(_value(item, "asset_id", "") or "")
 
 
-def _content_security_policy_state(value: Any) -> tuple[bool, str]:
+def _content_security_policy_state(
+    value: Any, report_only: Any = None
+) -> tuple[bool, str]:
     if not isinstance(value, str) or not value.strip() or "\n" in value or "\r" in value:
         return False, "content-security-policy is missing or invalid"
-    directives: dict[str, list[str]] = {}
-    for segment in value.split(";"):
-        parts = segment.strip().split()
-        if not parts:
-            continue
-        name = parts[0].lower()
-        if name in directives or re.fullmatch(r"[a-z][a-z0-9-]*", name) is None:
-            return False, "content-security-policy contains duplicate or invalid directives"
-        directives[name] = [token.lower() for token in parts[1:]]
+    directives = _parse_csp_directives(value)
+    if directives is None:
+        return False, "content-security-policy contains duplicate or invalid directives"
+
+    # HF-embed product profile (a-11-oy.com / a11oy Space): enforced CSP is
+    # intentionally frame-ancestors-only so Hugging Face can embed the product.
+    # Resource directives ship on Content-Security-Policy-Report-Only while the
+    # product migrates; requiring fail-closed enforced CSP would reject the
+    # published dual-header design. Proof domain a11oy.net keeps full enforced CSP.
+    if _is_hf_embed_frame_ancestors(directives):
+        if not isinstance(report_only, str) or not report_only.strip():
+            return (
+                False,
+                "content-security-policy HF-embed profile requires report-only resource policy",
+            )
+        ro = _parse_csp_directives(report_only)
+        if ro is None or "default-src" not in ro:
+            return False, "content-security-policy report-only missing default-src"
+        return (
+            True,
+            "content-security-policy HF-embed enforced frame-ancestors + report-only resource policy present",
+        )
 
     missing = sorted(CSP_REQUIRED_DIRECTIVES - set(directives))
     if missing:
@@ -182,7 +228,13 @@ def assess_web_security_headers(values: Any) -> dict[str, dict[str, Any]] | None
     }
     assessment: dict[str, dict[str, Any]] = {}
     for name, validator in validators.items():
-        passed, detail = validator(values.get(name))
+        if name == "content-security-policy":
+            passed, detail = _content_security_policy_state(
+                values.get(name),
+                report_only=values.get("content-security-policy-report-only"),
+            )
+        else:
+            passed, detail = validator(values.get(name))
         assessment[name] = {"passed": passed, "detail": detail}
     return assessment
 
