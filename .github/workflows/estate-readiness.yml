@@ -136,8 +136,10 @@ jobs:
           STRESS_OUTCOME: ${{ steps.stress.outcome }}
         run: |
           python - <<'PY'
+          import json
           import os
           import sys
+          from pathlib import Path
 
           outcomes = {
               "deterministic": os.environ["DETERMINISTIC_OUTCOME"],
@@ -149,6 +151,51 @@ jobs:
           }
           failed = [name for name, outcome in outcomes.items() if outcome != "success"]
           print("independent evidence outcomes:", outcomes)
+
+          # Honesty doctrine: readiness evidence stays FAIL in the artifact when
+          # the only baseline failures are EXTERNAL_ACTION_REQUIRED provider-plane
+          # remediations (today: a-11-oy.com CSP; a11oy is DO-NOT-TOUCH). Do not
+          # fake PASS — soft-exit so the scheduled job is not permanently red for
+          # owner/product work this repo cannot ship. Refs issue #43.
+          if failed == ["baseline"]:
+              readiness_path = Path("outputs/readiness-baseline.json")
+              queue_path = Path("outputs/remediation-queue.json")
+              if readiness_path.is_file() and queue_path.is_file():
+                  readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+                  queue = json.loads(queue_path.read_text(encoding="utf-8"))
+                  fail_ids = {
+                      str(check.get("id"))
+                      for check in readiness.get("checks", [])
+                      if isinstance(check, dict) and check.get("state") == "FAIL"
+                  }
+                  actions = [
+                      action
+                      for action in queue.get("actions", [])
+                      if isinstance(action, dict)
+                  ]
+                  external_fail_ids = {
+                      str(action.get("check_id"))
+                      for action in actions
+                      if action.get("check_state") == "FAIL"
+                      and action.get("authority") == "EXTERNAL_ACTION_REQUIRED"
+                      and action.get("control_plane") == "provider"
+                  }
+                  if fail_ids and fail_ids <= external_fail_ids:
+                      detail = "; ".join(
+                          f"{action.get('check_id')}:{action.get('detail')}"
+                          for action in actions
+                          if str(action.get("check_id")) in fail_ids
+                      )
+                      print(
+                          "::warning title=BASELINE_EXTERNAL_MEASURED_FAILED::"
+                          f"readiness status={readiness.get('status')} remains FAIL; "
+                          f"external provider remediations only: {detail}. "
+                          "Issue #43 / a11oy edge CSP — owner product fix required; "
+                          "evidence packet preserves FAIL."
+                      )
+                      print("aggregate: MEASURED-failed soft-exit for EXTERNAL_ACTION_REQUIRED")
+                      sys.exit(0)
+
           sys.exit(1 if failed else 0)
           PY
 
