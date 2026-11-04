@@ -22,6 +22,7 @@ from .storage import StorageError, atomic_write, canonical_bytes, integrity_byte
 LOCAL_CHECKS = ("python", "installed_package", "reviewed_source", "folders", "offline_tests")
 MANIFEST_NAME = "verification_manifest.json"
 MAX_SOURCE_FILE = 1024 * 1024
+EXPECTED_PYTEST_VERSION = "9.2.0"
 
 
 def now_utc() -> str:
@@ -277,7 +278,7 @@ def run_setup(root: Path | None, output: Path, *, access_receipt: Path | None = 
     try:
         if not fingerprint or root is None or manifest is None:
             raise EvidenceValidationError("TESTS_NOT_RUN_UNTRUSTED_SOURCE")
-        if metadata.version("pytest") != "9.1.1":
+        if metadata.version("pytest") != EXPECTED_PYTEST_VERSION:
             raise EvidenceValidationError("TEST_RUNNER_VERSION_MISMATCH")
         tests = _run_tests(root, fingerprint, manifest)
         _check_source(root, manifest)
