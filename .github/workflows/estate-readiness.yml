@@ -171,11 +171,12 @@ jobs:
           failed = [name for name, outcome in outcomes.items() if outcome != "success"]
           print("independent evidence outcomes:", outcomes)
 
-          # Honesty doctrine: readiness evidence stays FAIL in the artifact when
-          # the only baseline failures are EXTERNAL_ACTION_REQUIRED provider-plane
-          # remediations (today: a-11-oy.com CSP; a11oy is DO-NOT-TOUCH). Do not
-          # fake PASS — soft-exit so the scheduled job is not permanently red for
-          # owner/product work this repo cannot ship. Refs issue #43.
+          # HARD LAW: no soft-green. When the only baseline FAILs map to
+          # EXTERNAL_ACTION_REQUIRED provider remediations, keep the evidence
+          # packet FAIL and fail the job closed with a clear OWNER message.
+          # Do not exit 0 over live/product unfinished work (refs #43, #108).
+          # After #109 dual-CSP accept, product CSP may PASS; if EXTERNAL
+          # FAILs return, CI must stay red until owner/product ships the fix.
           if failed == ["baseline"]:
               readiness_path = Path("outputs/readiness-baseline.json")
               queue_path = Path("outputs/remediation-queue.json")
@@ -206,14 +207,15 @@ jobs:
                           if str(action.get("check_id")) in fail_ids
                       )
                       print(
-                          "::warning title=BASELINE_EXTERNAL_MEASURED_FAILED::"
+                          "::error title=BASELINE_EXTERNAL_OWNER_BLOCKED::"
                           f"readiness status={readiness.get('status')} remains FAIL; "
                           f"external provider remediations only: {detail}. "
-                          "Issue #43 / a11oy edge CSP — owner product fix required; "
-                          "evidence packet preserves FAIL."
+                          "OWNER: issue #43 / a11oy edge CSP (DO-NOT-TOUCH product) — "
+                          "architecture-compatible enforcing CSP or accepted doctrine. "
+                          "Evidence packet preserves FAIL; aggregate hard-fails (no soft-green)."
                       )
-                      print("aggregate: MEASURED-failed soft-exit for EXTERNAL_ACTION_REQUIRED")
-                      sys.exit(0)
+                      print("aggregate: MEASURED-failed HARD-FAIL for EXTERNAL_ACTION_REQUIRED")
+                      sys.exit(1)
 
           sys.exit(1 if failed else 0)
           PY
