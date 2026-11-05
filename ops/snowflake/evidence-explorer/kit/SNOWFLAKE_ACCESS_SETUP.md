@@ -31,7 +31,7 @@ Secrets travel only as environment variables or the owner's own config. They nev
 
 The runner exports `SZL_EE_RUN_ID` (format `YYYYMMDDTHHMMSSZ-<8 hex>`). Kit v0.3.0 appends it to every QUERY_TAG and refuses a malformed value before connecting.
 
-**Runner status (MEASURED from szl_ee_go.py in kit v0.2.0-rc1, carried unchanged into v0.3.0):** the runner still implements the *old* single-user contract — `SNOWFLAKE_USER` + `SNOWFLAKE_PRIVATE_KEY`, and profile `szl_ee` with `role = "SYSADMIN"`. It must be updated by the runner owner to this two-user contract before any live run. Kit v0.3.0 will refuse a SYSADMIN session at the identity check.
+**Runner status (SOURCE-OBSERVED in current kit v0.3.0):** `szl_ee_go.py` implements the two-user contract above. Mode A builds separate `szl_ee_setup` and `szl_ee_runtime` profiles; mode B requires separate setup and runtime connection names. The runner refuses the legacy `SNOWFLAKE_USER`, `SNOWFLAKE_PRIVATE_KEY`, `SZL_SF_CONNECTION_NAME`, and `SZL_SF_INGEST_CONNECTION_NAME` inputs, and it rejects sessions that expose forbidden admin roles. Offline regression evidence does not establish live account roles, query behavior, cost, or shutdown.
 
 Open questions (UNKNOWN until live):
 - whether `USE SECONDARY ROLES SZL_EE_OPERATOR` (a named role list) is accepted, or the runner must `USE ROLE SZL_EE_OPERATOR` around RESUME/SUSPEND;
