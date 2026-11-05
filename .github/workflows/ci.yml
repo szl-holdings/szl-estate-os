@@ -65,6 +65,10 @@ jobs:
         run: python -m unittest discover -s ci -p 'test*steward*.py' -v
       - name: Test read-only coordinator receipt chain and signing contracts
         run: python -I -B tools/coordinator/test_szl_coordinator.py -v
+      - name: Test lane-lease ownership gate and its coordinator integration
+        env:
+          SZL_COORD_PATCHED: tools/coordinator/szl_coordinator.py
+        run: python -I -B tools/coordinator/test_szl_lane_lease.py -v
   snowflake-evidence-explorer:
     # Standard-library tests only: no package installs, no credentials. The
     # integration suite must skip here because its approval variables are unset.
@@ -105,6 +109,9 @@ jobs:
       - name: Require complete synthetic runner mutation evidence
         working-directory: ops/snowflake/evidence-explorer/kit
         run: python -I -B mutation_sweep_go.py . "$RUNNER_TEMP/ee-runner-mutation-results.json"
+      - name: Require complete receipt-verifier mutation evidence
+        working-directory: ops/snowflake/evidence-explorer/bundle
+        run: python -I -B verifier_mutation_sweep.py "$RUNNER_TEMP/ee-verifier-mutation-results.json"
       - name: Preserve mutation evidence on success or failure
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -114,5 +121,6 @@ jobs:
             ${{ runner.temp }}/ee-mutation-results.json
             ${{ runner.temp }}/ee-kit-mutation-results.json
             ${{ runner.temp }}/ee-runner-mutation-results.json
+            ${{ runner.temp }}/ee-verifier-mutation-results.json
           if-no-files-found: error
           retention-days: 14

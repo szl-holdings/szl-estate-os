@@ -352,7 +352,22 @@ scan cannot silently become a production claim.
 The scheduled `Estate readiness evidence` workflow performs deterministic
 checks, a live audit, baseline verification, remediation-queue compilation,
 receipt-chain verification, and a bounded read-only API stress profile as
-independent steps. The remediation queue preserves every non-pass result,
+independent steps.
+
+### Actions secrets for inventory
+
+| Secret | Where | Role |
+|---|---|---|
+| _(none)_ | scheduled / default `workflow_dispatch` | Public baseline audit blanks `GH_TOKEN` / `GITHUB_TOKEN` / `HF_TOKEN` so the github source stays honest `MEASURED` / `PUBLIC_ONLY`. |
+| Actions `github.token` | automatic | Repo-scoped only. **Do not** feed it into org inventory; it cannot reconcile private org repos and would degrade the source to `PARTIAL`. |
+| `SZL_GITHUB_TOKEN` | org secret (selected repos, includes `szl-estate-os`) | Org-read PAT for authenticated GitHub inventory packets. |
+| `HF_TOKEN` (or `HF_ORG_TOKEN`) | org secret (private repos) | Hugging Face inventory for authenticated packets. |
+
+Use workflow_dispatch input `run_authenticated_inventory=true` to run a **separate**
+authenticated inventory probe job that wires `SZL_GITHUB_TOKEN` + `HF_TOKEN`.
+That job uploads its own artifact and does **not** replace or soft-pass the
+public baseline aggregate. `--profile production` still requires a separately
+approved authenticated evidence packet (`PRODUCTION_READINESS.md`). The remediation queue preserves every non-pass result,
 routes it to the source, inventory, evidence, or provider control plane, binds
 it to the exact readiness-report digest, and grants no deployment authority. A
 rejected baseline supplies no source mappings or header policy. Operational

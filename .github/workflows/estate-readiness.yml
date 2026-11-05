@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: "17 10 * * *"
   workflow_dispatch:
+    inputs:
+      run_authenticated_inventory:
+        description: >-
+          Also run a separate authenticated inventory audit using org secrets
+          SZL_GITHUB_TOKEN + HF_TOKEN. Does not replace the public baseline;
+          production completeness still needs a separately approved packet.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,7 +28,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: block
           disable-telemetry: true
@@ -63,11 +71,22 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          # This is deliberately credential-free. Authenticated organization
-          # completeness belongs to a separately authorized production packet.
-          # Passing the per-run github.token here cannot reconcile org-wide
-          # private inventory, which honestly degrades the github source to
-          # PARTIAL and fails the baseline contract that requires MEASURED.
+          # Public baseline is deliberately credential-free.
+          # Authenticated organization completeness belongs to a separately
+          # authorized production packet (see README Continuous readiness /
+          # workflow_dispatch run_authenticated_inventory).
+          #
+          # Secrets map (do NOT put tokens in the repo):
+          # - Actions github.token / secrets.GITHUB_TOKEN: repo-scoped only;
+          #   cannot reconcile org-wide private inventory. Using it here would
+          #   mark github source PARTIAL and fail baseline MEASURED.
+          # - secrets.SZL_GITHUB_TOKEN (org, selected repos incl. this one):
+          #   org-read PAT for authenticated GitHub inventory.
+          # - secrets.HF_TOKEN / secrets.HF_ORG_TOKEN (org, private):
+          #   Hugging Face inventory for authenticated packets.
+          #
+          # Blank these env names so ambient runner credentials cannot leak
+          # into the public baseline audit.
           GH_TOKEN: ""
           GITHUB_TOKEN: ""
           HF_TOKEN: ""
@@ -136,8 +155,10 @@ jobs:
           STRESS_OUTCOME: ${{ steps.stress.outcome }}
         run: |
           python - <<'PY'
+          import json
           import os
           import sys
+          from pathlib import Path
 
           outcomes = {
               "deterministic": os.environ["DETERMINISTIC_OUTCOME"],
@@ -149,6 +170,53 @@ jobs:
           }
           failed = [name for name, outcome in outcomes.items() if outcome != "success"]
           print("independent evidence outcomes:", outcomes)
+
+          # HARD LAW: no soft-green. When the only baseline FAILs map to
+          # EXTERNAL_ACTION_REQUIRED provider remediations, keep the evidence
+          # packet FAIL and fail the job closed with a clear OWNER message.
+          # Do not exit 0 over live/product unfinished work (refs #43, #108).
+          # After #109 dual-CSP accept, product CSP may PASS; if EXTERNAL
+          # FAILs return, CI must stay red until owner/product ships the fix.
+          if failed == ["baseline"]:
+              readiness_path = Path("outputs/readiness-baseline.json")
+              queue_path = Path("outputs/remediation-queue.json")
+              if readiness_path.is_file() and queue_path.is_file():
+                  readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+                  queue = json.loads(queue_path.read_text(encoding="utf-8"))
+                  fail_ids = {
+                      str(check.get("id"))
+                      for check in readiness.get("checks", [])
+                      if isinstance(check, dict) and check.get("state") == "FAIL"
+                  }
+                  actions = [
+                      action
+                      for action in queue.get("actions", [])
+                      if isinstance(action, dict)
+                  ]
+                  external_fail_ids = {
+                      str(action.get("check_id"))
+                      for action in actions
+                      if action.get("check_state") == "FAIL"
+                      and action.get("authority") == "EXTERNAL_ACTION_REQUIRED"
+                      and action.get("control_plane") == "provider"
+                  }
+                  if fail_ids and fail_ids <= external_fail_ids:
+                      detail = "; ".join(
+                          f"{action.get('check_id')}:{action.get('detail')}"
+                          for action in actions
+                          if str(action.get("check_id")) in fail_ids
+                      )
+                      print(
+                          "::error title=BASELINE_EXTERNAL_OWNER_BLOCKED::"
+                          f"readiness status={readiness.get('status')} remains FAIL; "
+                          f"external provider remediations only: {detail}. "
+                          "OWNER: issue #43 / a11oy edge CSP (DO-NOT-TOUCH product) — "
+                          "architecture-compatible enforcing CSP or accepted doctrine. "
+                          "Evidence packet preserves FAIL; aggregate hard-fails (no soft-green)."
+                      )
+                      print("aggregate: MEASURED-failed HARD-FAIL for EXTERNAL_ACTION_REQUIRED")
+                      sys.exit(1)
+
           sys.exit(1 if failed else 0)
           PY
 
@@ -157,6 +225,115 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: estate-readiness-${{ github.run_id }}
+          path: outputs/
+          if-no-files-found: error
+          retention-days: 30
+
+  # Optional authenticated inventory (workflow_dispatch only). Evidence only —
+  # does not gate or replace the public baseline aggregate above.
+  authenticated-inventory:
+    name: Authenticated inventory probe
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.run_authenticated_inventory == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: block
+          disable-telemetry: true
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            codeload.github.com:443
+            objects.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
+            *.actions.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            *.blob.core.windows.net:443
+            huggingface.co:443
+            *.huggingface.co:443
+            *.hf.co:443
+            *.hf.space:443
+            a-11-oy.com:443
+            a11oy.net:443
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Require org inventory secrets
+        env:
+          SZL_GITHUB_TOKEN: ${{ secrets.SZL_GITHUB_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          missing=0
+          if [ -z "${SZL_GITHUB_TOKEN}" ]; then
+            echo "::error::SZL_GITHUB_TOKEN org secret missing or not granted to this repository"
+            missing=1
+          fi
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "::error::HF_TOKEN org secret missing or not granted to this repository"
+            missing=1
+          fi
+          exit "$missing"
+
+      - name: Run authenticated estate audit
+        id: auth_audit
+        env:
+          # Org PAT — not Actions github.token (repo-scoped; would stay PARTIAL).
+          GH_TOKEN: ${{ secrets.SZL_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SZL_GITHUB_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: >-
+          python SZL_ONE_OF_ONE_ESTATE_OS.py audit
+          --github-org szl-holdings
+          --hf-org SZLHOLDINGS
+          --hf-space betterwithage/anatomy
+          --domain a-11-oy.com
+          --domain a11oy.net
+          --deep
+          --timeout 15
+
+      - name: Summarize inventory scope
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("outputs/latest_audit.json")
+          if not path.is_file():
+              raise SystemExit("authenticated audit output missing")
+          audit = json.loads(path.read_text(encoding="utf-8"))
+          for report in audit.get("source_reports") or []:
+              if not isinstance(report, dict):
+                  continue
+              meta = report.get("metadata") or {}
+              print(
+                  f"source={report.get('source')} status={report.get('status')} "
+                  f"scope={report.get('scope')} count={report.get('count')} "
+                  f"reconciled={meta.get('inventory_reconciled')} "
+                  f"reason={meta.get('inventory_reconciliation_reason')}"
+              )
+          PY
+
+      - name: Upload authenticated inventory packet
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: estate-authenticated-inventory-${{ github.run_id }}
           path: outputs/
           if-no-files-found: error
           retention-days: 30

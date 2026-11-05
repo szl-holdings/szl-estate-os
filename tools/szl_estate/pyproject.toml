@@ -16,15 +16,15 @@ classifiers = ["Private :: Do Not Upload"]
 providers = [
   "requests==2.34.2",
   "httpx==0.28.1",
-  "huggingface_hub==2.3.0",
+  "huggingface_hub==2.4.0",
 ]
 presentation = [
-  "pydantic==2.14.1",
+  "pydantic==2.14.2",
   "rich==15.0.0",
   "beautifulsoup4==4.15.0",
 ]
 browser = ["playwright==1.64.1"]
-test = ["pytest==9.1.1"]
+test = ["pytest==9.2.0"]
 
 [project.scripts]
 szl-estate = "szl_estate.cli:main"

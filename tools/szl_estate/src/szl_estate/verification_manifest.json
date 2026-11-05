@@ -1,9 +1,9 @@
 {
   "files": {
     ".gitattributes": "0dacf9b940271a5a4433fc33092e8fa671f2611a909c18236a83d41424ff8c8a",
-    "pyproject.toml": "693276049e8c169450e5635010cca0e007c7f2b185eef894ff002ce3faa4ebf8",
-    "requirements-dev.txt": "c64a56ca588b983b94737cce207b2f6d300a38fa30dd6aae249bdc43fdfbc6eb",
-    "requirements.txt": "8d649a3b607fc42cae802213ec79954571d275407772db1780517cc15572b52c",
+    "pyproject.toml": "65aac4f9b8012ca567d10f120812243cf766d4f4e927888d3729c455609dd9c9",
+    "requirements-dev.txt": "06d3ef4b22300553ba61e5dfde160deb82b936f203d1adcdc07d6a63c0a2e504",
+    "requirements.txt": "6f9a338eb032ce3285cad1a819844b7f4cffb74653e089828770732c8b5fefd6",
     "src/szl_estate/__init__.py": "026ed4d5f3000f6a9c797e910205e6074c6d26310f37ae1a9e0e9e5014c3754c",
     "src/szl_estate/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
     "src/szl_estate/access.py": "e03ea77c94cb4b89d3094cfb7e92617f088a01b59a1cbd7e5fcb21631d46f974",
@@ -13,7 +13,7 @@
     "src/szl_estate/inputs.py": "f3675d893340031897e0bda7a84991ea460f02f94baa64466b6314d42c4e9735",
     "src/szl_estate/model.py": "eea3aa627d1aab0f90c6d86da98ca141d36d770231c4495c4407534d3c243ce6",
     "src/szl_estate/parsers.py": "dceb8b6679b843dbcbaa39ba001931a464133a28d9c59bfde14962698a594ff5",
-    "src/szl_estate/setup.py": "a98bcaec6a99f3c7390d63cb2787d83d1a1a89192002d7b9588481dc92764436",
+    "src/szl_estate/setup.py": "7da3c8f97fdc6b70558eed4a360a018882e314985e9cd99fc3ab01857dac092c",
     "src/szl_estate/snapshot_agent.py": "b7418c67bef1e49847008e90fee8caed58dcd1603c99698184f25169eb863d87",
     "src/szl_estate/storage.py": "2c8a1da9bee021384fe80db44f857fa39d75d72c90c2c688ec4bda0b1b9a7f77",
     "tests/fixtures/pr_states.json": "ffd2e1ba115c27f00ee55b63d0f9be373c299573b43dcb2c0b8a4775d3daaa99",
@@ -24,7 +24,7 @@
     "tests/test_inputs.py": "98597745bb3f8bf129ec846c916eac240a5ca6f256a35159de5b839e1b488007",
     "tests/test_model.py": "aaceaece2c391997eea5a4d1e560cd12a40d5f999d5e4a38cf48e75841a58610",
     "tests/test_parsers.py": "f28c0e8f5646314b59957eabdd179956696a1059aeba5ee1a56b133fd1731336",
-    "tests/test_setup.py": "80a0291530acf539963ed87135278fee5a9ca80f19bcec1e07cfdaf56b545121",
+    "tests/test_setup.py": "ebc74cac04bc0dcac3053ca05abc20dfd29db7121dc3f8adee5bef8f41831083",
     "tests/test_snapshot_agent.py": "4c220621728041bdf9c96baf0dc7639b259e0d67c947606d37db4689db068acf"
   },
   "schema": "szl.reviewed-phase0-files/v1"
