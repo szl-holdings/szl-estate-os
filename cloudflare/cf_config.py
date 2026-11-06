@@ -408,6 +408,8 @@ def export_live(client: ReadOnlyClient, zones: list[str], account_sections: bool
                 scope[section] = {"data": readers[section]()}
             except ApiError as exc:
                 scope[section] = {"error": str(exc)}
+            except (KeyError, TypeError, ValueError, AttributeError) as exc:
+                scope[section] = {"error": f"unexpected API response shape ({type(exc).__name__})"}
     if not account_sections:
         return exported
     account_scope: dict[str, Any] = {}
@@ -430,6 +432,8 @@ def export_live(client: ReadOnlyClient, zones: list[str], account_sections: bool
         account_scope["workers"] = {"data": sorted(workers, key=lambda item: item["name"])}
     except ApiError as exc:
         account_scope["workers"] = {"error": str(exc)}
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        account_scope["workers"] = {"error": f"unexpected API response shape ({type(exc).__name__})"}
     try:
         tunnels = client.get_all(f"/accounts/{account_id}/cfd_tunnel", {"is_deleted": "false"})
         account_scope["tunnels"] = {
@@ -437,6 +441,8 @@ def export_live(client: ReadOnlyClient, zones: list[str], account_sections: bool
         }
     except ApiError as exc:
         account_scope["tunnels"] = {"error": str(exc)}
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        account_scope["tunnels"] = {"error": f"unexpected API response shape ({type(exc).__name__})"}
     return exported
 
 
@@ -530,13 +536,34 @@ def secret_findings(document: Any) -> list[str]:
     return findings
 
 
+_REQUIRED_ITEM_KEYS = {
+    "dns": ("type", "name"),
+    "waf_custom": ("expression", "action"),
+    "rate_limit": ("expression", "action"),
+    "config_rules": ("expression", "action"),
+    "monetization_rules": ("id",),
+    "workers": ("name",),
+    "tunnels": ("id", "name"),
+}
+
+
 def _check_section_shape(scope: str, section: str, data: Any) -> list[str]:
+    if section in ("zone", "bot_management"):
+        return [] if isinstance(data, dict) else [f"{scope}/{section}: data must be an object"]
+    if not isinstance(data, list):
+        return [f"{scope}/{section}: data must be a list"]
     problems = []
-    expected_list = section not in ("zone", "bot_management")
-    if expected_list and not isinstance(data, list):
-        problems.append(f"{scope}/{section}: data must be a list")
-    if not expected_list and not isinstance(data, dict):
-        problems.append(f"{scope}/{section}: data must be an object")
+    keys = _REQUIRED_ITEM_KEYS[section]
+    seen: set[Any] = set()
+    for index, item in enumerate(data):
+        if not isinstance(item, dict) or any(key not in item for key in keys):
+            problems.append(f"{scope}/{section}[{index}]: an item needs {', '.join(keys)}")
+            continue
+        if section in ("monetization_rules", "workers", "tunnels"):
+            identity = item[keys[0]]
+            if identity in seen:
+                problems.append(f"{scope}/{section}: duplicate {keys[0]} {identity!r}")
+            seen.add(identity)
     return problems
 
 

@@ -654,6 +654,33 @@ class ExportAndDriftTests(_Cli):
         _, report, _, _ = self.drift(live, baseline)
         self.assertEqual(self.section(report, f"zone:{ZONE_B}", "monetization_rules")["status"], "unverified")
 
+    def test_malformed_api_objects_are_unverified_not_a_crash(self) -> None:
+        fake = fake_account()
+        baseline = self.baseline(fake)
+        live = copy.deepcopy(fake)
+        del live["dns"]["a" * 32][0]["type"]
+        live["tunnels"][0].pop("name")
+        code, report, _, output = self.drift(live, baseline)
+        self.assertEqual(code, 3, output)
+        self.assertEqual(self.section(report, f"zone:{ZONE_A}", "dns")["error"], "unexpected API response shape (KeyError)")
+        self.assertEqual(self.section(report, "account", "tunnels")["status"], "unverified")
+
+    def test_baseline_items_need_identity_fields(self) -> None:
+        fake = fake_account()
+        baseline = self.baseline(fake)
+        manifest = json.loads((baseline / "manifest.json").read_text(encoding="utf-8"))
+        scopes = {
+            entry["scope"]: json.loads((baseline / relative).read_text(encoding="utf-8"))["sections"]
+            for relative, entry in manifest["files"].items()
+        }
+        scopes["account"]["tunnels"]["data"].append(dict(scopes["account"]["tunnels"]["data"][0]))
+        scopes[f"zone:{ZONE_A}"]["dns"]["data"].append({"name": "no-type.example.test"})
+        cf.write_snapshot(baseline, scopes, {k: v for k, v in manifest.items() if k not in ("schema", "files")})
+        with self.assertRaises(cf.SnapshotError) as raised:
+            cf.load_snapshot(baseline)
+        self.assertIn("duplicate id", str(raised.exception))
+        self.assertIn("an item needs type, name", str(raised.exception))
+
     def test_pagination_reads_every_dns_page(self) -> None:
         fake = fake_account()
         fake["dns"]["b" * 32] = [
