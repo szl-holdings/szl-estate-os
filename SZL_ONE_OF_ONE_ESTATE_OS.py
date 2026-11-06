@@ -1854,11 +1854,29 @@ def content_title(text: str) -> str | None:
     return html.unescape(re.sub(r"\s+", " ", match.group(1))).strip()[:200] or None
 
 
+# A 402 is a payment challenge only when the body says so. An empty or
+# unrelated 402 stays BROKEN so a failed origin cannot hide behind the status.
+_PAYMENT_CHALLENGE_MARKERS = (
+    "x402",
+    "payment-signature",
+    "payment required",
+    "monetization gateway",
+)
+
+
+def payment_challenge(text: str) -> bool:
+    """Recognize an x402 or monetization-gateway body. The probe never pays."""
+    folded = text.lower()
+    return any(marker in folded for marker in _PAYMENT_CHALLENGE_MARKERS)
+
+
 def classify_content(result: HttpResult, text: str) -> tuple[str, str]:
     if result.status == 0:
         return "BROKEN", "UNREACHABLE"
     if result.status in {401, 403}:
         return "UNAVAILABLE", "RESTRICTED"
+    if result.status == 402 and payment_challenge(text):
+        return "UNAVAILABLE", "PAYMENT_REQUIRED"
     if not 200 <= result.status < 400:
         return "BROKEN", f"HTTP_{result.status}"
     visible = re.sub(r"<[^>]+>", " ", text)
@@ -2036,10 +2054,17 @@ def collect_domains(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
     assets.sort(key=lambda item: item.asset_id)
     broken = sum(1 for asset in assets if asset.status_label == "BROKEN")
     modeled = sum(1 for asset in assets if asset.status_label == "MODELED")
+    payment_required = sum(
+        1 for asset in assets if asset.operational_status == "PAYMENT_REQUIRED"
+    )
     if broken:
         warnings.append(f"{broken} route probes are BROKEN")
     if modeled:
         warnings.append(f"{modeled} route probes are MODELED/placeholder")
+    if payment_required:
+        warnings.append(
+            f"{payment_required} route probes are PAYMENT_REQUIRED and were not paid"
+        )
     status = "MEASURED"
     if errors and assets:
         status = "PARTIAL"
@@ -2062,6 +2087,7 @@ def collect_domains(config: AuditConfig) -> tuple[list[Asset], SourceReport]:
             "discovered_route_count": discovered_route_count,
             "broken_count": broken,
             "modeled_count": modeled,
+            "payment_required_count": payment_required,
         },
     )
 
@@ -4369,6 +4395,52 @@ def self_test() -> dict[str, Any]:
             == "MODELED"
         )
         checks.append("placeholder precision")
+        payment_html = dataclasses.replace(
+            live_result,
+            status=402,
+            error="HTTP 402",
+            body=(
+                b"<html><title>Payment required</title><body>"
+                b"This request needs you to pay before you continue. "
+                b"Powered by Cloudflare Monetization Gateway</body></html>"
+            ),
+        )
+        assert classify_content(
+            payment_html, payment_html.body.decode()
+        ) == ("UNAVAILABLE", "PAYMENT_REQUIRED")
+        payment_json = dataclasses.replace(
+            live_result,
+            status=402,
+            error="HTTP 402",
+            headers={"content-type": "application/json"},
+            body=(
+                b'{"x402Version":2,"error":"PAYMENT-SIGNATURE header is required"}'
+            ),
+        )
+        assert classify_content(
+            payment_json, payment_json.body.decode()
+        ) == ("UNAVAILABLE", "PAYMENT_REQUIRED")
+        unpaid_marketing = dataclasses.replace(
+            live_result,
+            body=(
+                b"<html><title>Plans</title><body>"
+                + b"Payment required is described for customers. " * 40
+                + b"</body></html>"
+            ),
+        )
+        assert classify_content(
+            unpaid_marketing, unpaid_marketing.body.decode()
+        )[0] == "LIVE"
+        bare_payment_status = dataclasses.replace(
+            live_result,
+            status=402,
+            error="HTTP 402",
+            body=b"upstream failed closed",
+        )
+        assert classify_content(
+            bare_payment_status, bare_payment_status.body.decode()
+        ) == ("BROKEN", "HTTP_402")
+        checks.append("payment challenge is not a broken origin")
         assert hf_truth_label(
             "space", {"runtime": {"stage": "RUNNING"}}
         ) == ("LIVE", "RUNNING")
