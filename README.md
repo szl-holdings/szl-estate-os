@@ -481,6 +481,16 @@ python3 -B -m unittest discover -s ops/recovery/tests -v
 (cd ops/vm/readiness && python3 -B test_szl_readiness_runner.py -v)
 ```
 
+The repository smoke tests in `tests/` check that every source file compiles,
+that every module declared in `pyproject.toml` imports, and that every
+first-party module they import is packaged. They need pytest; install the
+checkout editable in a virtual environment:
+
+```sh
+python3 -m pip install -e '.[test]'
+python3 -m pytest
+```
+
 The maintenance runner and the Phase 0 audit package pin their own pytest
 closures; install them in a virtual environment:
 

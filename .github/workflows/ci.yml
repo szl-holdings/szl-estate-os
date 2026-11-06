@@ -33,6 +33,8 @@ jobs:
       - name: Verify maintenance failure, concurrency, credential and provider contracts
         working-directory: maintenance
         run: python -m pytest -q
+      - name: Run repository smoke tests (compile, declared-module imports, packaging closure)
+        run: python -m pytest -q tests
   self-test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
