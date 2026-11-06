@@ -8,7 +8,7 @@
     "huggingface_spaces": [
       "SZLHOLDINGS/a11oy",
       "SZLHOLDINGS/killinchu",
-      "betterwithage/anatomy"
+      "SZLHOLDINGS/anatomy"
     ],
     "domains": [
       "a-11-oy.com",
@@ -104,7 +104,7 @@
       "required_status": "LIVE"
     },
     {
-      "asset_id": "huggingface:space:betterwithage/anatomy",
+      "asset_id": "huggingface:space:SZLHOLDINGS/anatomy",
       "tier": 1,
       "role": "estate anatomy Space",
       "public": true,
@@ -129,7 +129,7 @@
     {
       "asset_id": "huggingface:space:szlholdings/cosmos",
       "status": "FOLDED",
-      "target": "huggingface:space:betterwithage/anatomy",
+      "target": "huggingface:space:SZLHOLDINGS/anatomy",
       "as_of": "2026-09-05",
       "reason": "The discovery surface is consolidated into the source-bound Anatomy Space; no replacement Space is minted."
     }
@@ -144,7 +144,7 @@
     "domain:route:a11oy.net/": "github:repo:szl-holdings/a11oy-net",
     "huggingface:space:szlholdings/a11oy": "github:repo:szl-holdings/a11oy",
     "huggingface:space:szlholdings/killinchu": "github:repo:szl-holdings/killinchu",
-    "huggingface:space:betterwithage/anatomy": "github:repo:szl-holdings/anatomy"
+    "huggingface:space:SZLHOLDINGS/anatomy": "github:repo:szl-holdings/anatomy"
   },
   "production_requirements": {
     "authenticated_inventory": true,
