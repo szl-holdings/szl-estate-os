@@ -437,3 +437,9 @@ Run the same gates locally after an audit:
 `--profile production` intentionally fails closed until authenticated inventory,
 exact Hugging Face source/runtime binding, signed independent evidence, and all
 active critical gaps in the manifest are closed. See `PRODUCTION_READINESS.md`.
+
+Estate on Hugging Face: models, datasets and Spaces are published under the [SZLHOLDINGS](https://huggingface.co/SZLHOLDINGS) org.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).
