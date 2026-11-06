@@ -1933,6 +1933,32 @@ def verify(
             ),
         )
     )
+    payment_assets = [
+        item
+        for item in assets.values()
+        if str(item.get("operational_status") or "") == "PAYMENT_REQUIRED"
+    ]
+    payment_asset_ids = {
+        item["asset_id"]
+        for item in payment_assets
+        if observation_identifier_is_safe(item.get("asset_id"))
+    }
+    invalid_payment_identifiers = len(payment_asset_ids) != len(payment_assets)
+    checks.append(
+        result(
+            "assets.payment_required",
+            "FAIL"
+            if invalid_payment_identifiers
+            else ("WARN" if payment_assets else "PASS"),
+            "payment observations include invalid asset identifiers"
+            if invalid_payment_identifiers
+            else (
+                "none observed"
+                if not payment_assets
+                else ", ".join(str(item.get("asset_id")) for item in payment_assets)
+            ),
+        )
+    )
 
     configured_critical_assets = manifest.get("critical_assets")
     critical_assets = (

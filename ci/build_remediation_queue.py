@@ -236,18 +236,23 @@ def target_from_check(check_id: str) -> str | None:
 
 def prohibited_status_targets(detail: str) -> list[str]:
     """Recover the affected assets emitted by assets.prohibited_status."""
+    return observation_targets(detail, kind="prohibited asset")
+
+
+def observation_targets(detail: str, *, kind: str) -> list[str]:
+    """Recover comma-separated asset ids from a readiness finding detail."""
     if not detail.strip():
-        raise ContractError("assets.prohibited_status must identify an affected asset")
+        raise ContractError(f"{kind} must identify an affected asset")
     targets: list[str] = []
     seen: set[str] = set()
     for index, item in enumerate(detail.split(",")):
         target = validate_identifier(
             item.strip(),
-            f"prohibited asset target {index}",
+            f"{kind} target {index}",
         )
         assert target is not None
         if target in seen:
-            raise ContractError(f"duplicate prohibited asset target: {target}")
+            raise ContractError(f"duplicate {kind} target: {target}")
         seen.add(target)
         targets.append(target)
     return targets
@@ -298,6 +303,8 @@ def classify(check_id: str, target: str | None, detail: str) -> tuple[str, str, 
         )
     if check_id.startswith(("evidence.", "production.requirement.independent_")):
         return "evidence", "PRODUCE_INDEPENDENT_EVIDENCE", "INDEPENDENT_EVIDENCE_REQUIRED"
+    if check_id == "assets.payment_required":
+        return "provider", "RECONCILE_PROVIDER_TARGET", "EXTERNAL_ACTION_REQUIRED"
     if check_id == "assets.prohibited_status":
         if target and target.startswith("github:"):
             return "source", "REPAIR_SOURCE_CONTRACT", "SOURCE_CHANGE_REQUIRED"
@@ -346,7 +353,11 @@ def failed_dependencies(
     if not (
         check_id.startswith(("asset.", "headers.", "alignment.", "freshness.asset."))
         or check_id
-        in {"assets.prohibited_status", "production.requirement.critical_huggingface_alignment"}
+        in {
+            "assets.payment_required",
+            "assets.prohibited_status",
+            "production.requirement.critical_huggingface_alignment",
+        }
     ):
         return []
     dependencies = {"manifest.baseline_contract", "audit.payload_contract", "assets.unique_ids"}
@@ -407,8 +418,15 @@ def build_queue(
         check_id = check["id"]
         sanitized_detail = sanitize_detail(check["detail"])
         targets = (
-            prohibited_status_targets(check["detail"])
-            if check_id == "assets.prohibited_status"
+            observation_targets(
+                check["detail"],
+                kind=(
+                    "prohibited asset"
+                    if check_id == "assets.prohibited_status"
+                    else "payment-gated asset"
+                ),
+            )
+            if check_id in {"assets.prohibited_status", "assets.payment_required"}
             and not failed_dependencies(check_id, None, states)
             else [target_from_check(check_id)]
         )

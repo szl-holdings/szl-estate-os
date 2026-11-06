@@ -263,6 +263,13 @@ real server path, static assets are excluded, and discovery failures fall back
 to the declared root. This keeps route evidence aligned with the deployed site
 instead of treating retired, guessed paths as current contracts.
 
+An HTTP 402 is `UNAVAILABLE` / `PAYMENT_REQUIRED` only when the body is a
+payment challenge (`x402`, `PAYMENT-SIGNATURE`, or a monetization-gateway
+payment page). The public probe does not pay and does not call that route
+`LIVE`. An empty or unrelated 402 stays `BROKEN`, as do other non-success
+statuses outside 401 and 403. A critical surface that must be `LIVE` still
+fails when the observed label is not `LIVE`.
+
 The audit preserves raw required security-header values as well as presence.
 Web hardening fails closed on a wildcard or unsafe-script CSP, a short or zero
 HSTS max-age, non-`nosniff` content-type policy, or a leaking referrer policy.
@@ -301,8 +308,11 @@ Loopback is the safe default. A non-loopback bind requires both
   not proved.
 - `LIVE`: the specific route or runtime state was directly observed live.
 - `MODELED`: placeholder, thin, or not yet operational content.
-- `BROKEN`: the probe directly observed a failed state.
-- `UNAVAILABLE`: access or runtime evidence could not be retrieved.
+- `BROKEN`: the probe directly observed a failed state. A recognized payment
+  challenge is not a failed state.
+- `UNAVAILABLE`: access or runtime evidence could not be retrieved. A recognized
+  HTTP 402 payment challenge uses operational status `PAYMENT_REQUIRED`. The
+  public baseline records it as a warning and does not pay.
 - `ARCHIVED`: the source reports that the asset is archived.
 
 Scores are nullable. Missing branch protection, security, governance, or card

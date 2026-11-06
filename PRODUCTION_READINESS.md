@@ -41,7 +41,10 @@ profile into a repeatable CI gate.
 
 `baseline` requires all public sources to be measured, known critical public
 assets to exist, critical routes and Spaces to be live, required web security
-headers to be present, and no directly observed `BROKEN` asset.
+headers to be present, and no directly observed `BROKEN` asset. A recognized
+HTTP 402 payment challenge is `UNAVAILABLE` / `PAYMENT_REQUIRED` and is warned,
+not counted as `BROKEN`. It still fails a critical surface whose required
+status is `LIVE`. The public probe does not pay.
 
 `production` additionally requires authenticated scope, private critical assets,
 exact critical Space source/runtime alignment, independent asymmetric evidence,

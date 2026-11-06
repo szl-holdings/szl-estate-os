@@ -2022,6 +2022,146 @@ class ReadinessTests(unittest.TestCase):
         self.assertTrue(all(action["control_plane"] == "source" for action in actions))
         self.assertTrue(all(action["state"] == "BLOCKED" for action in actions))
 
+    def test_recognized_payment_gate_warns_without_clearing_a_broken_route(self) -> None:
+        value = audit()
+        value["meta"]["status"] = "MEASURED"
+        value["assets"] = [
+            {
+                "asset_id": "domain:route:a-11-oy.com/api/a11oy/v1/experimental/index",
+                "source": "domains",
+                "asset_type": "route",
+                "status_label": "UNAVAILABLE",
+                "operational_status": "PAYMENT_REQUIRED",
+                "observed_at": "2026-08-01T18:56:00Z",
+                "url": "https://a-11-oy.com/api/a11oy/v1/experimental/index",
+                "metadata": {"status_code": 402, "content_state": "PAYMENT_REQUIRED"},
+            },
+            {
+                "asset_id": "domain:route:a-11-oy.com/",
+                "source": "domains",
+                "asset_type": "route",
+                "status_label": "LIVE",
+                "operational_status": "REAL",
+                "observed_at": "2026-08-01T18:56:00Z",
+                "url": "https://a-11-oy.com/",
+                "metadata": {"status_code": 200, "content_state": "REAL"},
+            },
+            {
+                "asset_id": "domain:route:a-11-oy.com/missing",
+                "source": "domains",
+                "asset_type": "route",
+                "status_label": "BROKEN",
+                "operational_status": "HTTP_404",
+                "observed_at": "2026-08-01T18:56:00Z",
+                "url": "https://a-11-oy.com/missing",
+                "metadata": {"status_code": 404},
+            },
+        ]
+        value["source_reports"][2]["count"] = 3
+        report = verify(value, manifest(), "baseline")
+        self.assertEqual(check(report, "assets.prohibited_status")["state"], "FAIL")
+        self.assertIn(
+            "domain:route:a-11-oy.com/missing",
+            check(report, "assets.prohibited_status")["detail"],
+        )
+        self.assertNotIn(
+            "experimental/index",
+            check(report, "assets.prohibited_status")["detail"],
+        )
+        self.assertEqual(check(report, "assets.payment_required")["state"], "WARN")
+        self.assertEqual(
+            check(report, "assets.payment_required")["detail"],
+            "domain:route:a-11-oy.com/api/a11oy/v1/experimental/index",
+        )
+        self.assertEqual(report["status"], "FAIL")
+
+    def test_payment_gate_on_a_critical_live_surface_still_fails(self) -> None:
+        value = audit()
+        value["meta"]["status"] = "MEASURED"
+        value["assets"] = [
+            {
+                "asset_id": "domain:route:a-11-oy.com/",
+                "source": "domains",
+                "asset_type": "route",
+                "status_label": "UNAVAILABLE",
+                "operational_status": "PAYMENT_REQUIRED",
+                "observed_at": "2026-08-01T18:56:00Z",
+                "url": "https://a-11-oy.com/",
+                "metadata": {
+                    "status_code": 402,
+                    "content_state": "PAYMENT_REQUIRED",
+                    "security_headers": {
+                        "content-security-policy": True,
+                        "referrer-policy": True,
+                        "strict-transport-security": True,
+                        "x-content-type-options": True,
+                    },
+                    "security_header_values": {
+                        "content-security-policy": "default-src 'none'",
+                        "referrer-policy": "no-referrer",
+                        "strict-transport-security": "max-age=63072000",
+                        "x-content-type-options": "nosniff",
+                    },
+                },
+            }
+        ]
+        for report_item in value["source_reports"]:
+            report_item["count"] = 1 if report_item["source"] == "domains" else 0
+        report = verify(value, manifest(), "baseline")
+        self.assertEqual(check(report, "assets.prohibited_status")["state"], "PASS")
+        self.assertEqual(check(report, "assets.payment_required")["state"], "WARN")
+        self.assertEqual(check(report, "asset.domain:route:a-11-oy.com/")["state"], "FAIL")
+        self.assertIn("status=UNAVAILABLE required=LIVE", check(report, "asset.domain:route:a-11-oy.com/")["detail"])
+        self.assertEqual(report["status"], "FAIL")
+        queue = build_queue(
+            report,
+            manifest(),
+            readiness_sha256="a" * 64,
+            manifest_sha256="b" * 64,
+        )
+        payment = next(
+            action for action in queue["actions"] if action["check_id"] == "assets.payment_required"
+        )
+        self.assertEqual(payment["state"], "PLANNED")
+        self.assertEqual(payment["authority"], "EXTERNAL_ACTION_REQUIRED")
+        self.assertEqual(payment["target"], "domain:route:a-11-oy.com/")
+        critical = next(
+            action
+            for action in queue["actions"]
+            if action["check_id"] == "asset.domain:route:a-11-oy.com/"
+        )
+        self.assertEqual(critical["state"], "BLOCKED")
+
+    def test_payment_gate_alone_does_not_fail_baseline(self) -> None:
+        value = audit()
+        value["meta"]["status"] = "MEASURED"
+        value["assets"] = [
+            {
+                "asset_id": "domain:route:a-11-oy.com/api/a11oy/v1/experimental/index",
+                "source": "domains",
+                "asset_type": "route",
+                "status_label": "UNAVAILABLE",
+                "operational_status": "PAYMENT_REQUIRED",
+                "observed_at": "2026-08-01T18:56:00Z",
+                "url": "https://a-11-oy.com/api/a11oy/v1/experimental/index",
+                "metadata": {"status_code": 402, "content_state": "PAYMENT_REQUIRED"},
+            }
+        ]
+        for report_item in value["source_reports"]:
+            report_item["count"] = 1 if report_item["source"] == "domains" else 0
+        report = verify(value, manifest(), "baseline")
+        self.assertEqual(check(report, "assets.prohibited_status")["state"], "PASS")
+        self.assertEqual(check(report, "assets.prohibited_status")["detail"], "none observed")
+        self.assertEqual(check(report, "assets.payment_required")["state"], "WARN")
+        self.assertEqual(report["status"], "FAIL")
+        self.assertNotEqual(
+            {item["id"] for item in report["checks"] if item["state"] == "FAIL"},
+            {"assets.payment_required", "assets.prohibited_status"},
+        )
+        failing = {item["id"] for item in report["checks"] if item["state"] == "FAIL"}
+        self.assertNotIn("assets.payment_required", failing)
+        self.assertNotIn("assets.prohibited_status", failing)
+
     def test_prohibited_noncritical_observations_require_valid_schema(self) -> None:
         cases = (
             (
