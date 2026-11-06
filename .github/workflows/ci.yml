@@ -69,6 +69,13 @@ jobs:
         env:
           SZL_COORD_PATCHED: tools/coordinator/szl_coordinator.py
         run: python -I -B tools/coordinator/test_szl_lane_lease.py -v
+      - name: Test anatomy body gate and khipu number contracts
+        run: python -B ci/test_anatomy_gate.py -v
+      - name: Test offline session-recovery contracts (fake GitHub transport, no SSH)
+        run: python -B -m unittest discover -s ops/recovery/tests -v
+      - name: Test VM readiness runner contracts (stub checker, never the real payload)
+        working-directory: ops/vm/readiness
+        run: python -B test_szl_readiness_runner.py -v
   snowflake-evidence-explorer:
     # Standard-library tests only: no package installs, no credentials. The
     # integration suite must skip here because its approval variables are unset.
