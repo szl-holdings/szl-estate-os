@@ -19,7 +19,7 @@ providers = [
   "huggingface_hub==2.4.0",
 ]
 presentation = [
-  "pydantic==2.14.2",
+  "pydantic==2.14.3",
   "rich==15.0.0",
   "beautifulsoup4==4.15.0",
 ]
