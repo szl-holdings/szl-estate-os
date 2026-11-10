@@ -95,7 +95,7 @@ jobs:
           python SZL_ONE_OF_ONE_ESTATE_OS.py audit
           --github-org szl-holdings
           --hf-org SZLHOLDINGS
-          --hf-space betterwithage/anatomy
+          --hf-space SZLHOLDINGS/anatomy
           --domain a-11-oy.com
           --domain a11oy.net
           --deep
@@ -301,7 +301,7 @@ jobs:
           python SZL_ONE_OF_ONE_ESTATE_OS.py audit
           --github-org szl-holdings
           --hf-org SZLHOLDINGS
-          --hf-space betterwithage/anatomy
+          --hf-space SZLHOLDINGS/anatomy
           --domain a-11-oy.com
           --domain a11oy.net
           --deep
