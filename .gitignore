@@ -14,3 +14,7 @@ work/runtime/
 maintenance/runs/
 maintenance/.pytest_cache/
 maintenance/.szl-apply.lock
+# Python packaging artifacts (root pyproject.toml)
+build/
+dist/
+*.egg-info/

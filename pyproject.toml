@@ -4,20 +4,48 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "szl-estate-os"
-version = "0.1.0"
+# Single source of truth: the CLI's `--version` and every audit payload's
+# app_version come from SZL_ONE_OF_ONE_ESTATE_OS.APP_VERSION.
+dynamic = ["version"]
 description = "Governed, evidence-aware control plane for the SZL GitHub, Hugging Face, and domain estate."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{ name = "Stephen Lutar", email = "stephen@szlholdings.com" }]
+classifiers = [
+  # Private repository; never published to a package index.
+  "Private :: Do Not Upload",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+# The control plane uses only the Python standard library.
 dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
 
 [project.urls]
 Homepage = "https://a-11-oy.com"
-Repository = "https://github.com/szl-holdings/szl-estate-os"
+Source = "https://github.com/szl-holdings/szl-estate-os"
+Issues = "https://github.com/szl-holdings/szl-estate-os/issues"
 
 [tool.setuptools]
+# Install editable from a checkout (`pip install -e '.[test]'`): outputs/ is
+# resolved next to SZL_ONE_OF_ONE_ESTATE_OS.py and steward-export-public reads
+# the git checkout that holds these modules.
 py-modules = ["ACTION_ASSURANCE_RUNTIME", "SZL_ONE_OF_ONE_ESTATE_OS", "frontier_steward", "operating_fabric", "steward_public"]
+# SZL_ONE_OF_ONE_ESTATE_OS and ACTION_ASSURANCE_RUNTIME import estate.*.
+packages = ["estate"]
+
+[tool.setuptools.package-data]
+estate = ["*.json"]
+
+[tool.setuptools.dynamic]
+version = { attr = "SZL_ONE_OF_ONE_ESTATE_OS.APP_VERSION" }
 
 [tool.ruff]
 line-length = 120
@@ -26,3 +54,8 @@ extend-exclude = ["build", "dist", ".venv", "node_modules"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
+# A bare `pytest` at the root runs only tests/. The other suites run with the
+# commands in README "Tests" and .github/workflows/ci.yml: maintenance/ and
+# tools/szl_estate/ both ship a package named szl_estate, so they cannot share
+# one pytest session.
+testpaths = ["tests"]
