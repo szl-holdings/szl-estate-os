@@ -1,0 +1,103 @@
+{
+  "excluded": [
+    "API tokens and token metadata (inspect_1610.json tokens)",
+    "the account audit log and its actor e-mail addresses",
+    "account name, members, billing and registrar contacts",
+    "e-mail routing rules and destination addresses",
+    "Worker secret_text values (the API never returns them) and plain_text binding values (stored as SHA-256)",
+    "TXT values other than SPF/DMARC policy (stored as SHA-256 and length)",
+    "DNS record ids and comments, ruleset ids, versions and timestamps",
+    "D1, R2, AI Gateway, Access applications, notification policies, zone settings and certificates: not exported"
+  ],
+  "files": {
+    "account.json": {
+      "scope": "account",
+      "sections": [
+        "tunnels",
+        "workers"
+      ],
+      "sha256": "b20a77ce999ed545ae38cd624e1a6e89ff6fd24ca2ca889711908bf0d70251c8"
+    },
+    "zones/a-11-oy.com.json": {
+      "scope": "zone:a-11-oy.com",
+      "sections": [
+        "bot_management",
+        "config_rules",
+        "dns",
+        "monetization_rules",
+        "rate_limit",
+        "waf_custom",
+        "zone"
+      ],
+      "sha256": "fe4b1a0760aa95b75c70c33638408a4a56ad7588acd10317e9226ee2726745db"
+    },
+    "zones/a11oy.net.json": {
+      "scope": "zone:a11oy.net",
+      "sections": [
+        "bot_management",
+        "config_rules",
+        "dns",
+        "monetization_rules",
+        "rate_limit",
+        "waf_custom",
+        "zone"
+      ],
+      "sha256": "fc15ebbc584968bf8fa8f9d9ef7ea6d7df9fe5b7cd2bea57f59c06cdaa172999"
+    },
+    "zones/szlholdings.com.json": {
+      "scope": "zone:szlholdings.com",
+      "sections": [
+        "bot_management",
+        "config_rules",
+        "dns",
+        "monetization_rules",
+        "rate_limit",
+        "waf_custom",
+        "zone"
+      ],
+      "sha256": "1eb6593d13b90c123b6614d1dead4cc407254775427fed7856d2744691269e76"
+    }
+  },
+  "generated_by": "cloudflare/build_snapshot_20261106.py",
+  "known_changes_after_capture": [
+    "2026-11-06T15:08:20Z: the account audit log records a DNS record created in a-11-oy.com by another actor, after the 15:06Z DNS capture (CLOUDFLARE_REPORT CF-8: showcase.a-11-oy.com). It is not in this baseline, so the first live drift run is expected to report it as an added record.",
+    "2026-11-06T15:31:28Z-15:35:49Z: rulesets_update events on a-11-oy.com. The WAF, rate-limit and configuration rule lists here come from the 16:11Z read, which postdates them; action_parameters come from the 15:06Z read and are only reused where description, expression and action are unchanged.",
+    "2026-11-06T16:27:21Z-16:27:25Z: the coordinator disabled three Monetization Gateway rules (monetization_changes_1655.json); this baseline applies those changes to the 16:26Z rule read."
+  ],
+  "placeholder_marker": "$uncaptured",
+  "schema": "szl.cloudflare-config-snapshot/v1",
+  "snapshot": "2026-11-06",
+  "sources": [
+    {
+      "file": "_cf/cf_audit.json",
+      "file_written_at": "2026-11-06T15:06:12Z",
+      "sha256": "853e630f0ac2d26f4e81786245b94a0eef79b6719696df340d01b038899a2230"
+    },
+    {
+      "file": "_cf/inspect_1610.json",
+      "file_written_at": "2026-11-06T16:11:23Z",
+      "sha256": "d846dcd717609420236c6f4318030f91663f0b575330d6d2f22a0d8bdab92e88"
+    },
+    {
+      "file": "_cf/monetization_rules_1650.json",
+      "file_written_at": "2026-11-06T16:26:29Z",
+      "sha256": "3de0ac74e2292d0878e244b9e7fdf60e42d194df065cbff360930c499dc5ffc1"
+    },
+    {
+      "file": "_cf/monetization_changes_1655.json",
+      "file_written_at": "2026-11-06T16:27:25Z",
+      "sha256": "ff85e5d6f1ebc0e4e594da787999b32d6aba190f9a5567572480f3c98109c516"
+    },
+    {
+      "file": "_cf/szlholdings_zone.json",
+      "file_written_at": "2026-11-06T15:25:25Z",
+      "sha256": "61be247267c086ecb19b0f63076dfcb291e365319d914d7d8435a79b68a796a1"
+    },
+    {
+      "file": "_cf/szlholdings_dns_after.json",
+      "file_written_at": "2026-11-06T15:31:55Z",
+      "sha256": "962d642cba99e017010e51e5cc7cec7cf1e8a125e9c17002d061c422380c31f2"
+    }
+  ],
+  "volatile_marker": "_state"
+}
