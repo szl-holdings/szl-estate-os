@@ -21,6 +21,7 @@ The mutant checks run locally. `python -I -B tools/coordinator/mutate_szl_coordi
 31 mutants (about 15 min) and exits 0 only if every mutant is killed and no test is skipped.
 `SZL_COORD_PATCHED=tools/coordinator/szl_coordinator.py python -I -B tools/coordinator/mutate_szl_lane_lease.py`
 runs 43 lease mutants (3 recorded as equivalent) and 6 coordinator-integration mutants.
+The coordinator path is resolved against the process working directory, not the temporary mutant work dir.
 
 Limits: the Ed25519 code is pure Python and not constant-time, so it is for local operator keys only.
 The chain lock and the lease lock assume a local filesystem. Lease files are hashed, not signed. A crashed run leaves `.chain.lock` for an operator to remove.
