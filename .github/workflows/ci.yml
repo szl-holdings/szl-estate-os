@@ -205,7 +205,13 @@ jobs:
             echo "Coordinator mutation: base SHA missing; running fail-closed."
             exit 0
           fi
-          if git diff --name-only "${base}" "${{ github.sha }}" | grep -E -q '^(tools/coordinator/|\.github/workflows/ci\.yml$)'; then
+          if ! changed="$(git diff --name-only "${base}" "${{ github.sha }}")"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Coordinator mutation: git diff failed; running fail-closed."
+            exit 0
+          fi
+          # Here-string avoids SIGPIPE from grep -q closing a git-diff pipe under pipefail.
+          if grep -E -q '^(tools/coordinator/|\.github/workflows/ci\.yml$)' <<< "${changed}"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "Coordinator mutation: tools/coordinator or ci.yml changed."
           else
@@ -228,8 +234,14 @@ jobs:
           SZL_COORD_PATCHED: tools/coordinator/szl_coordinator.py
         run: |
           set -euo pipefail
+          set +e
           python -I -B tools/coordinator/mutate_szl_lane_lease.py
-          cp tools/coordinator/mutation_results.json "${RUNNER_TEMP}/lease-mutation-results.json"
+          rc=$?
+          set -e
+          if [ -f tools/coordinator/mutation_results.json ]; then
+            cp tools/coordinator/mutation_results.json "${RUNNER_TEMP}/lease-mutation-results.json"
+          fi
+          exit "${rc}"
       - name: Preserve mutation evidence on success or failure
         if: always() && steps.gate.outputs.run == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
