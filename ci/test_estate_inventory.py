@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -61,7 +62,7 @@ class PublicInventoryTests(unittest.TestCase):
 
     def test_cross_source_failure_preserves_successful_public_rows(self):
         def fetch(url):
-            if "api.github.com" in url:
+            if urlsplit(url).hostname == "api.github.com":
                 raise inventory.InventoryError("HTTP_403")
             return [row(kind="model")], ""
         result = inventory.build_inventory("owner", "owner", fetch=fetch)

@@ -306,6 +306,11 @@ def evaluate_safety(text: str) -> SafetyDecision:
     )
 
 
+def _env_present(name: str) -> bool:
+    """True when the environment variable is set to a non-blank value; never returns its bytes."""
+    return os.environ.get(name, "").strip() != ""
+
+
 def runtime_status(
     *,
     requested_model: str = REQUESTED_MODEL_FAMILY,
@@ -315,8 +320,10 @@ def runtime_status(
 
     cli_path = shutil.which("codex")
     sdk_installed = importlib.util.find_spec("cursor_sdk") is not None
-    sdk_key_present = bool(os.environ.get("CURSOR_API_KEY"))
-    api_key_present = bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    # Presence flags are computed by comparison so no credential bytes can flow into
+    # the status payload (CodeQL py/clear-text-logging-sensitive-data).
+    sdk_key_present = _env_present("CURSOR_API_KEY")
+    api_key_present = _env_present("OPENAI_API_KEY")
     attestation_fields = {
         "provider": os.environ.get("SZL_STEWARD_MODEL_PROVIDER"),
         "model_id": resolved_model or os.environ.get("SZL_STEWARD_MODEL_ID"),
