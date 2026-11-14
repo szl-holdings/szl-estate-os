@@ -1,0 +1,55 @@
+name: Cloudflare config contracts
+
+# Offline checks for cloudflare/: the committed snapshot's digests, closed file
+# set and secret scan, plus the exporter and drift contracts against a local
+# API stub. No credentials and no network access to Cloudflare. The live,
+# token-backed comparison is cloudflare-config-drift.yml.
+
+on:
+  pull_request:
+    paths:
+      - "cloudflare/**"
+      - ".github/workflows/cloudflare-config-ci.yml"
+      - ".github/workflows/cloudflare-config-drift.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "cloudflare/**"
+      - ".github/workflows/cloudflare-config-ci.yml"
+      - ".github/workflows/cloudflare-config-drift.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-config-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: Snapshot integrity and drift contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+          disable-telemetry: true
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Test the exporter, normalizers and drift comparison
+        run: python -I -B cloudflare/test_cf_config.py -v
+
+      - name: Verify the committed snapshot
+        run: python -I -B cloudflare/cf_config.py verify-snapshot
