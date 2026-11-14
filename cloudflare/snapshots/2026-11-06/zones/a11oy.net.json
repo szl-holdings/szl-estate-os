@@ -1,0 +1,229 @@
+{
+  "scope": "zone:a11oy.net",
+  "sections": {
+    "bot_management": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": {
+        "_state": {
+          "using_latest_model": true
+        },
+        "ai_agents": {
+          "anthropic_agent": "disabled",
+          "google_agent": "disabled",
+          "instinct": "disabled",
+          "muse": "disabled",
+          "openai_agent": "disabled"
+        },
+        "ai_bots_migration_opt_out": false,
+        "ai_bots_protection": "block",
+        "ai_search": "disabled",
+        "ai_training": "disallow",
+        "ai_user": "disabled",
+        "bot_preference_sync_enabled": true,
+        "cf_robots_variant": "off",
+        "content_bots_protection": "disabled",
+        "crawler_protection": "enabled",
+        "enable_js": true,
+        "is_robots_txt_managed": true,
+        "optimize_wordpress": false,
+        "sbfm_definitely_automated": "managed_challenge",
+        "sbfm_static_resource_protection": false,
+        "sbfm_verified_bots": "allow",
+        "stale_zone_configuration": {
+          "fight_mode": true
+        },
+        "suppress_session_score": false
+      }
+    },
+    "config_rules": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "note": "rule list, order and enabled flags from the 16:11Z read; action_parameters from cf_audit.json",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": []
+    },
+    "dns": {
+      "captured": {
+        "file_written_at": "2026-11-06T15:06:12Z",
+        "source": "_cf/cf_audit.json"
+      },
+      "data": [
+        {
+          "content": "185.199.108.153",
+          "name": "a11oy.net",
+          "proxied": true,
+          "ttl": 1,
+          "type": "A"
+        },
+        {
+          "content": "185.199.109.153",
+          "name": "a11oy.net",
+          "proxied": true,
+          "ttl": 1,
+          "type": "A"
+        },
+        {
+          "content": "185.199.110.153",
+          "name": "a11oy.net",
+          "proxied": true,
+          "ttl": 1,
+          "type": "A"
+        },
+        {
+          "content": "185.199.111.153",
+          "name": "a11oy.net",
+          "proxied": true,
+          "ttl": 1,
+          "type": "A"
+        },
+        {
+          "content": "100::",
+          "name": "ntfy.a11oy.net",
+          "proxied": true,
+          "ttl": 1,
+          "type": "AAAA"
+        },
+        {
+          "content": "szl-holdings.github.io",
+          "name": "www.a11oy.net",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "route1.mx.cloudflare.net",
+          "name": "a11oy.net",
+          "priority": {
+            "$uncaptured": "cf_audit.json did not record MX priority"
+          },
+          "proxied": false,
+          "ttl": 1,
+          "type": "MX"
+        },
+        {
+          "content": "route2.mx.cloudflare.net",
+          "name": "a11oy.net",
+          "priority": {
+            "$uncaptured": "cf_audit.json did not record MX priority"
+          },
+          "proxied": false,
+          "ttl": 1,
+          "type": "MX"
+        },
+        {
+          "content": "route3.mx.cloudflare.net",
+          "name": "a11oy.net",
+          "priority": {
+            "$uncaptured": "cf_audit.json did not record MX priority"
+          },
+          "proxied": false,
+          "ttl": 1,
+          "type": "MX"
+        },
+        {
+          "content": "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s",
+          "name": "_dmarc.a11oy.net",
+          "proxied": false,
+          "ttl": 3600,
+          "type": "TXT"
+        },
+        {
+          "content_kind": "other",
+          "content_length": 32,
+          "content_sha256": "fa68fb69957e039d4253a3d40533dbc94e61bc1fb4912c17f9f972642c520c41",
+          "name": "_github-pages-challenge-szl-holdings.a11oy.net",
+          "proxied": false,
+          "ttl": 1,
+          "type": "TXT"
+        },
+        {
+          "content": "v=spf1 include:_spf.mx.cloudflare.net ~all",
+          "name": "a11oy.net",
+          "proxied": false,
+          "ttl": 1,
+          "type": "TXT"
+        },
+        {
+          "content_kind": "dkim",
+          "content_length": 425,
+          "content_sha256": "e3f6edfd6baf325a956bea9a7453a55c93011c260ac344532fe3246d4e116d15",
+          "name": "cf2024-1._domainkey.a11oy.net",
+          "proxied": false,
+          "ttl": 1,
+          "type": "TXT"
+        }
+      ]
+    },
+    "monetization_rules": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:26:29Z",
+        "note": "16:26Z rule read with the three 16:27Z disables of monetization_changes_1655.json applied",
+        "source": "_cf/monetization_rules_1650.json"
+      },
+      "data": [
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Verified bot traffic (x402) - non-experiment paths only",
+          "enabled": false,
+          "expression": "((http.request.uri.path wildcard r\"/*\" and not starts_with(http.request.uri.path, \"/experiments\") and cf.client.bot) and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "56a204859a924e75890dd81776554b02",
+          "price": "1000000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Proof experimental endpoints (bots)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/experiments\") and cf.client.bot and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "a539c1edbd2f49b5bbb7d2b5bc4de466",
+          "price": "10000",
+          "scheme": "exact"
+        }
+      ]
+    },
+    "rate_limit": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "note": "rule list, order and enabled flags from the 16:11Z read; action_parameters from cf_audit.json",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": []
+    },
+    "waf_custom": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "note": "rule list, order and enabled flags from the 16:11Z read; action_parameters from cf_audit.json",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": [
+        {
+          "action": "block",
+          "description": "Block vulnerability-scanner probes on the proof domain (.ssh/.env/xmlrpc/wp paths)",
+          "enabled": true,
+          "expression": "(http.request.uri.path contains \"/.ssh\" or http.request.uri.path contains \"/.env\" or http.request.uri.path contains \"xmlrpc\" or starts_with(http.request.uri.path, \"/wp-\") or http.request.uri.path contains \"wp-config\" or http.request.uri.path eq \"/env.js\" or http.request.uri.path contains \"/.git\")"
+        }
+      ]
+    },
+    "zone": {
+      "captured": {
+        "file_written_at": "2026-11-06T15:06:12Z",
+        "source": "_cf/cf_audit.json"
+      },
+      "data": {
+        "name": "a11oy.net",
+        "name_servers": [
+          "desiree.ns.cloudflare.com",
+          "simon.ns.cloudflare.com"
+        ],
+        "paused": false,
+        "plan": "Pro Website",
+        "status": "active",
+        "type": "full"
+      }
+    }
+  }
+}

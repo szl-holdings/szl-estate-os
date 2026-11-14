@@ -1,0 +1,547 @@
+{
+  "scope": "zone:a-11-oy.com",
+  "sections": {
+    "bot_management": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": {
+        "_state": {
+          "using_latest_model": true
+        },
+        "ai_agents": {
+          "anthropic_agent": "disabled",
+          "google_agent": "disabled",
+          "instinct": "disabled",
+          "muse": "disabled",
+          "openai_agent": "disabled"
+        },
+        "ai_bots_migration_opt_out": false,
+        "ai_bots_protection": "disabled",
+        "ai_search": "disabled",
+        "ai_training": "disallow",
+        "ai_user": "disabled",
+        "bot_preference_sync_enabled": true,
+        "cf_robots_variant": "off",
+        "content_bots_protection": "disabled",
+        "crawler_protection": "enabled",
+        "enable_js": true,
+        "is_robots_txt_managed": true,
+        "optimize_wordpress": false,
+        "sbfm_definitely_automated": "managed_challenge",
+        "sbfm_static_resource_protection": true,
+        "sbfm_verified_bots": "allow",
+        "suppress_session_score": false
+      }
+    },
+    "config_rules": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "note": "rule list, order and enabled flags from the 16:11Z read; action_parameters from cf_audit.json",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": [
+        {
+          "action": "set_config",
+          "action_parameters": {
+            "webmcp_enabled": false
+          },
+          "description": "Issue #2743: preserve origin CSP for isolated Platform preview only",
+          "enabled": true,
+          "expression": "(http.host eq \"a-11-oy.com\" and (http.request.uri.path eq \"/preview/platform-a11oy\" or starts_with(http.request.uri.path, \"/preview/platform-a11oy/\")))"
+        }
+      ]
+    },
+    "dns": {
+      "captured": {
+        "file_written_at": "2026-11-06T15:06:12Z",
+        "source": "_cf/cf_audit.json"
+      },
+      "data": [
+        {
+          "content": "137.175.22.196",
+          "name": "gpu-cloud.a-11-oy.com",
+          "proxied": false,
+          "ttl": 300,
+          "type": "A"
+        },
+        {
+          "content": "100::",
+          "name": "agents-store.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "AAAA"
+        },
+        {
+          "content": "0 issue \"letsencrypt.org\"",
+          "name": "a-11-oy.com",
+          "proxied": false,
+          "ttl": 3600,
+          "type": "CAA"
+        },
+        {
+          "content": "0 issue \"pki.goog\"",
+          "name": "a-11-oy.com",
+          "proxied": false,
+          "ttl": 3600,
+          "type": "CAA"
+        },
+        {
+          "content": "0 issue \"ssl.com\"",
+          "name": "a-11-oy.com",
+          "proxied": false,
+          "ttl": 3600,
+          "type": "CAA"
+        },
+        {
+          "content": "szlholdings-a11oy.hf.space",
+          "name": "a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "4d22013d-e93b-4889-9a17-b30012cf19e9.cfargotunnel.com",
+          "name": "api.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "acd44edd-1faf-46fc-ad40-c2977b3f98fb.cfargotunnel.com",
+          "name": "desktop.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "1e17425f-0031-43b1-98d2-9570f862a9e4.cfargotunnel.com",
+          "name": "desktop2.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "szl-holdings.github.io",
+          "name": "dev.a-11-oy.com",
+          "proxied": false,
+          "ttl": 300,
+          "type": "CNAME"
+        },
+        {
+          "content": "4d22013d-e93b-4889-9a17-b30012cf19e9.cfargotunnel.com",
+          "name": "gateway.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "szlholdings-gdw-frontier.hf.space",
+          "name": "gdw.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "4d22013d-e93b-4889-9a17-b30012cf19e9.cfargotunnel.com",
+          "name": "gpu.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "9bec082b-8338-43f6-93f1-b33c817d8078.cfargotunnel.com",
+          "name": "gpu2.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "szl-holdings.github.io",
+          "name": "holdings.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "9bec082b-8338-43f6-93f1-b33c817d8078.cfargotunnel.com",
+          "name": "inference.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "szlholdings-killinchu.hf.space",
+          "name": "killinchu.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "20ec7fde-e65a-431a-845e-9a53aec73523.cfargotunnel.com",
+          "name": "mcp.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "edaf5825-5c95-4eb0-9750-a9e654799115.cfargotunnel.com",
+          "name": "meter.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "4d22013d-e93b-4889-9a17-b30012cf19e9.cfargotunnel.com",
+          "name": "meter2.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "szlholdings-a11oy.hf.space",
+          "name": "www.a-11-oy.com",
+          "proxied": true,
+          "ttl": 1,
+          "type": "CNAME"
+        },
+        {
+          "content": "route1.mx.cloudflare.net",
+          "name": "a-11-oy.com",
+          "priority": {
+            "$uncaptured": "cf_audit.json did not record MX priority"
+          },
+          "proxied": false,
+          "ttl": 1,
+          "type": "MX"
+        },
+        {
+          "content": "route2.mx.cloudflare.net",
+          "name": "a-11-oy.com",
+          "priority": {
+            "$uncaptured": "cf_audit.json did not record MX priority"
+          },
+          "proxied": false,
+          "ttl": 1,
+          "type": "MX"
+        },
+        {
+          "content": "route3.mx.cloudflare.net",
+          "name": "a-11-oy.com",
+          "priority": {
+            "$uncaptured": "cf_audit.json did not record MX priority"
+          },
+          "proxied": false,
+          "ttl": 1,
+          "type": "MX"
+        },
+        {
+          "content": "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s",
+          "name": "_dmarc.a-11-oy.com",
+          "proxied": false,
+          "ttl": 3600,
+          "type": "TXT"
+        },
+        {
+          "content": "\"v=spf1 include:_spf.mx.cloudflare.net ~all\"",
+          "name": "a-11-oy.com",
+          "proxied": false,
+          "ttl": 1,
+          "type": "TXT"
+        },
+        {
+          "content_kind": "dkim",
+          "content_length": 425,
+          "content_sha256": "e3f6edfd6baf325a956bea9a7453a55c93011c260ac344532fe3246d4e116d15",
+          "name": "cf2024-1._domainkey.a-11-oy.com",
+          "proxied": false,
+          "ttl": 1,
+          "type": "TXT"
+        }
+      ]
+    },
+    "monetization_rules": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:26:29Z",
+        "note": "16:26Z rule read with the three 16:27Z disables of monetization_changes_1655.json applied",
+        "source": "_cf/monetization_rules_1650.json"
+      },
+      "data": [
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "MCP tool calls - doctrine-governed (everyone, x402)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/mcp/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "2dac25fc6eb445d080d081141c6ffda5",
+          "price": "10000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Doctrine chat - Nemotron Estate flagship (everyone, x402)",
+          "enabled": true,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/chat/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "41cee0f88822411baf864bb54e8b4727",
+          "price": "20000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Acoustic validation ($0.05, everyone)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/acoustic/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "49b73ff270374852bb0702d150893b2b",
+          "price": "50000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Verified bot traffic (x402) - non-API (competitive)",
+          "enabled": false,
+          "expression": "((http.request.uri.path wildcard r\"/*\" and not starts_with(http.request.uri.path, \"/api/\") and cf.client.bot) and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "5303c2e182cd4d8daf974838f0b14f86",
+          "price": "100000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Completions/Responses - Nemotron Estate flagship (everyone, x402) [2026-11-06 leak fix]",
+          "enabled": true,
+          "expression": "(http.host eq \"inference.a-11-oy.com\" and (starts_with(http.request.uri.path, \"/v1/completions\") or starts_with(http.request.uri.path, \"/v1/responses\")) and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "6babfd10032746f7863cda066d95125d",
+          "price": "20000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Living Anatomy API ($0.05, everyone)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/anatomy/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "846c3eed8529415699b3305131f88ad6",
+          "price": "50000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Agent access - experimental surfaces (everyone, x402)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/api/a11oy/v1/experimental/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "85bd68e05db3411695fdd5b5f72ede29",
+          "price": "10000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Premium API mesh/frontier (bots)",
+          "enabled": true,
+          "expression": "((starts_with(http.request.uri.path, \"/api/a11oy/v1/mesh/\") or starts_with(http.request.uri.path, \"/api/a11oy/v1/frontier/\")) and cf.client.bot and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "94dc6d8169a84173bf0005bea66e50eb",
+          "price": "50000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Dataset access API ($0.10, everyone)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/data/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "a36a6d9287da4cbc977ec23381c9c3b2",
+          "price": "100000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Premium attest/ledger APIs (bots)",
+          "enabled": true,
+          "expression": "((starts_with(http.request.uri.path, \"/api/a11oy/v1/attest/\") or starts_with(http.request.uri.path, \"/api/a11oy/v1/ledger\")) and cf.client.bot and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "b8026fdb4f0d42c6ba734ddd77e75644",
+          "price": "25000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Model inference - estate-trained models (everyone, x402)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/inference/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "ceb0b09132634f44a6ce4abb05855ebb",
+          "price": "50000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Experimental surfaces (bots)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/api/a11oy/v1/experimental/\") and cf.client.bot and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "d25c5164dc994ce58bb4c9ff2e696c9f",
+          "price": "10000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Model inference - estate-trained models (verified bots)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/inference/\") and cf.client.bot and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "dda0725a501e4974a411964146d3af73",
+          "price": "100000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "MCP tool calls - doctrine-governed (verified bots)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/mcp/\") and cf.client.bot and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "e610a927dc324675a56448d7341d6d5d",
+          "price": "50000",
+          "scheme": "exact"
+        },
+        {
+          "address": "0x50E9B335ac233fcc5e87404367E7De253A63D460",
+          "description": "Second Brain retrieval API ($0.03, everyone)",
+          "enabled": false,
+          "expression": "(starts_with(http.request.uri.path, \"/v1/brain/\") and not (http.user_agent contains \"szl-readiness\" or http.user_agent contains \"szl-mesh-orchestrator\" or http.user_agent contains \"szl-energy-operator\" or http.user_agent contains \"SZL-Estate-Release-Train\" or http.user_agent contains \"SZL-Vigil-Anatomy-Probe\" or http.user_agent contains \"Cloudflare-Healthchecks\"))",
+          "id": "fb9e3c84e7684f3481ea4fc626ccc827",
+          "price": "30000",
+          "scheme": "exact"
+        }
+      ]
+    },
+    "rate_limit": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "note": "rule list, order and enabled flags from the 16:11Z read; action_parameters from cf_audit.json",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": [
+        {
+          "action": "block",
+          "description": "API soft rate limit (bots+humans)",
+          "enabled": true,
+          "expression": "starts_with(http.request.uri.path, \"/api/\")",
+          "ratelimit": {
+            "$uncaptured": "neither capture recorded the rate-limit characteristics, period or threshold"
+          }
+        }
+      ]
+    },
+    "waf_custom": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "note": "rule list, order and enabled flags from the 16:11Z read; action_parameters from cf_audit.json",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": [
+        {
+          "action": "skip",
+          "action_parameters": {
+            "phases": [
+              "http_ratelimit",
+              "http_request_firewall_managed",
+              "http_request_sbfm"
+            ],
+            "products": [
+              "zoneLockdown",
+              "uaBlock",
+              "hot",
+              "bic",
+              "securityLevel",
+              "rateLimit",
+              "waf"
+            ],
+            "ruleset": "current"
+          },
+          "description": "gpu tunnel skip (ops)",
+          "enabled": true,
+          "expression": "(http.host contains \"gpu\")"
+        },
+        {
+          "action": "skip",
+          "action_parameters": {
+            "phases": [
+              "http_request_sbfm"
+            ],
+            "products": [
+              "bic",
+              "securityLevel"
+            ],
+            "ruleset": "current"
+          },
+          "description": "Allow health/readiness without bot challenge",
+          "enabled": true,
+          "expression": "(http.request.uri.path eq \"/healthz\" or http.request.uri.path eq \"/api/a11oy/healthz\" or http.request.uri.path eq \"/api/a11oy/v1/honest\" or http.request.uri.path eq \"/robots.txt\" or starts_with(http.request.uri.path, \"/.well-known/\"))"
+        },
+        {
+          "action": "skip",
+          "action_parameters": {
+            "phases": [
+              "http_request_sbfm"
+            ],
+            "products": [
+              "bic",
+              "securityLevel"
+            ]
+          },
+          "description": "HQ Vigil anatomy probe allowlist (MEASURED egress; Rosa GO probe honesty)",
+          "enabled": true,
+          "expression": "(ip.src eq 5.161.126.99 or ip.src eq 2a01:4ff:f0:85b4::1) and starts_with(http.request.uri.path, \"/api/a11oy/v1/\")"
+        },
+        {
+          "action": "block",
+          "action_parameters": {
+            "$uncaptured": "rule added after the 15:06Z read; inspect_1610.json did not record action_parameters"
+          },
+          "description": "Block vLLM internals on inference host (/metrics /docs /openapi.json /redoc) except HQ Vigil [2026-11-06 leak fix]",
+          "enabled": true,
+          "expression": "(http.host eq \"inference.a-11-oy.com\" and http.request.uri.path in {\"/metrics\" \"/docs\" \"/openapi.json\" \"/redoc\"} and not ip.src in {5.161.126.99 2a01:4ff:f0:85b4::1})"
+        },
+        {
+          "action": "skip",
+          "action_parameters": {
+            "phases": [
+              "http_request_sbfm"
+            ],
+            "products": [
+              "bic",
+              "securityLevel"
+            ],
+            "ruleset": "current"
+          },
+          "description": "Skip bot challenge on monetized API hosts (paying agent clients; x402 governs access)",
+          "enabled": true,
+          "expression": "(http.host in {\"inference.a-11-oy.com\" \"mcp.a-11-oy.com\" \"gpu2.a-11-oy.com\"})"
+        },
+        {
+          "action": "skip",
+          "action_parameters": {
+            "$uncaptured": "rule added after the 15:06Z read; inspect_1610.json did not record action_parameters"
+          },
+          "description": "Skip bot challenge on apex x402 paths so agent clients receive 402 not 403 (x402 governs access; rate limits still apply) [2026-11-06]",
+          "enabled": true,
+          "expression": "(http.host eq \"a-11-oy.com\" and (starts_with(http.request.uri.path, \"/api/a11oy/v1/\") or starts_with(http.request.uri.path, \"/v1/\")))"
+        },
+        {
+          "action": "block",
+          "description": "Block WordPress/vulnerability scanner noise at the edge (wp-config probes, plugin paths)",
+          "enabled": true,
+          "expression": "(starts_with(http.request.uri.path, \"/wp-\") or http.request.uri.path contains \"wp-config\" or starts_with(http.request.uri.path, \"/.wp-\") or http.request.uri.path contains \"/wp-content/\" or http.request.uri.path contains \"/wp-login\" or http.request.uri.path contains \".php\" and not http.request.uri.path eq \"/index.php\")"
+        }
+      ]
+    },
+    "zone": {
+      "captured": {
+        "file_written_at": "2026-11-06T15:06:12Z",
+        "source": "_cf/cf_audit.json"
+      },
+      "data": {
+        "name": "a-11-oy.com",
+        "name_servers": [
+          "desiree.ns.cloudflare.com",
+          "simon.ns.cloudflare.com"
+        ],
+        "paused": false,
+        "plan": "Pro Website",
+        "status": "active",
+        "type": "full"
+      }
+    }
+  }
+}
