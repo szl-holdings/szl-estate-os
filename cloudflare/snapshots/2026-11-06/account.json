@@ -1,0 +1,176 @@
+{
+  "scope": "account",
+  "sections": {
+    "tunnels": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": [
+        {
+          "_state": {
+            "connections": 0,
+            "status": "down"
+          },
+          "id": "80c28042-6aee-4f26-bc47-80786c7c9800",
+          "name": "gdw-szl"
+        },
+        {
+          "_state": {
+            "connections": 0,
+            "status": "down"
+          },
+          "id": "66e5a763-5c82-4bcf-9a65-289fc13af7a2",
+          "name": "laptop-szl"
+        },
+        {
+          "_state": {
+            "connections": 0,
+            "status": "down"
+          },
+          "id": "edaf5825-5c95-4eb0-9750-a9e654799115",
+          "name": "omen-szl"
+        },
+        {
+          "_state": {
+            "connections": 0,
+            "status": "inactive"
+          },
+          "id": "c7db7e1a-dbb3-4fe1-a5db-62c04e5ce297",
+          "name": "szl-hatun-mcp"
+        },
+        {
+          "_state": {
+            "connections": 4,
+            "status": "healthy"
+          },
+          "id": "20ec7fde-e65a-431a-845e-9a53aec73523",
+          "name": "szl-hatun-mcp-v2"
+        },
+        {
+          "_state": {
+            "connections": 4,
+            "status": "healthy"
+          },
+          "id": "9bec082b-8338-43f6-93f1-b33c817d8078",
+          "name": "szl-inference-api"
+        },
+        {
+          "_state": {
+            "connections": 8,
+            "status": "healthy"
+          },
+          "id": "4d22013d-e93b-4889-9a17-b30012cf19e9",
+          "name": "szl-laptop-mesh"
+        },
+        {
+          "_state": {
+            "connections": 4,
+            "status": "healthy"
+          },
+          "id": "acd44edd-1faf-46fc-ad40-c2977b3f98fb",
+          "name": "szl-massed-thinlinc"
+        },
+        {
+          "_state": {
+            "connections": 4,
+            "status": "healthy"
+          },
+          "id": "1e17425f-0031-43b1-98d2-9570f862a9e4",
+          "name": "szl-massed-vm2-thinlinc"
+        }
+      ]
+    },
+    "workers": {
+      "captured": {
+        "file_written_at": "2026-11-06T16:11:23Z",
+        "source": "_cf/inspect_1610.json"
+      },
+      "data": [
+        {
+          "_state": {
+            "created_on": "2026-10-28T22:00:43.577439Z",
+            "modified_on": "2026-11-06T15:36:46.547272Z"
+          },
+          "bindings": [],
+          "compatibility_date": "2026-06-18",
+          "name": "curation-atlas"
+        },
+        {
+          "_state": {
+            "created_on": "2026-10-17T01:13:33.47222Z",
+            "modified_on": "2026-11-06T15:27:37.926281Z"
+          },
+          "bindings": [
+            {
+              "name": "ADMISSION_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "DB",
+              "type": "d1"
+            },
+            {
+              "name": "METRICS_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "REQUIRE_MODEL_BINDING",
+              "type": "plain_text",
+              "value_sha256": {
+                "$uncaptured": "inspect_1610.json did not record this plain_text value"
+              }
+            },
+            {
+              "name": "SOURCE_REVISION",
+              "type": "plain_text",
+              "value_sha256": "2f01cb45a24f27e17076f3b49d9bbff638f91e30c7b334237a1ff7a10a8d5f4a"
+            },
+            {
+              "name": "STORE_SECRET",
+              "type": "secret_text"
+            }
+          ],
+          "compatibility_date": "2026-10-01",
+          "name": "szl-agents-studio-store"
+        },
+        {
+          "_state": {
+            "created_on": "2026-08-31T03:02:40.048192Z",
+            "modified_on": "2026-10-10T13:46:22.299638Z"
+          },
+          "bindings": [],
+          "compatibility_date": "2026-08-31",
+          "name": "szl-alert-relay"
+        },
+        {
+          "_state": {
+            "created_on": "2026-11-05T12:41:43.203564Z",
+            "modified_on": "2026-11-06T15:27:38.622516Z"
+          },
+          "bindings": [
+            {
+              "name": "API_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "SEND_EMAIL",
+              "type": "send_email"
+            }
+          ],
+          "compatibility_date": "2024-09-01",
+          "name": "szl-email-sender"
+        },
+        {
+          "_state": {
+            "created_on": "2026-11-05T17:55:58.876838Z",
+            "modified_on": "2026-11-06T15:27:39.859911Z"
+          },
+          "bindings": [],
+          "compatibility_date": "2024-09-01",
+          "name": "szl-revenue-tracker"
+        }
+      ]
+    }
+  }
+}

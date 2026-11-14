@@ -17,10 +17,14 @@ check, list (see the module docstring). Leases expire within 24 h, are never ove
 deleted, and overlapping unexpired leases block each other.
 
 The tests run in CI (`self-test` job): `test_szl_coordinator.py` and `test_szl_lane_lease.py`.
-The mutant checks run locally. `python -I -B tools/coordinator/mutate_szl_coordinator.py` runs
+The mutant checks run locally and in the `coordinator-mutation` job of Estate OS CI, on
+pull requests that touch `tools/coordinator/**` or `.github/workflows/ci.yml`, and weekly
+against main. The job is fail-closed: it exits non-zero on any unjustified survivor.
+`python -I -B tools/coordinator/mutate_szl_coordinator.py` runs
 31 mutants (about 15 min) and exits 0 only if every mutant is killed and no test is skipped.
 `SZL_COORD_PATCHED=tools/coordinator/szl_coordinator.py python -I -B tools/coordinator/mutate_szl_lane_lease.py`
 runs 43 lease mutants (3 recorded as equivalent) and 6 coordinator-integration mutants.
+The coordinator path is resolved against the process working directory, not the temporary mutant work dir.
 
 Limits: the Ed25519 code is pure Python and not constant-time, so it is for local operator keys only.
 The chain lock and the lease lock assume a local filesystem. Lease files are hashed, not signed. A crashed run leaves `.chain.lock` for an operator to remove.

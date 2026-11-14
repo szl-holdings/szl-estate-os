@@ -11,6 +11,7 @@ import hmac
 import json
 import math
 import re
+import stat
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -132,7 +133,17 @@ def load_evidence_bytes(
     except ValueError:
         return None, f"{label}_path escapes the audit directory"
     try:
-        if not evidence_path.is_file():
+        # Stat explicitly rather than calling Path.is_file(), which reports
+        # every stat error as False. Python 3.13+ no longer raises for a
+        # symlink loop in non-strict resolve(), so a loop can reach this
+        # point. Only a missing path (or a non-directory parent) is "not a
+        # regular file"; any other stat failure, such as ELOOP or EACCES, is
+        # unavailable evidence on every supported Python.
+        try:
+            evidence_mode = evidence_path.stat().st_mode
+        except (FileNotFoundError, NotADirectoryError, ValueError):
+            return None, f"{label} is not a regular file"
+        if not stat.S_ISREG(evidence_mode):
             return None, f"{label} is not a regular file"
         # Bound the actual read: a file may grow or shrink after metadata checks.
         # One extra byte distinguishes an exact-limit file from an oversized one.
