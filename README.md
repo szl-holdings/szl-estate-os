@@ -49,6 +49,18 @@ $python = (Get-Command python).Source
 & $python .\SZL_ONE_OF_ONE_ESTATE_OS.py serve
 ```
 
+On Linux or macOS:
+
+```sh
+python3 SZL_ONE_OF_ONE_ESTATE_OS.py self-test
+python3 SZL_ONE_OF_ONE_ESTATE_OS.py audit
+python3 SZL_ONE_OF_ONE_ESTATE_OS.py operating-report
+python3 SZL_ONE_OF_ONE_ESTATE_OS.py serve
+```
+
+The control plane and its `ci/` verifiers use only the Python standard
+library, so there is nothing to install; CI runs them on Python 3.12.
+
 Open `http://127.0.0.1:8787`.
 
 The default data files are:
@@ -90,19 +102,27 @@ production inventory requires a separately approved evidence packet.
 ## Commands
 
 ```text
-self-test          Deterministic local checks; no network
-audit              Live read-only GitHub, Hugging Face, and domain audit
-status             Latest audit and receipt-chain status
-export             Export the latest SQLite projection to JSON
-verify-receipts    Verify payload hashes, chain links, and available signatures
-operating-report   Seven-lane controls, evidence, blockers, and action queue
-evidence-template  Template for current external-only control evidence
-steward-status     Model access and recorded Frontier Steward plan evidence
-steward-plan       No-tool structured inference or deterministic safe proposals
-steward-verify     Validate a plan's closed schema, policy, and content digest
-steward-schema     Emit the strict draft or compiled-plan schema
-serve              Dashboard, JSON API, health, readiness, and metrics
+self-test              Deterministic local checks; no network
+audit                  Live read-only GitHub, Hugging Face, and domain audit
+status                 Latest audit and receipt-chain status
+export                 Export the latest SQLite projection to JSON
+verify-receipts        Verify payload hashes, chain links, and available signatures
+operating-report       Seven-lane controls, evidence, blockers, and action queue
+evidence-template      Template for current external-only control evidence
+steward-status         Model access and recorded Frontier Steward plan evidence
+steward-plan           No-tool structured inference or deterministic safe proposals
+steward-verify         Validate a plan's closed schema, policy, and content digest
+steward-export-public  Export only a recorded public-scope deterministic observation
+steward-schema         Emit the strict draft or compiled-plan schema
+serve                  Dashboard, JSON API, health, readiness, and metrics
 ```
+
+Exit codes: `0` success; `1` unhandled error (a sanitized `FAILED` JSON
+object on stderr); `2` an `audit` whose aggregate status is neither
+`MEASURED` nor `PARTIAL`; `3` `verify-receipts` found an invalid chain, or
+`steward-plan` produced anything other than a `PROPOSED` plan confirmed by
+readback (for example a recorded `BLOCKED` plan); `4` `steward-plan` was
+`DENIED` or `steward-verify` rejected the plan; `130` interrupted.
 
 Useful audit options:
 
@@ -368,10 +388,10 @@ independent steps.
 
 | Secret | Where | Role |
 |---|---|---|
-| _(none)_ | scheduled / default `workflow_dispatch` | Public baseline audit blanks `GH_TOKEN` / `GITHUB_TOKEN` / `HF_TOKEN` so the github source stays honest `MEASURED` / `PUBLIC_ONLY`. |
+| _(none)_ | scheduled / default `workflow_dispatch` | Public baseline audit blanks `GH_TOKEN` / `GITHUB_TOKEN` / `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` so the github source stays honest `MEASURED` / `PUBLIC_ONLY`. |
 | Actions `github.token` | automatic | Repo-scoped only. **Do not** feed it into org inventory; it cannot reconcile private org repos and would degrade the source to `PARTIAL`. |
 | `SZL_GITHUB_TOKEN` | org secret (selected repos, includes `szl-estate-os`) | Org-read PAT for authenticated GitHub inventory packets. |
-| `HF_TOKEN` (or `HF_ORG_TOKEN`) | org secret (private repos) | Hugging Face inventory for authenticated packets. |
+| `HF_TOKEN` | org secret (private repos) | Hugging Face inventory for authenticated packets. The probe job reads only `secrets.HF_TOKEN`; an `HF_ORG_TOKEN` secret alone is not used and the job fails closed. |
 
 Use workflow_dispatch input `run_authenticated_inventory=true` to run a **separate**
 authenticated inventory probe job that wires `SZL_GITHUB_TOKEN` + `HF_TOKEN`.
@@ -437,3 +457,55 @@ Run the same gates locally after an audit:
 `--profile production` intentionally fails closed until authenticated inventory,
 exact Hugging Face source/runtime binding, signed independent evidence, and all
 active critical gaps in the manifest are closed. See `PRODUCTION_READINESS.md`.
+
+Estate on Hugging Face: models, datasets and Spaces are published under the [SZLHOLDINGS](https://huggingface.co/SZLHOLDINGS) org.
+
+## Tests
+
+`.github/workflows/ci.yml` is the source of truth for what runs on every pull
+request. The control-plane suites need only the standard library and run from
+the repository root:
+
+```sh
+python3 SZL_ONE_OF_ONE_ESTATE_OS.py self-test
+for t in verify_estate_readiness build_remediation_queue github_controls \
+    huggingface_controls provenance_policy estate_inventory anatomy_gate \
+    action_assurance action_assurance_runtime frontier_dashboard; do
+  python3 "ci/test_$t.py" -v || break
+done
+python3 -m unittest discover -s ci -p 'test*steward*.py' -v
+python3 -I -B tools/coordinator/test_szl_coordinator.py -v
+SZL_COORD_PATCHED=tools/coordinator/szl_coordinator.py \
+  python3 -I -B tools/coordinator/test_szl_lane_lease.py -v
+python3 -B -m unittest discover -s ops/recovery/tests -v
+(cd ops/vm/readiness && python3 -B test_szl_readiness_runner.py -v)
+```
+
+The repository smoke tests in `tests/` check that every source file compiles,
+that every module declared in `pyproject.toml` imports, and that every
+first-party module they import is packaged. They need pytest; install the
+checkout editable in a virtual environment:
+
+```sh
+python3 -m pip install -e '.[test]'
+python3 -m pytest
+```
+
+The maintenance runner and the Phase 0 audit package pin their own pytest
+closures; install them in a virtual environment:
+
+```sh
+python3 -m pip install -r maintenance/runtime-requirements.lock.txt
+(cd maintenance && python3 -m pytest -q)
+python3 -m pip install --only-binary=:all: -r tools/szl_estate/requirements-dev.txt
+python3 -m pip install --no-deps --no-build-isolation tools/szl_estate
+python3 -m pytest tools/szl_estate/tests
+```
+
+The Snowflake Evidence Explorer suites and mutation sweeps are listed in the
+`snowflake-evidence-explorer` job; its live integration tests skip unless the
+approval variables are set, and the `fakesnow` emulator test is not run in CI.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).

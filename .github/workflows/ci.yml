@@ -5,16 +5,21 @@ on:
   push:
     branches:
       - main
+  schedule:
+    # Weekly Monday 11:17 UTC (6:17 AM ET). Mutation only; other jobs skip this event.
+    - cron: "17 11 * * 1"
 
 permissions:
   contents: read
 
 concurrency:
-  group: estate-os-ci-${{ github.workflow }}-${{ github.ref }}
+  # event_name keeps a weekly schedule from cancelling a push-to-main run, and vice versa.
+  group: estate-os-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   maintenance:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,7 +38,10 @@ jobs:
       - name: Verify maintenance failure, concurrency, credential and provider contracts
         working-directory: maintenance
         run: python -m pytest -q
+      - name: Run repository smoke tests (compile, declared-module imports, packaging closure)
+        run: python -m pytest -q tests
   self-test:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -69,10 +77,18 @@ jobs:
         env:
           SZL_COORD_PATCHED: tools/coordinator/szl_coordinator.py
         run: python -I -B tools/coordinator/test_szl_lane_lease.py -v
+      - name: Test anatomy body gate and khipu number contracts
+        run: python -B ci/test_anatomy_gate.py -v
+      - name: Test offline session-recovery contracts (fake GitHub transport, no SSH)
+        run: python -B -m unittest discover -s ops/recovery/tests -v
+      - name: Test VM readiness runner contracts (stub checker, never the real payload)
+        working-directory: ops/vm/readiness
+        run: python -B test_szl_readiness_runner.py -v
   snowflake-evidence-explorer:
     # Standard-library tests only: no package installs, no credentials. The
     # integration suite must skip here because its approval variables are unset.
     # The fakesnow emulator script needs pinned third-party packages and is not run.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -122,5 +138,117 @@ jobs:
             ${{ runner.temp }}/ee-kit-mutation-results.json
             ${{ runner.temp }}/ee-runner-mutation-results.json
             ${{ runner.temp }}/ee-verifier-mutation-results.json
+          if-no-files-found: error
+          retention-days: 14
+
+  qa-intake:
+    # Synthetic-only, standard-library tests for the offline CI intake prototype.
+    # No package installs, no network access, no credentials.
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Verify package checksums
+        working-directory: ops/qa-intake
+        run: sha256sum -c SHA256SUMS
+      - name: Run the synthetic intake tests
+        working-directory: ops/qa-intake
+        run: python -B -S test_ci_intake.py -v
+      - name: Sample input must require review and match the saved result byte for byte
+        working-directory: ops/qa-intake
+        run: |
+          set +e
+          python -B -S offline_ci_intake.py < sample_input.json > "$RUNNER_TEMP/qa-intake-sample.json"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          cmp "$RUNNER_TEMP/qa-intake-sample.json" sample_result.json
+
+  coordinator-mutation:
+    # Standard-library mutation harnesses only: no package installs, no credentials.
+    # PRs that do not touch tools/coordinator/** or this workflow skip the suite after
+    # a path gate (fail-closed: run if the base SHA cannot be read). The weekly
+    # schedule always runs the suite against main.
+    if: github.event_name == 'schedule' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Decide whether coordinator mutation applies
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Coordinator mutation: scheduled weekly run."
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          if [ -z "${base}" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Coordinator mutation: base SHA missing; running fail-closed."
+            exit 0
+          fi
+          if ! changed="$(git diff --name-only "${base}" "${{ github.sha }}")"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Coordinator mutation: git diff failed; running fail-closed."
+            exit 0
+          fi
+          # Here-string avoids SIGPIPE from grep -q closing a git-diff pipe under pipefail.
+          if grep -E -q '^(tools/coordinator/|\.github/workflows/ci\.yml$)' <<< "${changed}"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Coordinator mutation: tools/coordinator or ci.yml changed."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Coordinator mutation: no coordinator paths changed; skipping the suite."
+          fi
+      - name: Set up Python
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Run coordinator mutant check
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          python -I -B tools/coordinator/mutate_szl_coordinator.py | tee "${RUNNER_TEMP}/coordinator-mutation-results.json"
+      - name: Run lane-lease mutant check
+        if: steps.gate.outputs.run == 'true'
+        env:
+          SZL_COORD_PATCHED: tools/coordinator/szl_coordinator.py
+        run: |
+          set -euo pipefail
+          set +e
+          python -I -B tools/coordinator/mutate_szl_lane_lease.py
+          rc=$?
+          set -e
+          if [ -f tools/coordinator/mutation_results.json ]; then
+            cp tools/coordinator/mutation_results.json "${RUNNER_TEMP}/lease-mutation-results.json"
+          fi
+          exit "${rc}"
+      - name: Preserve mutation evidence on success or failure
+        if: always() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coordinator-mutations-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/coordinator-mutation-results.json
+            ${{ runner.temp }}/lease-mutation-results.json
           if-no-files-found: error
           retention-days: 14

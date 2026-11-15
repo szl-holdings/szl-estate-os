@@ -333,6 +333,7 @@ def tls_probe(host, target=None, family=socket.AF_UNSPEC, timeout=5):
     result = {'host': host, 'target': target or host, 'family': family, 'verified': False}
     try:
         context = ssl.create_default_context()
+        context.minimum_version = ssl.TLSVersion.TLSv1_2  # CodeQL py/insecure-protocol
         addresses = socket.getaddrinfo(target or host, 443, family, socket.SOCK_STREAM)
         if not addresses:
             raise OSError('No addresses')

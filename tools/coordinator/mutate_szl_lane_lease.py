@@ -8,8 +8,9 @@ The unmutated module must pass first (otherwise the harness refuses to score).
 Run:  python -I -B mutate_szl_lane_lease.py   (from the folder holding both files)
 1.1.0: +12 mutants for F11 (git base read) and F12 (acquire lock); stale_base_unchecked
 re-anchored to the 1.1.0 comparison; +1 integration mutant (coord_git_dir_not_passed).
-      SZL_COORD_PATCHED=<patched szl_coordinator.py> additionally scores 5 integration
+      SZL_COORD_PATCHED=<patched szl_coordinator.py> additionally scores 6 integration
       mutants of the coordinator diff against the CoordinatorIntegration tests.
+      The path is resolved against the process cwd before tests run in a temp work dir.
 Writes mutation_results.json next to this script; prints a summary table.
 """
 import concurrent.futures as cf
@@ -167,7 +168,7 @@ def run_integration(coord_path, tag):
     test_copy = d / "test_szl_lane_lease.py"
     test_copy.write_bytes(TESTS.read_bytes())
     e = child_env(SRC)
-    e["SZL_COORD_PATCHED"] = str(coord_path)       # child_env strips SZL_LEASE*
+    e["SZL_COORD_PATCHED"] = str(Path(coord_path).expanduser().resolve())
     p = subprocess.run([sys.executable, "-I", "-B", str(test_copy), "CoordinatorIntegration"],
                        cwd=str(d), env=e, capture_output=True, text=True, timeout=600)
     failed = sorted(set(re.findall(r"^(?:FAIL|ERROR): (\w+)", p.stderr, re.M)))
@@ -264,7 +265,19 @@ def main():
                "survived": len(survivors), "survivors": survivors,
                "unjustified_survivors": unjustified, "results": results}
     coord = os.environ.get("SZL_COORD_PATCHED")
-    summary["coordinator_integration"] = score_coordinator(coord) if coord else "not run (SZL_COORD_PATCHED unset)"
+    if coord:
+        resolved = Path(coord).expanduser().resolve()
+        if not resolved.is_file():
+            summary["coordinator_integration"] = {
+                "error": f"SZL_COORD_PATCHED is not a file: {coord}",
+                "resolved": str(resolved),
+            }
+        else:
+            # Integration tests run with cwd in WORK, so a repo-relative path
+            # such as tools/coordinator/szl_coordinator.py would 404 there.
+            summary["coordinator_integration"] = score_coordinator(str(resolved))
+    else:
+        summary["coordinator_integration"] = "not run (SZL_COORD_PATCHED unset)"
     (HERE / "mutation_results.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(f"baseline rc={base['rc']} ran={base['ran']} {base['coverage_line']}")
     for r in results:
