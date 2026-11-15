@@ -110,7 +110,7 @@ class DashboardTests(unittest.TestCase):
         self.build()
         text=self.output.read_text(encoding="utf-8")
         csp=html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"',text).group(1))
-        for tag in re.findall(r"<(?:style|script)[^>]*>(.*?)</(?:style|script)>",text,re.S):
+        for tag in re.findall(r"<(?:style|script)[^>]*>(.*?)</(?:style|script)>",text,re.S|re.I):
             digest=base64.b64encode(hashlib.sha256(tag.encode()).digest()).decode()
             self.assertIn("sha256-"+digest,csp)
         self.assertIn("connect-src 'none'",csp)
