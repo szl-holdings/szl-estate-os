@@ -1,0 +1,652 @@
+{
+ "schema": "szl.provmap-unref-triage/v2",
+ "generated_by": "Vibe dc-CTO provenance-triage lane (W28b)",
+ "generated_at": "2026-11-23T00:08:21Z",
+ "evidence": {
+  "provenance_map": "HF SZLHOLDINGS/wave-logs mesh/vfe2-lap/vfe2_provenance_map_v0.json (VFE2 lane)",
+  "bundle_commit": "https://huggingface.co/datasets/SZLHOLDINGS/wave-logs/commit/31ce206f967ed5c6e31848f388b03689f3b29f61",
+  "bundle_folder": "mesh/2026-11-22/ouroboros/w28-unref-triage/"
+ },
+ "method": "linked = union of per-artifact gh_links in provenance map v0 (68 measured vs map summary 63; 5-name drift = newer links, disclosed); unref = census(all 188 GH repos) minus linked = 125, exact match to map summary gh_repos_unreferenced",
+ "counts": {
+  "census_repos": 188,
+  "linked_repos": 68,
+  "unreferenced": 125,
+  "buckets": {
+   "ALIGN_CANDIDATE_CODE_REPO": 89,
+   "EXEMPT_ARCHIVED": 26,
+   "EXEMPT_BACKUP_SANDBOX": 4,
+   "EXEMPT_FROZEN_FAMILY": 2,
+   "REVIEW_MINOR": 4
+  }
+ },
+ "tiering": "T1 production-infrastructure/control, T2 core tooling/evidence, T3 research/benchmark/domain, T4 utility/admin; heuristic, advisory-only (seat convergence: Astra + Sol 2026-11-23, nonce-verified; Kimi rail degraded-2-empties, governance via sibling standing rulings)",
+ "repair_action": "propose-only HF artifact card/pointer linking: GH repo URL + exact commit SHA in card YAML provenance section; execution gated behind owner signature mint + 5-repo pilot doctrine + coordination with ou30 propose-only card packages (no duplicate edits)",
+ "rows": [
+  {
+   "name": "szl-evidence-core",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "YARQA-ATTN",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-org-health",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "agents-studio",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "ayllu-hf-space",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "amaru",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "ChaskaLLM",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-asset-registry",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "acoustic-validation",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-ops-runbook",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-eval-harness",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-billing",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-specdecode",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-retrieval-bench",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-quant-witness",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-quant-bench",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-provctl",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-microscopy-pilot",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-portal",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-capability-ledger",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-serve",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "frontier-console",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-ouroboros",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-energy-mcp",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-blocked",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-hf-frontier",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "ci-witness-action",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-vertical-portal",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-nemo",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-receipt",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-defensive-control-plane",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-humanitarian-causal-twin",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "vgl-cold-replay",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-trust",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-abstention-frontier",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-block-kv",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-calibration",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-gov",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "rosie",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-sovereign-os",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-hatun-conformance",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-attestation",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-ci-witness",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-energy-attest",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-engine-bench",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-crosscheck",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-showcase",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "conformance-corpus",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-runbook-catalog",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "puriq-live",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-build-env",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-openshell-receipts",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "frontier-54-runs",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "lyte-lattice",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "khipu-sda-core",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-doctrine",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-estate-os",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-govsign",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-receipt-attn",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-lambda-gate",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-evidence-litellm",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-formulas",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "evidence-studio",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szlholdings.com",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "khipu-x1",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "governance-as-code",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-substrate",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-evidence-mandate",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-platform",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-eclipse",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-seismic-review",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-drift",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "pentagi",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "szl-pin",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-invariants",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-guardrail-receipt",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "szl-maskmod",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-kernels",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-repo-template",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "killinchu-ghsa-x4vh-8v6w-fg2m",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-skills-ghsa-7gvv-whrr-6q3x",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-kernel-attest",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "szl-wave1-report",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "registry-mirror",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 1
+  },
+  {
+   "name": "szl-v14",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "evidence-doctrine",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "release-gate-fixture",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 2
+  },
+  {
+   "name": "frontier-compass",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 3
+  },
+  {
+   "name": "pitch-collateral",
+   "bucket": "ALIGN_CANDIDATE_CODE_REPO",
+   "tier": 4
+  },
+  {
+   "name": "a11oy-net",
+   "bucket": "EXEMPT_FROZEN_FAMILY",
+   "tier": 0
+  },
+  {
+   "name": "a11oy-ghsa-hch6-g4gg-wvv2",
+   "bucket": "EXEMPT_FROZEN_FAMILY",
+   "tier": 0
+  },
+  {
+   "name": "alloyscape-estate-backup",
+   "bucket": "EXEMPT_BACKUP_SANDBOX",
+   "tier": 0
+  },
+  {
+   "name": "alloyscape-sandbox-forge",
+   "bucket": "EXEMPT_BACKUP_SANDBOX",
+   "tier": 0
+  },
+  {
+   "name": "alloyscape-sandbox-pliny",
+   "bucket": "EXEMPT_BACKUP_SANDBOX",
+   "tier": 0
+  },
+  {
+   "name": "alloyscape-sandbox-artifex",
+   "bucket": "EXEMPT_BACKUP_SANDBOX",
+   "tier": 0
+  },
+  {
+   "name": "szl-tinkuy",
+   "bucket": "REVIEW_MINOR",
+   "tier": 0
+  },
+  {
+   "name": "szl-holdings.github.io",
+   "bucket": "REVIEW_MINOR",
+   "tier": 0
+  },
+  {
+   "name": "sda",
+   "bucket": "REVIEW_MINOR",
+   "tier": 0
+  },
+  {
+   "name": "szl-acoustic-research",
+   "bucket": "REVIEW_MINOR",
+   "tier": 0
+  },
+  {
+   "name": "a-11-oy.github.io",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "cosmos",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-provctl-live",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-kernels-live",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "receipt-chain-live",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "ouroboros",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "energy-attest-holo",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "docs-site",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-uds-deployment",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "governed-inference-meter",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "khipu-lab",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "counsel",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "immune-lattice",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-experiments",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "khipu-pages",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-telemetry",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "governed-norm-holo",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "lambda-gate-holo",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "lean-kernel",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-fleet-overlay",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-governed-norm",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-formula-ledger",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "fail-closed-governed-ai-services",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "evidence-typed-formula-governance",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "warhacker-demo",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  },
+  {
+   "name": "szl-otel-mesh",
+   "bucket": "EXEMPT_ARCHIVED",
+   "tier": 0
+  }
+ ]
+}
