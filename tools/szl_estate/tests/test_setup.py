@@ -2,6 +2,7 @@
 from dataclasses import replace
 import hashlib
 import json
+import re
 import importlib.util
 import contextlib
 import io
@@ -230,6 +231,23 @@ def test_cli_attempted_failed_setup_is_fail_and_estate_stays_unmeasured(tmp_path
     assert result == 1 and output["status"] == "FAIL"
     assert output["setup_ready"] is False and output["estate_ready"] is False
     assert all(row["status"] == "NOT_RUN" for row in output["access_matrix"])
+
+
+def test_committed_manifest_binds_reviewed_dependency_pin_files():
+    # PR #139 rewrote pydantic and playwright pins and left the trust anchor on the previous digests.
+    root = Path(__file__).resolve().parent.parent
+    manifest = json.loads((root / "src/szl_estate/verification_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema"] == "szl.reviewed-phase0-files/v1"
+    unbound = []
+    for name in ("pyproject.toml", "requirements.txt"):
+        raw = (root / name).read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        recorded = manifest["files"][name]
+        if digest != recorded:
+            pins = tuple(match.group(0) for match in re.finditer(r"(?:pydantic|playwright)==\d+\.\d+\.\d+", raw.decode("utf-8")))
+            unbound.append({"file": name, "recorded": recorded, "checkout": digest, "pins": pins})
+    assert unbound == []
+    assert len(_check_source(root, manifest)) == 64
 
 
 def test_actual_installed_manifest_binds_the_reviewed_checkout():
