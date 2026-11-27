@@ -1,9 +1,9 @@
 {
   "files": {
     ".gitattributes": "0dacf9b940271a5a4433fc33092e8fa671f2611a909c18236a83d41424ff8c8a",
-    "pyproject.toml": "16e25be6a5d313dcd317d5ee1649604f2a82c1180d054c9df093d0818c4cde70",
+    "pyproject.toml": "c0d3647260554ac73735810adaa12e101766bd1104a55fd82191a634a40fb932",
     "requirements-dev.txt": "06d3ef4b22300553ba61e5dfde160deb82b936f203d1adcdc07d6a63c0a2e504",
-    "requirements.txt": "3b464c838557826088ced2b482d921720c8c55800a46d489578d18feb98a45fd",
+    "requirements.txt": "647740ed3fb74117a84a5cf913a538acd7181727ccabb6f7da3b64d8e36a59b1",
     "src/szl_estate/__init__.py": "026ed4d5f3000f6a9c797e910205e6074c6d26310f37ae1a9e0e9e5014c3754c",
     "src/szl_estate/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
     "src/szl_estate/access.py": "e03ea77c94cb4b89d3094cfb7e92617f088a01b59a1cbd7e5fcb21631d46f974",
@@ -24,7 +24,7 @@
     "tests/test_inputs.py": "98597745bb3f8bf129ec846c916eac240a5ca6f256a35159de5b839e1b488007",
     "tests/test_model.py": "aaceaece2c391997eea5a4d1e560cd12a40d5f999d5e4a38cf48e75841a58610",
     "tests/test_parsers.py": "f28c0e8f5646314b59957eabdd179956696a1059aeba5ee1a56b133fd1731336",
-    "tests/test_setup.py": "ebc74cac04bc0dcac3053ca05abc20dfd29db7121dc3f8adee5bef8f41831083",
+    "tests/test_setup.py": "5eb8dbb2cf35408af8532684fba370ec47c7fc83f6eee4224a59532231364e8c",
     "tests/test_snapshot_agent.py": "4c220621728041bdf9c96baf0dc7639b259e0d67c947606d37db4689db068acf"
   },
   "schema": "szl.reviewed-phase0-files/v1"

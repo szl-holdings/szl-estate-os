@@ -2,6 +2,7 @@
 from dataclasses import replace
 import hashlib
 import json
+import re
 import importlib.util
 import contextlib
 import io
@@ -230,6 +231,42 @@ def test_cli_attempted_failed_setup_is_fail_and_estate_stays_unmeasured(tmp_path
     assert result == 1 and output["status"] == "FAIL"
     assert output["setup_ready"] is False and output["estate_ready"] is False
     assert all(row["status"] == "NOT_RUN" for row in output["access_matrix"])
+
+
+def test_committed_manifest_binds_reviewed_dependency_pin_files():
+    # PR #139 rewrote pydantic and playwright pins and left the trust anchor on the previous digests.
+    # The manifest is the installed trust anchor. The setup runner does not stage the JSON file.
+    root = Path(__file__).resolve().parent.parent
+    manifest = _manifest()
+    unbound = []
+    for name in ("pyproject.toml", "requirements.txt"):
+        raw = (root / name).read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        recorded = manifest["files"][name]
+        if digest != recorded:
+            pins = tuple(match.group(0) for match in re.finditer(r"(?:pydantic|playwright)==\d+\.\d+\.\d+", raw.decode("utf-8")))
+            unbound.append({"file": name, "recorded": recorded, "checkout": digest, "pins": pins})
+    assert unbound == []
+    assert len(_check_source(root, manifest)) == 64
+
+
+def test_pin_binding_runs_when_manifest_json_is_outside_the_reviewed_tree(tmp_path):
+    # The setup runner stages only hashed files. verification_manifest.json is not one of them.
+    root = Path(__file__).resolve().parent.parent
+    manifest = _manifest()
+    staged = tmp_path / "reviewed"
+    for name, digest in manifest["files"].items():
+        raw = (root / name).read_bytes()
+        assert hashlib.sha256(raw).hexdigest() == digest
+        target = staged / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    assert not (staged / "src/szl_estate/verification_manifest.json").exists()
+    spec = importlib.util.spec_from_file_location("staged_phase0_test_setup", staged / "tests/test_setup.py")
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    module.test_committed_manifest_binds_reviewed_dependency_pin_files()
 
 
 def test_actual_installed_manifest_binds_the_reviewed_checkout():
