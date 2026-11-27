@@ -24,7 +24,7 @@
     "tests/test_inputs.py": "98597745bb3f8bf129ec846c916eac240a5ca6f256a35159de5b839e1b488007",
     "tests/test_model.py": "aaceaece2c391997eea5a4d1e560cd12a40d5f999d5e4a38cf48e75841a58610",
     "tests/test_parsers.py": "f28c0e8f5646314b59957eabdd179956696a1059aeba5ee1a56b133fd1731336",
-    "tests/test_setup.py": "6db26b95233c47d9473072980967e3180479e167f3d7733351acd53cffe350c9",
+    "tests/test_setup.py": "5eb8dbb2cf35408af8532684fba370ec47c7fc83f6eee4224a59532231364e8c",
     "tests/test_snapshot_agent.py": "4c220621728041bdf9c96baf0dc7639b259e0d67c947606d37db4689db068acf"
   },
   "schema": "szl.reviewed-phase0-files/v1"

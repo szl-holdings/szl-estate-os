@@ -235,9 +235,9 @@ def test_cli_attempted_failed_setup_is_fail_and_estate_stays_unmeasured(tmp_path
 
 def test_committed_manifest_binds_reviewed_dependency_pin_files():
     # PR #139 rewrote pydantic and playwright pins and left the trust anchor on the previous digests.
+    # The manifest is the installed trust anchor. The setup runner does not stage the JSON file.
     root = Path(__file__).resolve().parent.parent
-    manifest = json.loads((root / "src/szl_estate/verification_manifest.json").read_text(encoding="utf-8"))
-    assert manifest["schema"] == "szl.reviewed-phase0-files/v1"
+    manifest = _manifest()
     unbound = []
     for name in ("pyproject.toml", "requirements.txt"):
         raw = (root / name).read_bytes()
