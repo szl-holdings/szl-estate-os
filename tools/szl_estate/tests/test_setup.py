@@ -250,6 +250,25 @@ def test_committed_manifest_binds_reviewed_dependency_pin_files():
     assert len(_check_source(root, manifest)) == 64
 
 
+def test_pin_binding_runs_when_manifest_json_is_outside_the_reviewed_tree(tmp_path):
+    # The setup runner stages only hashed files. verification_manifest.json is not one of them.
+    root = Path(__file__).resolve().parent.parent
+    manifest = _manifest()
+    staged = tmp_path / "reviewed"
+    for name, digest in manifest["files"].items():
+        raw = (root / name).read_bytes()
+        assert hashlib.sha256(raw).hexdigest() == digest
+        target = staged / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    assert not (staged / "src/szl_estate/verification_manifest.json").exists()
+    spec = importlib.util.spec_from_file_location("staged_phase0_test_setup", staged / "tests/test_setup.py")
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    module.test_committed_manifest_binds_reviewed_dependency_pin_files()
+
+
 def test_actual_installed_manifest_binds_the_reviewed_checkout():
     root = Path(__file__).resolve().parent.parent
     assert len(_check_source(root, _manifest())) == 64
